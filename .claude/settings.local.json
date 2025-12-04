@@ -1,0 +1,29 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls:*)",
+      "Bash(dir \"c:\\Projects\\inspig\\web\\src\\app\\(report)\\weekly\")",
+      "Bash(npm run build:*)",
+      "Bash(tree:*)",
+      "Bash(dir /b \"c:\\Projects\\inspig\\web\\src\\app\\(report)\\monthly\")",
+      "Bash(del \"c:\\Projects\\inspig\\web\\src\\components\\common\\Sidebar.tsx\")",
+      "Bash(cat:*)",
+      "Bash(type \"c:\\Projects\\inspig\\web\\src\\app\\(report)\\weekly\\[id]\\page.tsx\")",
+      "Bash(cmd.exe /c \"cd /d c:\\Projects\\inspig\\web && npm run build\")",
+      "Bash(cmd.exe /c \"cd /d c:\\Projects\\inspig\\web && npm run build 2>&1\")",
+      "Bash(powershell -Command \"cd ''c:\\Projects\\inspig\\web''; npm run build\")",
+      "Bash(cmd.exe /c \"dir /b C:\\Projects\\pig3.1\\pigplan\\pigplanxe\\src\\main\\webapp\\images\\ci\")",
+      "Bash(powershell -Command \"Get-ChildItem ''C:\\Projects\\pig3.1\\pigplan\\pigplanxe\\src\\main\\webapp\\images\\ci'' | Select-Object Name\")",
+      "Bash(powershell:*)",
+      "Bash(dir /s /b \"c:\\Projects\\inspig\\web\\src\")",
+      "Bash(findstr:*)",
+      "Bash(copy:*)",
+      "Bash(dir /b \"c:\\Projects\\inspig\\web\\src\\app\\(report)\\weekly\")",
+      "Bash(dir /b \"c:\\Projects\\inspig\\References\")",
+      "Bash(dir /b \"c:\\Projects\\inspig\")",
+      "Bash(dir \"c:\\Projects\\inspig\\References\")"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

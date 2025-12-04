@@ -1,0 +1,98 @@
+# 인사이트 PIGPLAN 프로젝트 지침
+
+## 프로젝트 설명
+ - 본 프로젝트는 데스크탑 web 및 모바일 web에 제공되는 서비스
+ - 양돈시스템이며 농자주에게 주간,월간,분리별로 리포트를 제공하는 서비스이다.
+ - 농장주가 직접 본 시스템에 로그인 해서 접속하거나 농장주에게 발송되는 sms 링크를 통해서 바로 접속
+ - sms링크는 로그인페이지 아닌 주간,월간의 해당하는 페이지에 바로 접근
+
+## INSIGHT-PIGPLAN 프로젝트
+- 프로젝트 경로 : C:\Projects\inspig
+- 기존 html 경로 : C:\Projects\pig3.1\pigplan\pigplanxe\src\main\webapp\insightpigplan
+- 파일 접근은 
+   C:\Projects\pig3.1\pigplan\pigplanxe\src\main\webapp\insightpigplan ,
+   C:\Projects\inspig 에만 접근
+- .claude/insitepig.md 파일의 INSIGHT-PIGPLAN 프로젝트 지침확인 후 지침내에서 작업 수행 
+
+## 고려사항
+- CSS 작업시 반드시 반응형으로 구성(모바일, 탭, 데스크탑)
+- css 상단의
+- 결과에 대한 응답은 최대한 간결하게 답하라.. 요약 중심으로
+- 아이콘은 https://fontawesome.com/ 에서 제공하는 FREE 아이콘 사용
+- 콤포넌트 생성시 유사한 명칭의 콤포넌트를 찾아보고 가능하면 해당 파일에서 분기해서 적용
+
+---
+
+## 기술 스택
+| 구분 | 기술 |
+|------|------|
+| 프레임워크 | Next.js 14+ (App Router) |
+| 언어 | TypeScript |
+| 스타일링 | Tailwind CSS |
+| 차트 | ECharts |
+| 상태관리 | React Context / Zustand (필요시) |
+| HTTP 클라이언트 | Axios / Fetch API |
+
+---
+
+## 프로젝트 구조
+```
+C:\Projects\inspig\web\src\
+├── app/                    # Next.js App Router
+│   ├── (report)/           # 리포트 관련 라우트 그룹
+│   │   └── weekly/         # 주간 리포트
+│   ├── api/                # API Routes
+│   ├── globals.css         # 전역 스타일
+│   └── layout.tsx          # 루트 레이아웃
+├── components/             # 재사용 컴포넌트
+│   ├── ui/                 # UI 컴포넌트
+│   ├── charts/             # 차트 컴포넌트
+│   ├── common/             # 공통 컴포넌트
+│   └── layout/             # 레이아웃 컴포넌트
+├── services/               # API 서비스
+├── types/                  # TypeScript 타입 정의
+├── hooks/                  # Custom Hooks
+├── utils/                  # 유틸리티 함수
+└── constants/              # 상수 정의
+```
+
+---
+
+## 배포 환경
+| 구분 | 설명 |
+|------|------|
+| 배포 방식 | Docker 컨테이너 |
+| 데이터베이스 | Oracle (별도 서버 구성) |
+| 빌드 | `npm run build` → standalone 출력 |
+
+### Docker 배포 설정
+```dockerfile
+# Dockerfile 예시
+FROM node:20-alpine AS builder
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+RUN npm run build
+
+FROM node:20-alpine AS runner
+WORKDIR /app
+ENV NODE_ENV=production
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
+COPY --from=builder /app/public ./public
+EXPOSE 3000
+CMD ["node", "server.js"]
+```
+
+### 환경 변수
+```env
+# .env.local (개발)
+NEXT_PUBLIC_API_URL=http://localhost:8080/api
+ORACLE_CONNECTION_STRING=<Oracle 접속 정보>
+
+# .env.production (운영)
+NEXT_PUBLIC_API_URL=https://api.example.com
+ORACLE_CONNECTION_STRING=<Oracle 접속 정보>
+```
+

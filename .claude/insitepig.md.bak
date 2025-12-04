@@ -1,0 +1,22 @@
+# 인사이트 PIGPLAN 프로젝트 지침
+
+## 프로젝트 설명
+ - 본 프로젝트는 데스크탑 web 및 모바일 web에 제공되는 서비스
+ - 양돈시스템이며 농자주에게 주간,월간,분리별로 리포트를 제공하는 서비스이다.
+ - 농장주가 직접 본 시스템에 로그인 해서 접속하거나 농장주에게 발송되는 sms 링크를 통해서 바로 접속
+ - sms링크는 로그인페이지 아닌 주간,월간의 해당하는 페이지에 바로 접근
+
+## INSIGHT-PIGPLAN 프로젝트
+- 프로젝트 경로 : C:\Projects\inspig
+- 기존 html 경로 : C:\Projects\pig3.1\pigplan\pigplanxe\src\main\webapp\insightpigplan
+- 파일 접근은 
+   C:\Projects\pig3.1\pigplan\pigplanxe\src\main\webapp\insightpigplan ,
+   C:\Projects\inspig 에만 접근
+- .claude/insitepig.md 파일의 INSIGHT-PIGPLAN 프로젝트 지침확인 후 지침내에서 작업 수행 
+
+## 고려사항
+- CSS 작업시 반드시 반응형으로 구성(모바일, 탭, 데스크탑)
+- css 상단의 
+- 결과에 대한 응답은 최대한 간결하게 답하라.. 요약 중심으로 
+- 아이콘은 https://fontawesome.com/ 에서 제공하는 FREE 아이콘 사용
+- 콤포넌트 생성시 유사한 명칭의 콤포넌트를 찾아보고 가능하면 해당 파일에서 분기해서 적용
