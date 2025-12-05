@@ -255,12 +255,12 @@ export const getSowChartOption = (data: any) => {
 
 ## 5. 스타일링 및 CSS 가이드
 
-### 4.1 Tailwind CSS v4
+### 5.1 Tailwind CSS v4
 - **설정 파일**: `tailwind.config.ts`
 - **전역 스타일**: `app/globals.css`
 - **원칙**: 가능한 Tailwind 유틸리티 클래스 사용, 복잡한 컴포넌트는 Custom CSS로 분리
 
-### 4.2 CSS 파일 구조 (Mobile First)
+### 5.2 CSS 파일 구조 (Mobile First)
 
 > **⚠️ 중요**: 프로젝트는 **Mobile First** 접근 방식을 사용합니다.
 > - 기본 스타일은 모바일(480px 이하)용으로 작성
@@ -269,14 +269,46 @@ export const getSowChartOption = (data: any) => {
 **📁 CSS 파일 구조**:
 ```
 web/src/css/
-├── style.css      # 메인 스타일 (모바일 기본 + 반응형 미디어 쿼리)
-└── style.css.bak  # 백업 파일 (Desktop First 버전)
+├── style.css      # 기본 베이스 스타일 (CSS 변수, 레이아웃, 타이포그래피)
+├── common.css     # 공통 컴포넌트 스타일 (카드, 테이블, 그리드, 버튼 등)
+└── popup.css      # 팝업 전용 스타일 (팝업 테이블, 탭, 배지 등)
 ```
 
-**Import**:
+### 5.3 CSS 파일별 역할 및 우선순위
+
+| 파일 | 역할 | @layer 사용 | 우선순위 | 종속성 |
+|------|------|-------------|----------|--------|
+| `style.css` | CSS 변수, 기본 레이아웃, 타이포그래피 | `@layer base` | 낮음 | 없음 (베이스) |
+| `common.css` | 재사용 컴포넌트 (카드, 테이블, 그리드) | `@layer components` | 중간 | 없음 (독립) |
+| `popup.css` | 팝업 전용 스타일 | **없음** | 높음 | 없음 (독립) |
+
+> **⚠️ CSS 우선순위 주의사항**:
+> - `@layer` 내부 스타일은 `@layer` 외부 스타일보다 우선순위가 **낮습니다**
+> - 팝업처럼 확실히 적용되어야 하는 스타일은 `@layer` 밖에 정의
+> - 각 CSS 파일은 **독립적**으로 동작해야 함 (다른 파일에 종속되지 않음)
+
+**Import 예시**:
 ```typescript
-import '@/css/style.css';
+// 필요한 CSS만 선택적으로 import
+import '@/css/style.css';      // 기본 베이스 (필수)
+import '@/css/common.css';     // 컴포넌트 사용 시
+import '@/css/popup.css';      // 팝업 사용 시
 ```
+
+### 5.4 CSS 파일 분리 원칙
+
+**1. 종속성 없는 독립 설계**
+- 각 CSS 파일은 다른 파일에 의존하지 않고 독립적으로 동작
+- 공통으로 필요한 CSS 변수는 각 파일에서 `:root`로 재정의 가능
+
+**2. 우선순위 기반 분리**
+- 기본값(오버라이드 가능): `@layer base` 또는 `@layer components`
+- 확정값(반드시 적용): `@layer` 밖에 정의
+
+**3. 기능별 분리**
+- 베이스: 변수, 리셋, 타이포그래피
+- 컴포넌트: 재사용 UI 요소
+- 특수 기능: 팝업, 모달 등 특정 기능 전용
 
 **브레이크포인트**:
 | 구분 | 범위 | 미디어 쿼리 |
@@ -337,7 +369,7 @@ import '@/css/style.css';
 }
 ```
 
-### 4.3 CSS 작성 규칙 (Naming Convention)
+### 5.5 CSS 작성 규칙 (Naming Convention)
 
 **1. 범용적인 클래스명 사용**
 - 특정 페이지나 기간(week, month)이 포함된 접두어 지양
@@ -357,7 +389,7 @@ import '@/css/style.css';
 - `is-`, `has-` 접두어 사용
 - 예: `.is-active`, `.has-error`, `.is-open`
 
-### 4.3 CSS 파일 구조 및 조직화
+### 5.6 CSS 파일 구조 및 조직화
 
 **1. 파일 상단 요약 (Summary)**
 - 파일의 목적, 주요 섹션, 변수 정의 등을 주석으로 명시
@@ -398,7 +430,7 @@ import '@/css/style.css';
 .data-grid { ... }
 ```
 
-### 4.4 Custom CSS (app/**/*.css)
+### 5.7 Custom CSS (app/**/*.css)
 - **위치**: 해당 컴포넌트 또는 페이지 디렉토리 내 `_styles` 폴더
 - **용도**: Tailwind로 표현하기 복잡한 그리드, 애니메이션, 레거시 스타일 포팅
 
@@ -421,7 +453,7 @@ import '@/css/style.css';
 }
 ```
 
-### 4.5 테마 모드 (Light/Dark)
+### 5.8 테마 모드 (Light/Dark)
 
 **테마 전환 버튼 위치**:
 1. **사이드바**: 하단 또는 상단에 테마 토글 버튼
@@ -439,7 +471,7 @@ import { ThemeToggle } from '@/components/layout/ThemeToggle';
 - 모든 컴포넌트는 `dark:` 클래스를 사용하여 다크모드 스타일 정의
 - 테마 변경 시 `localStorage`에 저장하여 새로고침 시에도 유지
 
-### 4.6 반응형 디자인 (Responsive Design)
+### 5.9 반응형 디자인 (Responsive Design)
 
 > **⚠️ 필수 규칙**: CSS 변경 및 추가 시 **반드시 반응형으로 처리**해야 합니다.
 > - 모바일, 태블릿, 데스크톱 모든 화면 크기에서 정상 작동 확인
