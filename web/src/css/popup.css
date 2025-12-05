@@ -1,9 +1,42 @@
 /* ============================================
-   팝업 전용 CSS (popup.css)
-   - Mobile-first 반응형 디자인
-   - 기본: 모바일 (480px 이하)
-   - @media (min-width: 481px): 태블릿
-   - @media (min-width: 769px): 데스크탑
+   POPUP CSS
+   팝업 전용 스타일시트
+   ============================================
+
+   [역할]
+   - 팝업 테이블 스타일 (popup-table-01, popup-table-02)
+   - 팝업 탭 UI (.popup-tabs, .popup-tab)
+   - 팝업 공통 요소 (팁, 닫기 버튼, 섹션 라벨 등)
+   - 증감 배지 (.change-badge)
+
+   [우선순위]
+   - @layer 밖 (높은 우선순위)
+   - 반드시 적용되어야 하는 스타일
+
+   [종속성]
+   - 독립적으로 동작 (다른 CSS 파일에 종속되지 않음)
+   - CSS 변수는 style.css에서 정의된 것 사용
+
+   [섹션 목록]
+   1. popup-table-01: 기본 테이블 (border-collapse)
+   2. popup-table-02: 카드형 테이블 (border-spacing)
+   3. popup-tabs: 팝업 내 탭 UI
+   4. popup-tip: 팁/안내 메시지
+   5. popup-close-btn: 닫기 버튼
+   6. popup-section-label: 섹션 라벨
+   7. change-badge: 증감 표시 배지
+
+   ============================================ */
+
+/* ============================================
+   📱 반응형 디자인 지침 (RESPONSIVE DESIGN GUIDE)
+   ============================================
+
+   [브레이크포인트]
+   - 모바일: 480px 이하 (기본)
+   - 태블릿: 481px ~ 768px (@media min-width: 481px)
+   - 데스크탑: 769px 이상 (@media min-width: 769px)
+
    ============================================ */
 
 /* ============================================
@@ -208,7 +241,6 @@
     color: var(--rp-text-primary);
     margin-bottom: 8px; /* 모바일 */
     padding-bottom: 5px; /* 모바일 */
-    border-bottom: 2px solid var(--rp-accent-primary);
 }
 
 .popup-section-desc {
@@ -301,7 +333,6 @@
 /* 카드형 테이블 */
 .popup-table-02 {
     width: 100%;
-    min-width: 500px;
     border-collapse: separate;
     border-spacing: 0 5px; /* 모바일 */
     font-size: 13px; /* 모바일 */
@@ -327,7 +358,7 @@
 
 .popup-table-02 tbody td {
     border-bottom: none;
-    padding: 8px 6px; /* 모바일 */
+    padding: 8px 3px; /* 모바일: 좌우 50% 축소 */
     font-size: 13px; /* 모바일 */
     text-align: center;
     color: var(--rp-text-primary);
@@ -347,14 +378,70 @@
     text-align: center;
 }
 
+.popup-table-02 tbody td.label.sub {
+    font-weight: 400;
+    font-size: 11px;
+    color: var(--rp-text-tertiary, #86868b);
+}
+
+/* ============================================
+   출하 테이블 전용 스타일 (.shipment-table)
+   - 구분1(category): 가로 중앙정렬
+   - 구분2(sub): 폰트 살짝 크게, padding 조정
+   ============================================ */
+.popup-table-02.shipment-table tbody td.label {
+    text-align: center;
+    padding: 8px 4px;
+}
+
+.popup-table-02.shipment-table tbody td.label.sub {
+    font-size: 12px;
+    padding: 8px 5px;
+    text-align: left;
+}
+
+/* 태블릿 (481px~) */
+@media (min-width: 481px) {
+    .popup-table-02.shipment-table tbody td.label {
+        padding: 9px 5px;
+    }
+
+    .popup-table-02.shipment-table tbody td.label.sub {
+        font-size: 13px;
+        padding: 9px 6px;
+    }
+}
+
+/* 데스크탑 (769px~) */
+@media (min-width: 769px) {
+    .popup-table-02.shipment-table tbody td.label {
+        padding: 10px 6px;
+    }
+
+    .popup-table-02.shipment-table tbody td.label.sub {
+        font-size: 14px;
+        padding: 10px 7px;
+    }
+}
+
+/* 출하 테이블 평균 컬럼 색상 */
+.popup-table-02.shipment-table tbody td.total.avg {
+    color: #10b981;
+}
+
+.dark .popup-table-02.shipment-table tbody td.total.avg {
+    color: #34d399;
+}
+
 .popup-table-02 tbody td.total {
     font-weight: 600;
-    color: var(--rp-text-primary);
+    color: var(--rp-accent-primary);
 }
 
 .popup-table-02 tbody td.total.grand {
     font-size: 14px; /* 모바일 */
     font-weight: 700;
+    color: var(--rp-accent-primary);
 }
 
 /* 하이라이트 컬럼 */
@@ -390,33 +477,100 @@
 }
 
 /* 합계 행 */
-.popup-table-02 tbody tr.total-row {
+.popup-table-02 tbody tr.total-row,
+.popup-table-02 tbody tr.sum-row {
     background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
-.dark .popup-table-02 tbody tr.total-row {
-    background: linear-gradient(135deg, #3a3a40 0%, #4a4a50 100%);
+.dark .popup-table-02 tbody tr.total-row,
+.dark .popup-table-02 tbody tr.sum-row {
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.15) 0%, rgba(0, 212, 255, 0.1) 100%);
+    border: 1px solid rgba(0, 212, 255, 0.2);
 }
 
-.popup-table-02 tbody tr.total-row td {
+.popup-table-02 tbody tr.total-row td,
+.popup-table-02 tbody tr.sum-row td {
     font-weight: 600;
     color: #1e293b;
 }
 
-.dark .popup-table-02 tbody tr.total-row td {
-    color: var(--rp-text-primary);
+.dark .popup-table-02 tbody tr.total-row td,
+.dark .popup-table-02 tbody tr.sum-row td {
+    color: #e6edf3;
 }
 
-.popup-table-02 tbody tr.total-row td.col-highlight {
+.popup-table-02 tbody tr.total-row td.col-highlight,
+.popup-table-02 tbody tr.sum-row td.col-highlight {
     background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
     color: #b91c1c;
     font-weight: 700;
 }
 
-.dark .popup-table-02 tbody tr.total-row td.col-highlight {
-    background: linear-gradient(135deg, rgba(185, 28, 28, 0.3) 0%, rgba(185, 28, 28, 0.2) 100%);
-    color: #fca5a5;
+.dark .popup-table-02 tbody tr.total-row td.col-highlight,
+.dark .popup-table-02 tbody tr.sum-row td.col-highlight {
+    background: linear-gradient(135deg, rgba(255, 107, 107, 0.2) 0%, rgba(255, 59, 48, 0.25) 100%);
+    color: #ff6b6b;
+}
+
+/* ============================================
+   셀 내부 비율 막대 (.cell-with-bar)
+   - 도태폐사 테이블 등에서 사용
+   ============================================ */
+.cell-with-bar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.cell-with-bar .bar-bg {
+    flex: 1;
+    height: 14px;
+    background: var(--rp-bg-cell-alt, #f5f5f5);
+    border-radius: 3px;
+    overflow: hidden;
+    min-width: 40px;
+}
+
+.dark .cell-with-bar .bar-bg {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.cell-with-bar .bar-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.3s ease;
+}
+
+.cell-with-bar .bar-fill.red {
+    background: linear-gradient(90deg, #dc3545, #c82333);
+}
+
+.cell-with-bar .bar-fill.blue {
+    background: linear-gradient(90deg, #667eea, #5a6fd6);
+}
+
+.cell-with-bar .bar-fill.green {
+    background: linear-gradient(90deg, #28a745, #218838);
+}
+
+.cell-with-bar .percent {
+    font-size: 11px;
+    color: var(--rp-text-tertiary, #86868b);
+    min-width: 36px;
+    text-align: right;
+}
+
+.cell-with-bar .value {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--rp-text-primary, #1d1d1f);
+    min-width: 20px;
+    text-align: right;
+}
+
+.dark .cell-with-bar .value {
+    color: var(--rp-text-primary);
 }
 
 /* 증감 표시 */
@@ -442,12 +596,14 @@
 }
 
 /* 합계 행의 증감 배지 */
-.popup-table-02 tbody tr.total-row .change-badge {
+.popup-table-02 tbody tr.total-row .change-badge,
+.popup-table-02 tbody tr.sum-row .change-badge {
     font-size: 12px; /* 모바일 */
     margin-left: 5px; /* 모바일 */
 }
 
-.popup-table-02 tbody tr.total-row .change-badge svg {
+.popup-table-02 tbody tr.total-row .change-badge svg,
+.popup-table-02 tbody tr.sum-row .change-badge svg {
     font-size: 11px; /* 모바일 */
 }
 
@@ -560,7 +716,7 @@
     }
 
     .popup-table-02 tbody td {
-        padding: 10px 8px;
+        padding: 10px 5px; /* 태블릿: 점진적 증가 */
         font-size: 14px;
     }
 
@@ -590,12 +746,14 @@
         font-size: 11px;
     }
 
-    .popup-table-02 tbody tr.total-row .change-badge {
+    .popup-table-02 tbody tr.total-row .change-badge,
+    .popup-table-02 tbody tr.sum-row .change-badge {
         font-size: 13px;
         margin-left: 6px;
     }
 
-    .popup-table-02 tbody tr.total-row .change-badge svg {
+    .popup-table-02 tbody tr.total-row .change-badge svg,
+    .popup-table-02 tbody tr.sum-row .change-badge svg {
         font-size: 12px;
     }
 }
@@ -710,7 +868,7 @@
     }
 
     .popup-table-02 tbody td {
-        padding: 14px 12px;
+        padding: 14px 10px; /* 데스크탑: 원래값 유지 */
         font-size: 15px;
     }
 
@@ -749,3 +907,48 @@
         font-size: 13px;
     }
 }
+
+/* ============================================
+   출하 팝업 - 메트릭스 하이라이트 스타일
+   ============================================ */
+.metric-item.highlight {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: #fff;
+}
+
+.metric-item.highlight .metric-value {
+    color: #fff;
+}
+
+.metric-item.highlight .metric-value .unit {
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.metric-item.highlight .metric-label {
+    color: rgba(255, 255, 255, 0.85);
+}
+
+.metric-item.highlight-orange {
+    background: linear-gradient(135deg, #ff9500 0%, #ffb340 100%);
+    color: #fff;
+}
+
+.metric-item.highlight-orange .metric-value {
+    color: #fff;
+}
+
+.metric-item.highlight-orange .metric-value .unit {
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.metric-item.highlight-orange .metric-label {
+    color: rgba(255, 255, 255, 0.85);
+}
+
+.metric-sub {
+    font-size: 10px;
+    opacity: 0.8;
+    margin-left: 2px;
+}
+
+

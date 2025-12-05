@@ -96,11 +96,14 @@ export default function Icon({ name, className = '', size }: IconProps) {
     return null;
   }
 
+  // size prop이 있으면 fa-* 클래스 추가
+  const sizeClass = size ? `fa-${size}` : '';
+  const combinedClassName = [className, sizeClass].filter(Boolean).join(' ');
+
   return (
     <FontAwesomeIcon
       icon={icon}
-      className={className}
-      size={size}
+      className={combinedClassName}
     />
   );
 }

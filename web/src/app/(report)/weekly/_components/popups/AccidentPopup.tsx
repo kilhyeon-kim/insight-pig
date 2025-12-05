@@ -40,7 +40,7 @@ export const AccidentPopup: React.FC<AccidentPopupProps> = ({ isOpen, onClose, d
             type: 'category',
             name: '임신일',
             data: data.chart.xAxis,
-            axisLabel: { fontSize: 11 }
+            axisLabel: { fontSize: 11, interval: 0 }
         },
         yAxis: {
             type: 'value',
@@ -76,13 +76,13 @@ export const AccidentPopup: React.FC<AccidentPopupProps> = ({ isOpen, onClose, d
                     className={`popup-tab ${activeTab === 'table' ? 'active' : ''}`}
                     onClick={() => setActiveTab('table')}
                 >
-                    <FontAwesomeIcon icon={faTable} /> 원인별 사고복수
+                    <FontAwesomeIcon icon={faTable} className="fa-sm" /> 원인별 사고복수
                 </button>
                 <button
                     className={`popup-tab ${activeTab === 'chart' ? 'active' : ''}`}
                     onClick={() => setActiveTab('chart')}
                 >
-                    <FontAwesomeIcon icon={faChartSimple} /> 임신일별 사고복수
+                    <FontAwesomeIcon icon={faChartSimple} className="fa-sm" /> 임신일별 사고복수
                 </button>
                 <div
                     className="popup-tab-indicator"
@@ -99,8 +99,8 @@ export const AccidentPopup: React.FC<AccidentPopupProps> = ({ isOpen, onClose, d
                     <div className="popup-section-desc justify-end">
                         <span>단위: 복</span>
                     </div>
-                    <div className="overflow-x-auto">
-                        <table className="popup-table-01">
+                    <div className="popup-table-wrap">
+                        <table className="popup-table-02">
                             <thead>
                                 <tr>
                                     <th>구분</th>
@@ -109,13 +109,44 @@ export const AccidentPopup: React.FC<AccidentPopupProps> = ({ isOpen, onClose, d
                                 </tr>
                             </thead>
                             <tbody>
-                                {data.table.map((row, index) => (
-                                    <tr key={index}>
-                                        <td className="label">{row.type}</td>
-                                        <td>{row.lastWeek}</td>
-                                        <td>{row.lastMonth}</td>
-                                    </tr>
-                                ))}
+                                {data.table.map((row, index) => {
+                                    const lastWeekPercent = lastWeekTotal > 0 ? (row.lastWeek / lastWeekTotal * 100).toFixed(1) : '0';
+                                    const lastMonthPercent = lastMonthTotal > 0 ? (row.lastMonth / lastMonthTotal * 100).toFixed(1) : '0';
+                                    const maxLastWeek = Math.max(...data.table.map(r => r.lastWeek), 1);
+                                    const maxLastMonth = Math.max(...data.table.map(r => r.lastMonth), 1);
+                                    const lastWeekBarWidth = (row.lastWeek / maxLastWeek * 100);
+                                    const lastMonthBarWidth = (row.lastMonth / maxLastMonth * 100);
+
+                                    return (
+                                        <tr key={index}>
+                                            <td className="label">{row.type}</td>
+                                            <td>
+                                                <div className="cell-with-bar">
+                                                    <div className="bar-bg">
+                                                        <div
+                                                            className="bar-fill red"
+                                                            style={{ width: `${lastWeekBarWidth}%` }}
+                                                        />
+                                                    </div>
+                                                    <span className="percent">{lastWeekPercent}%</span>
+                                                    <span className="value">{row.lastWeek}</span>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div className="cell-with-bar">
+                                                    <div className="bar-bg">
+                                                        <div
+                                                            className="bar-fill red"
+                                                            style={{ width: `${lastMonthBarWidth}%` }}
+                                                        />
+                                                    </div>
+                                                    <span className="percent">{lastMonthPercent}%</span>
+                                                    <span className="value">{row.lastMonth}</span>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
                                 <tr className="sum-row">
                                     <td className="label">합계</td>
                                     <td className="total">{lastWeekTotal}</td>

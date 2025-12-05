@@ -78,7 +78,7 @@ export const ExtraSection: React.FC<ExtraSectionProps> = ({ data, onPopupOpen })
                     <div className="info-accordion-card" id="cardPsy">
                         <div className="card-header">
                             <div className="card-title">
-                                <FontAwesomeIcon icon={faGrip} /> PSY & 입력지연
+                                <FontAwesomeIcon icon={faGrip} className="fa-sm" /> PSY & 입력지연
                             </div>
                             <button className="card-more" onClick={() => handlePopup('psytrend')}>
                                 <FontAwesomeIcon icon={faChartLine} />&nbsp;추이
@@ -101,7 +101,7 @@ export const ExtraSection: React.FC<ExtraSectionProps> = ({ data, onPopupOpen })
                     <div className="info-accordion-card" id="cardPrice">
                         <div className="card-header">
                             <div className="card-title">
-                                <FontAwesomeIcon icon={faWonSign} /> 경락가격(지난주)
+                                <FontAwesomeIcon icon={faWonSign} className="fa-sm" /> 경락가격(지난주)
                             </div>
                             <button className="card-more" onClick={() => handlePopup('auction')}>
                                 <FontAwesomeIcon icon={faChartLine} />&nbsp;주간가격
@@ -133,7 +133,7 @@ export const ExtraSection: React.FC<ExtraSectionProps> = ({ data, onPopupOpen })
                     <div className="info-accordion-card" id="cardWeather">
                         <div className="card-header">
                             <div className="card-title">
-                                <FontAwesomeIcon icon={faCloudSun} /> 오늘 날씨
+                                <FontAwesomeIcon icon={faCloudSun} className="fa-sm" /> 오늘 날씨
                             </div>
                             <button className="card-more" onClick={() => handlePopup('weather')}>
                                 <FontAwesomeIcon icon={faChartLine} />&nbsp;주간날씨

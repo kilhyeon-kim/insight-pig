@@ -27,8 +27,8 @@ export const FarrowingPopup: React.FC<FarrowingPopupProps> = ({ isOpen, onClose,
                 <span>작업예정대비 <span className="popup-section-desc">달성율 : 예정작업 대비</span></span>
                 <span className="popup-section-desc">단위: 복</span>
             </div>
-            <div className="overflow-x-auto">
-                <table className="popup-table-01">
+            <div className="popup-table-wrap">
+                <table className="popup-table-02">
                     <thead>
                         <tr>
                             <th>구분</th>
@@ -38,7 +38,7 @@ export const FarrowingPopup: React.FC<FarrowingPopupProps> = ({ isOpen, onClose,
                         </tr>
                     </thead>
                     <tbody>
-                        <tr className="sum-row">
+                        <tr>
                             <td className="label">분만</td>
                             <td>{data.planned}</td>
                             <td className="total">{data.actual}</td>
@@ -55,8 +55,8 @@ export const FarrowingPopup: React.FC<FarrowingPopupProps> = ({ isOpen, onClose,
                 <span>분만 성적</span>
                 <span className="popup-section-desc">비율: 총산대비</span>
             </div>
-            <div className="overflow-x-auto">
-                <table className="popup-table-01">
+            <div className="popup-table-wrap">
+                <table className="popup-table-02">
                     <thead>
                         <tr>
                             <th>구분</th>
@@ -96,7 +96,7 @@ export const FarrowingPopup: React.FC<FarrowingPopupProps> = ({ isOpen, onClose,
                             <td>{data.stats.culling.avg.toFixed(1)}</td>
                             <td className="text-red-600">{data.stats.culling.rate}</td>
                         </tr>
-                        <tr className="sum-row">
+                        <tr>
                             <td className="label">포유개시</td>
                             <td className="total">{data.stats.nursingStart.sum}</td>
                             <td>{data.stats.nursingStart.avg.toFixed(1)}</td>

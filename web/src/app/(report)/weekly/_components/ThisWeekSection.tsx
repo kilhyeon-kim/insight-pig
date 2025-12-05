@@ -2,7 +2,7 @@ import React from 'react';
 import { ThisWeekData } from '@/types/weekly';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
-    faCalendarCheck,
+    faCalendarWeek,
     faArrowUpRightFromSquare,
     faHeart,
     faMagnifyingGlass,
@@ -39,7 +39,7 @@ export const ThisWeekSection: React.FC<ThisWeekSectionProps> = ({ data, onPopupO
             <div className="card-header">
                 <div className="card-header-top">
                     <div className="card-title">
-                        <FontAwesomeIcon icon={faCalendarCheck} /> 금주 작업예정
+                        <FontAwesomeIcon icon={faCalendarWeek} /> 금주 작업예정
                     </div>
                     <div className="card-date-wrap right horizontal">
                         <div className="card-badge">Week {grid?.weekNum ?? data.summary.matingGoal}</div>

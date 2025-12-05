@@ -9,7 +9,7 @@ interface KPISectionProps {
 
 export const KPISection: React.FC<KPISectionProps> = ({ data }) => {
     return (
-        <div className="report-card h-full">
+        <div className="report-card">
             <div className="card-header">
                 <h3 className="card-title">주요 지표 (KPI)</h3>
             </div>

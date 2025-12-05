@@ -309,40 +309,51 @@ export const MOCK_POPUP_DATA: PopupData = {
     shipment: {
         metrics: {
             totalCount: 500,
-            compareLastWeek: '+8.7%',
-            grade1Rate: 81,
+            compareLastWeek: '+20',
+            grade1Rate: 84.6,
             avgCarcass: 86.0,
             avgBackfat: 21.5,
-            farmPrice: 5170,
-            nationalPrice: 4950
+            farmPrice: 5220,
+            nationalPrice: 5200
         },
-        gradeDistribution: [
-            { grade: '1+', count: 165, rate: 33 },
-            { grade: '1', count: 240, rate: 48 },
-            { grade: '2', count: 70, rate: 14 },
-            { grade: '등외', count: 25, rate: 5 }
+        // 등급 분포 (가로 막대 차트)
+        gradeChart: [
+            { name: '1+', value: 165, color: '#667eea', colorEnd: '#764ba2' },
+            { name: '1', value: 240, color: '#28a745', colorEnd: '#20c997' },
+            { name: '2', value: 70, color: '#ffc107', colorEnd: '#fd7e14' },
+            { name: '등외', value: 25, color: '#dc3545', colorEnd: '#e83e8c' }
         ],
-        dailyTable: [
-            { date: '11.18', count: 68, avgWeight: 85.5, avgBackfat: 21.2, grade1Rate: 79 },
-            { date: '11.19', count: 75, avgWeight: 86.2, avgBackfat: 22.0, grade1Rate: 82 },
-            { date: '11.20', count: 80, avgWeight: 86.8, avgBackfat: 21.8, grade1Rate: 84 },
-            { date: '11.21', count: 72, avgWeight: 85.8, avgBackfat: 21.5, grade1Rate: 80 },
-            { date: '11.22', count: 77, avgWeight: 86.5, avgBackfat: 21.3, grade1Rate: 83 },
-            { date: '11.23', count: 63, avgWeight: 85.2, avgBackfat: 21.0, grade1Rate: 78 },
-            { date: '11.24', count: 65, avgWeight: 86.0, avgBackfat: 21.7, grade1Rate: 81 }
-        ],
+        // 출하자료분석 테이블 (일별) - 원본 구조
+        table: {
+            days: ['11.18', '11.19', '11.20', '11.21', '11.22', '11.23', '11.24'],
+            rows: [
+                { category: '이유두수(20주전)', sub: '', colspan: true, data: [85, 78, 90, 82, 75, 62, 68], sum: 540, avg: 77.1 },
+                { category: '출하', sub: '두수', data: [68, 75, 80, 72, 77, 63, 65], sum: 500, avg: 71.4, highlight: 'primary' },
+                { category: '', sub: '육성율', data: [80.0, 96.2, 88.9, 87.8, 102.7, 101.6, 95.6], avg: 92.6, unit: '%' },
+                { category: '', sub: '1등급비율', data: [78.9, 81.0, 82.2, 80.0, 81.4, 80.0, 81.1], avg: 80.7, unit: '%' },
+                { category: '등급', sub: '1+', data: [22, 25, 27, 24, 26, 20, 21], sum: 165, gradeRow: true, highlight: 'success' },
+                { category: '', sub: '1', data: [32, 36, 38, 34, 37, 30, 33], sum: 240, gradeRow: true, highlight: 'success' },
+                { category: '', sub: '2', data: [10, 10, 11, 10, 10, 9, 10], sum: 70, gradeRow: true },
+                { category: '', sub: '등외', data: [4, 4, 4, 4, 4, 4, 1], sum: 25, gradeRow: true },
+                { category: '평균', sub: '지육체중(kg)', data: [85.5, 86.2, 86.8, 85.8, 86.5, 85.2, 86.0], avg: 86.0 },
+                { category: '', sub: '등지방두께(mm)', data: [21.2, 22.0, 21.8, 21.5, 21.3, 21.0, 21.7], avg: 21.5 }
+            ]
+        },
+        // 출하자료분석 차트 데이터
         analysisChart: {
             dates: ['11.18', '11.19', '11.20', '11.21', '11.22', '11.23', '11.24'],
             shipCount: [68, 75, 80, 72, 77, 63, 65],
             avgWeight: [85.5, 86.2, 86.8, 85.8, 86.5, 85.2, 86.0],
             avgBackfat: [21.2, 22.0, 21.8, 21.5, 21.3, 21.0, 21.7]
         },
+        // 도체중/등지방 분포 차트 데이터 (scatter)
         carcassChart: {
             data: [
-                { weight: 82, backfat: 19 }, { weight: 84, backfat: 20 }, { weight: 85, backfat: 21 },
-                { weight: 86, backfat: 22 }, { weight: 87, backfat: 21 }, { weight: 88, backfat: 23 },
-                { weight: 85, backfat: 20 }, { weight: 86, backfat: 21 }, { weight: 87, backfat: 22 },
-                { weight: 84, backfat: 19 }, { weight: 86, backfat: 20 }, { weight: 88, backfat: 22 }
+                [82, 18, 10], [84, 19, 15], [86, 20, 25], [88, 21, 45],
+                [90, 22, 60], [92, 22, 75], [94, 21, 65], [96, 20, 50],
+                [98, 19, 30], [100, 18, 20], [102, 17, 12], [85, 23, 12],
+                [87, 24, 18], [89, 23, 25], [91, 24, 15], [93, 25, 10],
+                [95, 24, 8], [83, 16, 5], [85, 17, 8], [97, 23, 5]
             ]
         }
     },

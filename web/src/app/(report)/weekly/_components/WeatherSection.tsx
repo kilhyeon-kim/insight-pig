@@ -29,7 +29,7 @@ export const WeatherSection: React.FC<WeatherSectionProps> = ({ data }) => {
     };
 
     return (
-        <div className="report-card h-full">
+        <div className="report-card">
             <div className="card-header">
                 <h3 className="card-title">주간 날씨</h3>
             </div>

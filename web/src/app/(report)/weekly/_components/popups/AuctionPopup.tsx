@@ -4,6 +4,7 @@ import React, { useEffect, useRef } from 'react';
 import { AuctionPopupData } from '@/types/weekly';
 import { PopupContainer } from './PopupContainer';
 import * as echarts from 'echarts';
+import { useChartResponsive } from './useChartResponsive';
 
 interface AuctionPopupProps {
     isOpen: boolean;
@@ -14,6 +15,7 @@ interface AuctionPopupProps {
 export const AuctionPopup: React.FC<AuctionPopupProps> = ({ isOpen, onClose, data }) => {
     const chartRef = useRef<HTMLDivElement>(null);
     const chartInstance = useRef<echarts.ECharts | null>(null);
+    const chartSizes = useChartResponsive();
 
     useEffect(() => {
         if (!isOpen || !chartRef.current) return;
@@ -48,7 +50,7 @@ export const AuctionPopup: React.FC<AuctionPopupProps> = ({ isOpen, onClose, dat
                 itemWidth: 14,
                 itemHeight: 10,
                 textStyle: {
-                    fontSize: 11,
+                    fontSize: chartSizes.legendSize,
                     color: isDark ? '#e6edf3' : '#555'
                 }
             },
@@ -63,9 +65,10 @@ export const AuctionPopup: React.FC<AuctionPopupProps> = ({ isOpen, onClose, dat
                 type: 'category',
                 data: data?.xData || [],
                 axisLabel: {
-                    fontSize: 10,
+                    fontSize: chartSizes.axisLabelSize,
                     color: isDark ? '#e6edf3' : '#555',
-                    rotate: 30
+                    rotate: 30,
+                    interval: 0
                 },
                 axisLine: { lineStyle: { color: isDark ? 'rgba(255,255,255,0.2)' : '#ddd' } }
             },
@@ -74,7 +77,7 @@ export const AuctionPopup: React.FC<AuctionPopupProps> = ({ isOpen, onClose, dat
                 min: 3500,
                 max: 7000,
                 axisLabel: {
-                    fontSize: 10,
+                    fontSize: chartSizes.axisLabelSize,
                     color: isDark ? '#e6edf3' : '#555'
                 },
                 axisLine: { lineStyle: { color: isDark ? 'rgba(255,255,255,0.2)' : '#ddd' } },
@@ -154,7 +157,7 @@ export const AuctionPopup: React.FC<AuctionPopupProps> = ({ isOpen, onClose, dat
                         position: 'top',
                         offset: [0, -5],
                         fontWeight: 'bold',
-                        fontSize: 11,
+                        fontSize: chartSizes.dataLabelSize,
                         color: labelColor,
                         textBorderColor: isDark ? '#161b22' : '#ffffff',
                         textBorderWidth: 2,
@@ -200,7 +203,7 @@ export const AuctionPopup: React.FC<AuctionPopupProps> = ({ isOpen, onClose, dat
             chart.dispose();
             chartInstance.current = null;
         };
-    }, [isOpen, data]);
+    }, [isOpen, data, chartSizes]);
 
     return (
         <PopupContainer

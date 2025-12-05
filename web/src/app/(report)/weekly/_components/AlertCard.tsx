@@ -13,7 +13,7 @@ export const AlertCard: React.FC<AlertCardProps> = ({ data, onClick }) => {
     return (
         <div className="alert-card">
             <div className="alert-card-icon">
-                <FontAwesomeIcon icon={faTriangleExclamation} />
+                <FontAwesomeIcon icon={faTriangleExclamation} className="fa-sm" />
             </div>
             <div className="alert-card-info">
                 <div className="alert-card-title">관리대상모돈</div>

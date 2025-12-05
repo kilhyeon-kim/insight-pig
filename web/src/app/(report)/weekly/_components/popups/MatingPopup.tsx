@@ -4,6 +4,7 @@ import { MatingPopupData } from '@/types/weekly';
 import { PopupContainer } from './PopupContainer';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTable, faChartSimple } from '@fortawesome/free-solid-svg-icons';
+import { useChartResponsive } from './useChartResponsive';
 
 interface MatingPopupProps {
     isOpen: boolean;
@@ -19,29 +20,39 @@ interface MatingPopupProps {
  */
 export const MatingPopup: React.FC<MatingPopupProps> = ({ isOpen, onClose, data }) => {
     const [activeTab, setActiveTab] = useState<'table' | 'chart'>('table');
+    const chartSizes = useChartResponsive();
 
     // 차트 옵션 (재귀일별 교배복수)
     const chartOption = {
         tooltip: {
             trigger: 'axis',
-            axisPointer: { type: 'shadow' }
+            axisPointer: { type: 'shadow' },
+            textStyle: { fontSize: chartSizes.tooltipSize }
         },
         grid: {
             left: '3%',
-            right: '4%',
-            bottom: '3%',
+            right: '6%',
+            bottom: '5%',
             containLabel: true
         },
         xAxis: {
             type: 'category',
             name: '재귀일',
+            nameLocation: 'end',
+            nameGap: 10,
             data: data.chart.xAxis,
-            axisLabel: { fontSize: 11 }
+            axisLabel: { fontSize: chartSizes.axisLabelSize, interval: 0 },
+            nameTextStyle: {
+                fontSize: chartSizes.axisNameSize,
+                verticalAlign: 'top',
+                padding: [20, 0, 0, -10]
+            }
         },
         yAxis: {
             type: 'value',
             name: '복수',
-            nameTextStyle: { fontSize: 11 }
+            nameTextStyle: { fontSize: chartSizes.axisNameSize },
+            axisLabel: { fontSize: chartSizes.axisLabelSize }
         },
         series: [{
             name: '교배복수',
@@ -54,7 +65,7 @@ export const MatingPopup: React.FC<MatingPopupProps> = ({ isOpen, onClose, data 
             label: {
                 show: true,
                 position: 'top',
-                fontSize: 10
+                fontSize: chartSizes.dataLabelSize
             }
         }]
     };
@@ -72,13 +83,13 @@ export const MatingPopup: React.FC<MatingPopupProps> = ({ isOpen, onClose, data 
                     className={`popup-tab ${activeTab === 'table' ? 'active' : ''}`}
                     onClick={() => setActiveTab('table')}
                 >
-                    <FontAwesomeIcon icon={faTable} /> 유형별 교배복수
+                    <FontAwesomeIcon icon={faTable} className="fa-sm" /> 유형별 교배복수
                 </button>
                 <button
                     className={`popup-tab ${activeTab === 'chart' ? 'active' : ''}`}
                     onClick={() => setActiveTab('chart')}
                 >
-                    <FontAwesomeIcon icon={faChartSimple} /> 재귀일별 교배복수
+                    <FontAwesomeIcon icon={faChartSimple} className="fa-sm" /> 재귀일별 교배복수
                 </button>
                 <div
                     className="popup-tab-indicator"
@@ -96,8 +107,8 @@ export const MatingPopup: React.FC<MatingPopupProps> = ({ isOpen, onClose, data 
                         <span>달성율 : 예정작업 대비</span>
                         <span>단위: 복</span>
                     </div>
-                    <div className="overflow-x-auto">
-                        <table className="popup-table-01">
+                    <div className="popup-table-wrap">
+                        <table className="popup-table-02">
                             <thead>
                                 <tr>
                                     <th>구분</th>

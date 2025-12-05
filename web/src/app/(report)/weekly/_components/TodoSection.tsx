@@ -9,7 +9,7 @@ interface TodoSectionProps {
 
 export const TodoSection: React.FC<TodoSectionProps> = ({ data }) => {
     return (
-        <div className="report-card h-full">
+        <div className="report-card">
             <div className="card-header">
                 <h3 className="card-title">중점 관리 사항</h3>
             </div>

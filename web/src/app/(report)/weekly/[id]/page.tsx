@@ -17,7 +17,6 @@ import { LastWeekSection } from '../_components/LastWeekSection';
 import { ThisWeekSection } from '../_components/ThisWeekSection';
 import { ExtraSection } from '../_components/ExtraSection';
 import { MgmtSection } from '../_components/MgmtSection';
-import { TodoSection } from '../_components/TodoSection';
 
 // Popups
 import { AlertMdPopup } from '../_components/popups/AlertMdPopup';
@@ -73,9 +72,6 @@ export default function WeeklyDetailPage({ params }: WeeklyDetailPageProps) {
 
                 {/* Mgmt Section (현재 시기 관리 포인트) */}
                 <MgmtSection data={MOCK_MGMT_DATA} />
-
-                {/* Todo Section */}
-                <TodoSection data={data.todo} />
             </div>
 
             {/* Popups */}

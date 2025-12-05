@@ -1,7 +1,7 @@
 import React from 'react';
 import { LastWeekData } from '@/types/weekly';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faChartLine, faArrowUpRightFromSquare, faCaretUp, faCaretDown } from '@fortawesome/free-solid-svg-icons';
+import { faClipboardList, faArrowUpRightFromSquare, faCaretUp, faCaretDown } from '@fortawesome/free-solid-svg-icons';
 import { formatNumber } from '@/utils/format';
 
 interface LastWeekSectionProps {
@@ -15,7 +15,7 @@ export const LastWeekSection: React.FC<LastWeekSectionProps> = ({ data, onPopupO
             <div className="card-header">
                 <div className="card-header-top">
                     <div className="card-title">
-                        <FontAwesomeIcon icon={faChartLine} /> 지난주 주요실적
+                        <FontAwesomeIcon icon={faClipboardList} /> 지난주 주요실적
                     </div>
                     <div className="card-date-wrap right horizontal">
                         <div className="card-badge">Week {data.period.weekNum}</div>
@@ -41,7 +41,7 @@ export const LastWeekSection: React.FC<LastWeekSectionProps> = ({ data, onPopupO
 
                     {/* 모돈 */}
                     <div className="cell label row-span-2 clickable" onClick={() => onPopupOpen('modon')}>
-                        모돈<FontAwesomeIcon icon={faArrowUpRightFromSquare} className="detail-icon" />
+                        모돈<FontAwesomeIcon icon={faArrowUpRightFromSquare} className="detail-icon fa-sm" />
                     </div>
                     <div className="cell sub">현재모돈</div>
                     <div className="cell count lastweek">{formatNumber(data.modon.regCnt)}</div>
@@ -57,7 +57,7 @@ export const LastWeekSection: React.FC<LastWeekSectionProps> = ({ data, onPopupO
 
                     {/* 교배 */}
                     <div className="cell label clickable section-start" onClick={() => onPopupOpen('mating')}>
-                        교배<FontAwesomeIcon icon={faArrowUpRightFromSquare} className="detail-icon" />
+                        교배<FontAwesomeIcon icon={faArrowUpRightFromSquare} className="detail-icon fa-sm" />
                     </div>
                     <div className="cell sub section-start">복수</div>
                     <div className="cell count lastweek section-start">{formatNumber(data.mating.cnt)}</div>
@@ -67,7 +67,7 @@ export const LastWeekSection: React.FC<LastWeekSectionProps> = ({ data, onPopupO
 
                     {/* 분만 */}
                     <div className="cell label row-span-3 clickable section-start" onClick={() => onPopupOpen('farrowing')}>
-                        분만<FontAwesomeIcon icon={faArrowUpRightFromSquare} className="detail-icon" />
+                        분만<FontAwesomeIcon icon={faArrowUpRightFromSquare} className="detail-icon fa-sm" />
                     </div>
                     <div className="cell sub section-start">복수</div>
                     <div className="cell count lastweek section-start">{formatNumber(data.farrowing.cnt)}</div>
@@ -105,7 +105,7 @@ export const LastWeekSection: React.FC<LastWeekSectionProps> = ({ data, onPopupO
 
                     {/* 이유 */}
                     <div className="cell label row-span-2 clickable section-start" onClick={() => onPopupOpen('weaning')}>
-                        이유<FontAwesomeIcon icon={faArrowUpRightFromSquare} className="detail-icon" />
+                        이유<FontAwesomeIcon icon={faArrowUpRightFromSquare} className="detail-icon fa-sm" />
                     </div>
                     <div className="cell sub section-start">복수</div>
                     <div className="cell count lastweek section-start">{formatNumber(data.weaning.cnt)}</div>
@@ -129,7 +129,7 @@ export const LastWeekSection: React.FC<LastWeekSectionProps> = ({ data, onPopupO
 
                     {/* 사고 */}
                     <div className="cell label clickable section-start" onClick={() => onPopupOpen('accident')}>
-                        사고<FontAwesomeIcon icon={faArrowUpRightFromSquare} className="detail-icon" />
+                        사고<FontAwesomeIcon icon={faArrowUpRightFromSquare} className="detail-icon fa-sm" />
                     </div>
                     <div className="cell sub section-start">교배후 사고<br className="mobile-br"/>(복수)</div>
                     <div className="cell count lastweek section-start">{formatNumber(data.accident.cnt)}</div>
@@ -139,7 +139,7 @@ export const LastWeekSection: React.FC<LastWeekSectionProps> = ({ data, onPopupO
 
                     {/* 도태폐사 */}
                     <div className="cell label clickable section-start" onClick={() => onPopupOpen('culling')}>
-                        도태<br className="mobile-br"/>폐사<FontAwesomeIcon icon={faArrowUpRightFromSquare} className="detail-icon" />
+                        도태<br className="mobile-br"/>폐사<FontAwesomeIcon icon={faArrowUpRightFromSquare} className="detail-icon fa-sm" />
                     </div>
                     <div className="cell sub section-start">모돈 도폐사</div>
                     <div className="cell count lastweek section-start">{formatNumber(data.culling.cnt)}</div>
@@ -149,7 +149,7 @@ export const LastWeekSection: React.FC<LastWeekSectionProps> = ({ data, onPopupO
 
                     {/* 출하 */}
                     <div className="cell label clickable section-start" onClick={() => onPopupOpen('shipment')}>
-                        출하<FontAwesomeIcon icon={faArrowUpRightFromSquare} className="detail-icon" />
+                        출하<FontAwesomeIcon icon={faArrowUpRightFromSquare} className="detail-icon fa-sm" />
                     </div>
                     <div className="cell sub section-start">복수/<br className="mobile-br"/>평균체중</div>
                     <div className="cell count lastweek section-start">{formatNumber(data.shipment.cnt)}</div>

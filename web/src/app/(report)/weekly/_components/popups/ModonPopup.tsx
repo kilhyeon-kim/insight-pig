@@ -6,6 +6,7 @@ import { ModonPopupData } from '@/types/weekly';
 import { PopupContainer } from './PopupContainer';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTable, faChartSimple, faCaretUp, faCaretDown } from '@fortawesome/free-solid-svg-icons';
+import { useChartResponsive } from './useChartResponsive';
 
 interface ModonPopupProps {
     isOpen: boolean;
@@ -21,6 +22,7 @@ interface ModonPopupProps {
  */
 export const ModonPopup: React.FC<ModonPopupProps> = ({ isOpen, onClose, data }) => {
     const [activeTab, setActiveTab] = useState<'table' | 'chart'>('table');
+    const chartSizes = useChartResponsive();
 
     // 행 합계 계산
     const calculateRowTotal = (row: typeof data.table[0]) =>
@@ -59,7 +61,8 @@ export const ModonPopup: React.FC<ModonPopupProps> = ({ isOpen, onClose, data })
     const chartOption = {
         tooltip: {
             trigger: 'axis',
-            axisPointer: { type: 'shadow' }
+            axisPointer: { type: 'shadow' },
+            textStyle: { fontSize: chartSizes.tooltipSize }
         },
         grid: {
             left: '3%',
@@ -71,14 +74,16 @@ export const ModonPopup: React.FC<ModonPopupProps> = ({ isOpen, onClose, data })
             type: 'category',
             data: data.chart.xAxis,
             axisLabel: {
-                fontSize: 11,
-                rotate: 45
+                fontSize: chartSizes.axisLabelSize,
+                rotate: 45,
+                interval: 0
             }
         },
         yAxis: {
             type: 'value',
             name: '두수',
-            nameTextStyle: { fontSize: 11 }
+            nameTextStyle: { fontSize: chartSizes.axisNameSize },
+            axisLabel: { fontSize: chartSizes.axisLabelSize }
         },
         series: [{
             name: '모돈수',
@@ -91,7 +96,7 @@ export const ModonPopup: React.FC<ModonPopupProps> = ({ isOpen, onClose, data })
             label: {
                 show: true,
                 position: 'top',
-                fontSize: 10,
+                fontSize: chartSizes.dataLabelSize,
                 fontWeight: 600
             }
         }]
@@ -122,13 +127,13 @@ export const ModonPopup: React.FC<ModonPopupProps> = ({ isOpen, onClose, data })
                     className={`popup-tab ${activeTab === 'table' ? 'active' : ''}`}
                     onClick={() => setActiveTab('table')}
                 >
-                    <FontAwesomeIcon icon={faTable} /> 모돈구성비율
+                    <FontAwesomeIcon icon={faTable} className="fa-sm" /> 모돈구성비율
                 </button>
                 <button
                     className={`popup-tab ${activeTab === 'chart' ? 'active' : ''}`}
                     onClick={() => setActiveTab('chart')}
                 >
-                    <FontAwesomeIcon icon={faChartSimple} /> 산차별 현황
+                    <FontAwesomeIcon icon={faChartSimple} className="fa-sm" /> 산차별 현황
                 </button>
             </div>
 
@@ -143,8 +148,8 @@ export const ModonPopup: React.FC<ModonPopupProps> = ({ isOpen, onClose, data })
                         </span>
                         <span>단위: 복</span>
                     </div>
-                    <div className="popup-table-wrap">
-                        <table className="popup-table-02">
+                    <div className="popup-table-wrap" style={{ overflowX: 'auto' }}>
+                        <table className="popup-table-02" style={{ minWidth: '550px' }}>
                             <thead>
                                 <tr>
                                     <th>구분</th>
