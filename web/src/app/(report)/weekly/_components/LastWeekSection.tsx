@@ -17,7 +17,7 @@ export const LastWeekSection: React.FC<LastWeekSectionProps> = ({ data, onPopupO
                     <div className="card-title">
                         <FontAwesomeIcon icon={faChartLine} /> 지난주 주요실적
                     </div>
-                    <div className="card-date-wrap right inline">
+                    <div className="card-date-wrap right horizontal">
                         <div className="card-badge">Week {data.period.weekNum}</div>
                         <div className="card-date">{data.period.from} ~ {data.period.to}</div>
                     </div>
