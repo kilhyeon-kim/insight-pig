@@ -161,8 +161,9 @@ export const WeatherPopup: React.FC<WeatherPopupProps> = ({ isOpen, onClose, dat
             title="주간 날씨 예보"
             subtitle="기상청 단기예보 기준"
             maxWidth="max-w-2xl"
+            id="pop-weather"
         >
-            <div ref={chartRef} style={{ width: '100%', height: '320px' }} />
+            <div id="cht-weather-temp" ref={chartRef} style={{ width: '100%', height: '320px' }} />
         </PopupContainer>
     );
 };

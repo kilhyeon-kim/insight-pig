@@ -15,12 +15,22 @@ interface FarrowingPopupProps {
  * @see popup.js tpl-farrowing
  */
 export const FarrowingPopup: React.FC<FarrowingPopupProps> = ({ isOpen, onClose, data }) => {
+    // 달성률 계산 (소수점 1자리)
+    const calcRate = (planned: number, actual: number): string => {
+        if (planned === 0) return '-';
+        return ((actual / planned) * 100).toFixed(1) + '%';
+    };
+
+    const rate = calcRate(data.planned, data.actual);
+    const rateValue = parseFloat(rate);
+
     return (
         <PopupContainer
             isOpen={isOpen}
             onClose={onClose}
             title="분만 실적"
             subtitle="지난주 예정 대비 및 분만 성적"
+            id="pop-farrowing"
         >
             {/* 작업예정대비 섹션 */}
             <div className="popup-section-label">
@@ -28,7 +38,7 @@ export const FarrowingPopup: React.FC<FarrowingPopupProps> = ({ isOpen, onClose,
                 <span className="popup-section-desc">단위: 복</span>
             </div>
             <div className="popup-table-wrap">
-                <table className="popup-table-02">
+                <table className="popup-table-02" id="tbl-farrowing-plan">
                     <thead>
                         <tr>
                             <th>구분</th>
@@ -42,8 +52,8 @@ export const FarrowingPopup: React.FC<FarrowingPopupProps> = ({ isOpen, onClose,
                             <td className="label">분만</td>
                             <td>{data.planned}</td>
                             <td className="total">{data.actual}</td>
-                            <td className={parseInt(data.rate) >= 100 ? 'text-green-600' : 'text-red-600'}>
-                                {data.rate}
+                            <td className={rateValue >= 100 ? 'text-green-600' : 'text-red-600'}>
+                                {rate}
                             </td>
                         </tr>
                     </tbody>
@@ -56,7 +66,7 @@ export const FarrowingPopup: React.FC<FarrowingPopupProps> = ({ isOpen, onClose,
                 <span className="popup-section-desc">비율: 총산대비</span>
             </div>
             <div className="popup-table-wrap">
-                <table className="popup-table-02">
+                <table className="popup-table-02" id="tbl-farrowing-stats">
                     <thead>
                         <tr>
                             <th>구분</th>
@@ -72,7 +82,7 @@ export const FarrowingPopup: React.FC<FarrowingPopupProps> = ({ isOpen, onClose,
                             <td>{data.stats.totalBorn.avg.toFixed(1)}</td>
                             <td>-</td>
                         </tr>
-                        <tr>
+                        <tr className="row-highlight">
                             <td className="label">실산</td>
                             <td>{data.stats.bornAlive.sum}</td>
                             <td>{data.stats.bornAlive.avg.toFixed(1)}</td>
@@ -91,14 +101,14 @@ export const FarrowingPopup: React.FC<FarrowingPopupProps> = ({ isOpen, onClose,
                             <td className="text-red-600">{data.stats.mummy.rate}</td>
                         </tr>
                         <tr>
-                            <td className="label">자돈폐사</td>
+                            <td className="label">생시도태</td>
                             <td>{data.stats.culling.sum}</td>
                             <td>{data.stats.culling.avg.toFixed(1)}</td>
                             <td className="text-red-600">{data.stats.culling.rate}</td>
                         </tr>
-                        <tr>
+                        <tr className="row-highlight">
                             <td className="label">포유개시</td>
-                            <td className="total">{data.stats.nursingStart.sum}</td>
+                            <td>{data.stats.nursingStart.sum}</td>
                             <td>{data.stats.nursingStart.avg.toFixed(1)}</td>
                             <td className="text-green-600">{data.stats.nursingStart.rate}</td>
                         </tr>

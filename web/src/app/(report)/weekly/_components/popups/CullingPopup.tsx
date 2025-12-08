@@ -16,21 +16,16 @@ interface CullingPopupProps {
  */
 export const CullingPopup: React.FC<CullingPopupProps> = ({ isOpen, onClose, data }) => {
     // 합계 계산
-    const statsTotal = data.stats.dotae + data.stats.dead + data.stats.transfer + data.stats.sale;
     const lastWeekTotal = data.table.reduce((sum, row) => sum + row.lastWeek, 0);
     const lastMonthTotal = data.table.reduce((sum, row) => sum + row.lastMonth, 0);
 
-    // 스탯바 데이터
+    // 스탯바 데이터 (원본: danger/warning 클래스)
     const statItems = [
-        { label: '도태', value: data.stats.dotae, color: '#667eea' },
-        { label: '폐사', value: data.stats.dead, color: '#dc3545' },
-        { label: '전출', value: data.stats.transfer, color: '#28a745' },
-        { label: '판매', value: data.stats.sale, color: '#ffc107' }
+        { label: '도태', value: data.stats.dotae, type: 'danger' as const },
+        { label: '폐사', value: data.stats.dead, type: 'danger' as const },
+        { label: '전출', value: data.stats.transfer, type: 'warning' as const },
+        { label: '판매', value: data.stats.sale, type: 'warning' as const }
     ];
-
-    // 비율 계산용 최대값
-    const maxLastWeek = Math.max(...data.table.map(row => row.lastWeek), 1);
-    const maxLastMonth = Math.max(...data.table.map(row => row.lastMonth), 1);
 
     return (
         <PopupContainer
@@ -38,25 +33,22 @@ export const CullingPopup: React.FC<CullingPopupProps> = ({ isOpen, onClose, dat
             onClose={onClose}
             title="도태폐사"
             subtitle="지난주 유형별 및 원인별 도폐사현황"
+            id="pop-culling"
         >
             {/* 유형별 스탯 바 */}
             <div className="popup-section-label">
                 <span>유형별 현황</span>
                 <span className="popup-section-desc">단위: 복</span>
             </div>
-            <div className="stats-bar">
+            <div className="stats-bar-modern" id="cullingStatsBar">
                 {statItems.map((item, index) => (
-                    <div key={index} className="stats-bar-item shadow-sm" style={{ borderLeftColor: item.color }}>
-                        <div className="stats-bar-value" style={{ color: item.color }}>
+                    <div key={index} className="stats-bar-modern-item">
+                        <div className="stats-bar-modern-label">{item.label}</div>
+                        <div className={`stats-bar-modern-value ${item.type}`}>
                             {item.value}
                         </div>
-                        <div className="stats-bar-label">{item.label}</div>
                     </div>
                 ))}
-                <div className="stats-bar-item total">
-                    <div className="stats-bar-value">{statsTotal}</div>
-                    <div className="stats-bar-label">합계</div>
-                </div>
             </div>
 
             {/* 원인별 도폐사 테이블 */}
@@ -65,7 +57,7 @@ export const CullingPopup: React.FC<CullingPopupProps> = ({ isOpen, onClose, dat
                 <span className="popup-section-desc">단위: 복</span>
             </div>
             <div className="popup-table-wrap">
-                <table className="popup-table-02">
+                <table className="popup-table-02" id="tbl-culling-cause">
                     <thead>
                         <tr>
                             <th>원인</th>
@@ -75,10 +67,12 @@ export const CullingPopup: React.FC<CullingPopupProps> = ({ isOpen, onClose, dat
                     </thead>
                     <tbody>
                         {data.table.map((row, index) => {
+                            // 비율: 합계 기준 (100% = 합계)
                             const lastWeekPercent = lastWeekTotal > 0 ? (row.lastWeek / lastWeekTotal * 100).toFixed(1) : '0';
                             const lastMonthPercent = lastMonthTotal > 0 ? (row.lastMonth / lastMonthTotal * 100).toFixed(1) : '0';
-                            const lastWeekBarWidth = (row.lastWeek / maxLastWeek * 100);
-                            const lastMonthBarWidth = (row.lastMonth / maxLastMonth * 100);
+                            // 바 너비: 합계 대비 비율
+                            const lastWeekBarWidth = lastWeekTotal > 0 ? (row.lastWeek / lastWeekTotal * 100) : 0;
+                            const lastMonthBarWidth = lastMonthTotal > 0 ? (row.lastMonth / lastMonthTotal * 100) : 0;
 
                             return (
                                 <tr key={index}>
@@ -99,7 +93,7 @@ export const CullingPopup: React.FC<CullingPopupProps> = ({ isOpen, onClose, dat
                                         <div className="cell-with-bar">
                                             <div className="bar-bg">
                                                 <div
-                                                    className="bar-fill blue"
+                                                    className="bar-fill gray"
                                                     style={{ width: `${lastMonthBarWidth}%` }}
                                                 />
                                             </div>

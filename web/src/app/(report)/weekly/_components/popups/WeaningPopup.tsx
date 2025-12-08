@@ -15,12 +15,22 @@ interface WeaningPopupProps {
  * @see popup.js tpl-weaning
  */
 export const WeaningPopup: React.FC<WeaningPopupProps> = ({ isOpen, onClose, data }) => {
+    // 달성률 계산 (소수점 1자리)
+    const calcRate = (planned: number, actual: number): string => {
+        if (planned === 0) return '-';
+        return ((actual / planned) * 100).toFixed(1) + '%';
+    };
+
+    const rate = calcRate(data.planned, data.actual);
+    const rateValue = parseFloat(rate);
+
     return (
         <PopupContainer
             isOpen={isOpen}
             onClose={onClose}
             title="이유 실적"
             subtitle="지난주 예정 대비 및 이유 성적"
+            id="pop-weaning"
         >
             {/* 작업예정대비 섹션 */}
             <div className="popup-section-label">
@@ -28,7 +38,7 @@ export const WeaningPopup: React.FC<WeaningPopupProps> = ({ isOpen, onClose, dat
                 <span className="popup-section-desc">단위: 복</span>
             </div>
             <div className="popup-table-wrap">
-                <table className="popup-table-02">
+                <table className="popup-table-02" id="tbl-weaning-plan">
                     <thead>
                         <tr>
                             <th>구분</th>
@@ -42,8 +52,8 @@ export const WeaningPopup: React.FC<WeaningPopupProps> = ({ isOpen, onClose, dat
                             <td className="label">이유</td>
                             <td>{data.planned}</td>
                             <td className="total">{data.actual}</td>
-                            <td className={parseInt(data.rate) >= 100 ? 'text-green-600' : 'text-red-600'}>
-                                {data.rate}
+                            <td className={rateValue >= 100 ? 'text-green-600' : 'text-red-600'}>
+                                {rate}
                             </td>
                         </tr>
                     </tbody>
@@ -56,7 +66,7 @@ export const WeaningPopup: React.FC<WeaningPopupProps> = ({ isOpen, onClose, dat
                 <span className="popup-section-desc">이유육성율: 실산대비</span>
             </div>
             <div className="popup-table-wrap">
-                <table className="popup-table-02">
+                <table className="popup-table-02" id="tbl-weaning-stats">
                     <thead>
                         <tr>
                             <th>구분</th>

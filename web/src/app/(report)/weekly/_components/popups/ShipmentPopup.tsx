@@ -4,6 +4,7 @@ import { PopupContainer } from './PopupContainer';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTable, faChartLine, faCircle } from '@fortawesome/free-solid-svg-icons';
 import { useChartResponsive } from './useChartResponsive';
+import { useTheme } from '@/contexts/ThemeContext';
 
 interface ShipmentMetrics {
     totalCount: number;
@@ -68,6 +69,14 @@ interface ShipmentPopupProps {
 export const ShipmentPopup: React.FC<ShipmentPopupProps> = ({ isOpen, onClose, data }) => {
     const [activeTab, setActiveTab] = useState<'summary' | 'analysis' | 'carcass'>('summary');
     const chartSizes = useChartResponsive();
+    const { theme } = useTheme();
+
+    // 다크모드 색상
+    const isDark = theme === 'dark';
+    const textColor = isDark ? '#e6edf3' : '#1d1d1f';
+    const splitLineColor = isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.08)';
+    const dataLabelColor = isDark ? '#ffd700' : '#333';  // 다크모드: 골드 (확 뜨는 색상)
+    const subLabelColor = isDark ? '#66d9ef' : '#666';   // 다크모드: 시안 (보조 라벨용)
 
     const { metrics, gradeChart, table, analysisChart, carcassChart } = data;
     const total = gradeChart.reduce((sum, d) => sum + d.value, 0);
@@ -104,6 +113,7 @@ export const ShipmentPopup: React.FC<ShipmentPopupProps> = ({ isOpen, onClose, d
             axisLine: { show: false },
             axisTick: { show: false },
             axisLabel: {
+                color: textColor,
                 fontSize: chartSizes.axisLabelSize,
                 fontWeight: 600
             }
@@ -129,7 +139,7 @@ export const ShipmentPopup: React.FC<ShipmentPopupProps> = ({ isOpen, onClose, d
                     position: 'right',
                     formatter: `${d.value}두 (${((d.value / total) * 100).toFixed(1)}%)`,
                     fontSize: chartSizes.dataLabelSize,
-                    color: '#666'
+                    color: subLabelColor
                 }
             })).reverse()
         }]
@@ -139,11 +149,11 @@ export const ShipmentPopup: React.FC<ShipmentPopupProps> = ({ isOpen, onClose, d
     const analysisChartOption = {
         tooltip: {
             trigger: 'axis',
-            axisPointer: { type: 'cross', crossStyle: { color: '#999' } },
-            backgroundColor: 'rgba(255,255,255,0.95)',
-            borderColor: '#e0e0e0',
+            axisPointer: { type: 'cross', crossStyle: { color: isDark ? '#999' : '#999' } },
+            backgroundColor: isDark ? 'rgba(30,35,45,0.95)' : 'rgba(255,255,255,0.95)',
+            borderColor: isDark ? '#444' : '#e0e0e0',
             borderWidth: 1,
-            textStyle: { color: '#333', fontSize: chartSizes.tooltipSize },
+            textStyle: { color: textColor, fontSize: chartSizes.tooltipSize },
             formatter: (params: { axisValue: string; marker: string; seriesName: string; value: number }[]) => {
                 let result = '<strong>' + params[0].axisValue + '</strong><br/>';
                 params.forEach(item => {
@@ -156,7 +166,7 @@ export const ShipmentPopup: React.FC<ShipmentPopupProps> = ({ isOpen, onClose, d
         legend: {
             data: ['체중', '등지방 두께', '출하두수'],
             bottom: '2%',
-            textStyle: { fontWeight: 600, fontSize: chartSizes.legendSize },
+            textStyle: { fontWeight: 600, fontSize: chartSizes.legendSize, color: textColor },
             itemGap: 15
         },
         grid: {
@@ -169,31 +179,37 @@ export const ShipmentPopup: React.FC<ShipmentPopupProps> = ({ isOpen, onClose, d
         xAxis: {
             type: 'category',
             data: analysisChart.dates,
-            axisLabel: { fontSize: chartSizes.axisLabelSize, interval: 0 },
-            axisLine: { lineStyle: { width: 2 } }
+            axisLabel: {
+                fontSize: chartSizes.axisLabelSize,
+                interval: 0,
+                color: textColor,
+                rotate: 15,
+                formatter: (value: string) => value + '일'
+            },
+            axisLine: { lineStyle: { width: 2, color: isDark ? '#555' : '#333' } }
         },
         yAxis: [
             {
                 type: 'value',
                 name: '출하두수',
                 nameGap: 20,
-                nameTextStyle: { fontSize: chartSizes.axisNameSize },
+                nameTextStyle: { fontSize: chartSizes.axisNameSize, color: isDark ? '#a78bfa' : '#667eea' },
                 position: 'left',
-                axisLine: { show: true, lineStyle: { color: '#667eea', width: 2 } },
-                axisLabel: { formatter: '{value}', fontSize: chartSizes.axisLabelSize },
-                splitLine: { lineStyle: { type: 'dashed', opacity: 0.3 } }
+                axisLine: { show: true, lineStyle: { color: isDark ? '#a78bfa' : '#667eea', width: 2 } },
+                axisLabel: { formatter: '{value}', fontSize: chartSizes.axisLabelSize, color: textColor },
+                splitLine: { lineStyle: { type: 'dashed', color: splitLineColor } }
             },
             {
                 type: 'value',
                 name: '체중/등지방',
                 nameGap: 20,
-                nameTextStyle: { fontSize: chartSizes.axisNameSize },
+                nameTextStyle: { fontSize: chartSizes.axisNameSize, color: isDark ? '#34d399' : '#10b981' },
                 position: 'right',
                 min: 0,
                 max: 120,
                 interval: 10,
-                axisLine: { show: true, lineStyle: { color: '#10b981', width: 2 } },
-                axisLabel: { formatter: '{value}', fontSize: chartSizes.axisLabelSize },
+                axisLine: { show: true, lineStyle: { color: isDark ? '#34d399' : '#10b981', width: 2 } },
+                axisLabel: { formatter: '{value}', fontSize: chartSizes.axisLabelSize, color: textColor },
                 splitLine: { show: false }
             }
         ],
@@ -218,7 +234,7 @@ export const ShipmentPopup: React.FC<ShipmentPopupProps> = ({ isOpen, onClose, d
                 label: {
                     show: true,
                     position: 'insideBottom',
-                    offset: [0, 5],
+                    offset: [0, -1],
                     color: '#fff',
                     fontWeight: 'bold',
                     fontSize: chartSizes.dataLabelSize
@@ -299,9 +315,9 @@ export const ShipmentPopup: React.FC<ShipmentPopupProps> = ({ isOpen, onClose, d
     const carcassChartOption = {
         tooltip: {
             trigger: 'item',
-            backgroundColor: 'rgba(255, 255, 255, 0.95)',
-            borderColor: '#ddd',
-            textStyle: { color: '#333', fontSize: chartSizes.tooltipSize },
+            backgroundColor: isDark ? 'rgba(30,35,45,0.95)' : 'rgba(255, 255, 255, 0.95)',
+            borderColor: isDark ? '#444' : '#ddd',
+            textStyle: { color: textColor, fontSize: chartSizes.tooltipSize },
             formatter: (params: { data: number[] }) =>
                 `도체중: ${params.data[0]}kg<br/>등지방두께: ${params.data[1]}mm<br/>두수: ${params.data[2]}두`
         },
@@ -317,24 +333,24 @@ export const ShipmentPopup: React.FC<ShipmentPopupProps> = ({ isOpen, onClose, d
             name: '도체중 (kg)',
             nameLocation: 'middle',
             nameGap: 40,
-            nameTextStyle: { fontSize: chartSizes.axisNameSize },
+            nameTextStyle: { fontSize: chartSizes.axisNameSize, color: textColor },
             min: xMin,
             max: xMax,
             interval: 5,
-            axisLabel: { rotate: 45, fontSize: chartSizes.axisLabelSize },
-            splitLine: { show: true, lineStyle: { color: '#e8e8e8', type: 'dashed' } }
+            axisLabel: { rotate: 45, fontSize: chartSizes.axisLabelSize, color: textColor },
+            splitLine: { show: true, lineStyle: { color: splitLineColor, type: 'dashed' } }
         },
         yAxis: {
             type: 'value',
             name: '등지방두께 (mm)',
             nameLocation: 'end',
             nameGap: 5,
-            nameTextStyle: { align: 'left', fontSize: chartSizes.axisNameSize },
+            nameTextStyle: { align: 'left', fontSize: chartSizes.axisNameSize, color: textColor },
             min: yMin,
             max: yMax,
             interval: 5,
-            axisLabel: { fontSize: chartSizes.axisLabelSize },
-            splitLine: { show: true, lineStyle: { color: '#e8e8e8', type: 'dashed' } }
+            axisLabel: { fontSize: chartSizes.axisLabelSize, color: textColor },
+            splitLine: { show: true, lineStyle: { color: splitLineColor, type: 'dashed' } }
         },
         series: [{
             type: 'scatter',
@@ -344,8 +360,8 @@ export const ShipmentPopup: React.FC<ShipmentPopupProps> = ({ isOpen, onClose, d
                 show: true,
                 position: 'inside',
                 formatter: (params: { data: number[] }) => params.data[2],
-                color: '#000',
-                fontWeight: 'normal',
+                color: dataLabelColor,
+                fontWeight: 'bold',
                 fontSize: chartSizes.dataLabelSize
             },
             data: carcassData,
@@ -367,20 +383,20 @@ export const ShipmentPopup: React.FC<ShipmentPopupProps> = ({ isOpen, onClose, d
         }]
     };
 
-    const getTabIndicatorStyle = () => {
-        switch (activeTab) {
-            case 'summary': return { left: '0%', width: '33.33%' };
-            case 'analysis': return { left: '33.33%', width: '33.33%' };
-            case 'carcass': return { left: '66.66%', width: '33.33%' };
-        }
-    };
-
-    // 행 하이라이트 스타일
+    // 행 하이라이트 스타일 (다크모드 대응)
     const getRowStyle = (highlight?: 'primary' | 'success') => {
         if (highlight === 'primary') {
-            return { background: 'linear-gradient(135deg, #e8f0fe 0%, #d4e4fc 100%)' };
+            return {
+                background: isDark
+                    ? 'linear-gradient(135deg, rgba(102, 126, 234, 0.25) 0%, rgba(118, 75, 162, 0.2) 100%)'
+                    : 'linear-gradient(135deg, #e8f0fe 0%, #d4e4fc 100%)'
+            };
         } else if (highlight === 'success') {
-            return { background: 'linear-gradient(135deg, #e6f7ed 0%, #d4f0e0 100%)' };
+            return {
+                background: isDark
+                    ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(52, 211, 153, 0.15) 100%)'
+                    : 'linear-gradient(135deg, #e6f7ed 0%, #d4f0e0 100%)'
+            };
         }
         return {};
     };
@@ -392,6 +408,7 @@ export const ShipmentPopup: React.FC<ShipmentPopupProps> = ({ isOpen, onClose, d
             title="출하 실적"
             subtitle="지난주 출하현황 및 도체분석"
             maxWidth="max-w-3xl"
+            id="pop-shipment"
         >
             {/* 탭 헤더 (3탭) */}
             <div className="popup-tabs">
@@ -413,12 +430,11 @@ export const ShipmentPopup: React.FC<ShipmentPopupProps> = ({ isOpen, onClose, d
                 >
                     <FontAwesomeIcon icon={faCircle} className="fa-sm" /> 도체분포
                 </button>
-                <div className="popup-tab-indicator" style={getTabIndicatorStyle()} />
             </div>
 
             {/* 탭1: 출하현황 */}
             {activeTab === 'summary' && (
-                <div className="popup-tab-content">
+                <div className="popup-tab-content" id="tab-shipment-summary">
                     {/* 메트릭스 + 등급차트 그리드 */}
                     <div className="shipment-top-grid">
                         {/* 메트릭스 2x2 */}
@@ -445,7 +461,7 @@ export const ShipmentPopup: React.FC<ShipmentPopupProps> = ({ isOpen, onClose, d
                             </div>
                         </div>
                         {/* 등급차트 - 가로 막대 */}
-                        <div className="grade-chart-wrap">
+                        <div className="grade-chart-wrap" id="cht-shipment-grade">
                             <ReactECharts
                                 option={gradeChartOption}
                                 style={{ width: '100%', height: '120px' }}
@@ -459,7 +475,7 @@ export const ShipmentPopup: React.FC<ShipmentPopupProps> = ({ isOpen, onClose, d
                         <span>일별 출하현황</span>
                     </div>
                     <div className="popup-table-wrap" style={{ overflowX: 'auto' }}>
-                        <table className="popup-table-02 shipment-table" style={{ minWidth: '600px' }}>
+                        <table className="popup-table-02 shipment-table" id="tbl-shipment-daily" style={{ minWidth: '600px' }}>
                             <thead>
                                 <tr>
                                     <th colSpan={2} style={{ minWidth: '90px' }}>구분</th>
@@ -500,23 +516,27 @@ export const ShipmentPopup: React.FC<ShipmentPopupProps> = ({ isOpen, onClose, d
 
             {/* 탭2: 출하분석 차트 */}
             {activeTab === 'analysis' && (
-                <div className="popup-tab-content">
-                    <ReactECharts
-                        option={analysisChartOption}
-                        style={{ width: '100%', height: '320px' }}
-                        opts={{ renderer: 'svg' }}
-                    />
+                <div className="popup-tab-content" id="tab-shipment-analysis">
+                    <div id="cht-shipment-analysis">
+                        <ReactECharts
+                            option={analysisChartOption}
+                            style={{ width: '100%', height: '320px' }}
+                            opts={{ renderer: 'svg' }}
+                        />
+                    </div>
                 </div>
             )}
 
             {/* 탭3: 도체분포 차트 */}
             {activeTab === 'carcass' && (
-                <div className="popup-tab-content">
-                    <ReactECharts
-                        option={carcassChartOption}
-                        style={{ width: '100%', height: '350px' }}
-                        opts={{ renderer: 'svg' }}
-                    />
+                <div className="popup-tab-content" id="tab-shipment-carcass">
+                    <div id="cht-shipment-carcass">
+                        <ReactECharts
+                            option={carcassChartOption}
+                            style={{ width: '100%', height: '350px' }}
+                            opts={{ renderer: 'svg' }}
+                        />
+                    </div>
                 </div>
             )}
         </PopupContainer>

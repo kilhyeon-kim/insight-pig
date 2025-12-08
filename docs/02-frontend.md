@@ -455,6 +455,86 @@ import '@/css/popup.css';      // 팝업 사용 시
 
 ### 5.8 테마 모드 (Light/Dark)
 
+#### 다크모드 색상 체계 가이드라인 (필수 준수)
+
+> **⚠️ 중요**: 다크모드 구현 시 아래 색상 체계를 반드시 준수해야 합니다.
+> 영역별로 서로 다른 색상 계열을 사용하여 시각적 구분을 명확히 합니다.
+
+**1. 영역별 색상 계열**
+
+| 영역 | 색상 계열 | 팝업 배경 | 테이블 래퍼 | 데이터 행 | 헤더 텍스트 | 강조 색상 |
+|------|----------|-----------|-------------|-----------|-------------|-----------|
+| 페이지 기본 | 순수 그레이 (Neutral Gray) | `#1f1f23` | `#28282e` | `#35353c` | `#9ca3af` | `#60a5fa` |
+| 지난주 주요실적 | 그린 틴트 (Green Tinted) | `#1a211e` | `#232b28` | `#2d3835` | `#8bb9a3` | `#6ee7b7` |
+| 금주 실적 | 웜 그레이 (Warm Gray) | `#211f1d` | `#2a2826` | `#38342f` | `#b8a99a` | `#fbbf24` |
+| 관리대상 모돈 등 | 현행 유지 | - | - | - | - | - |
+| 팝업 | 블루 틴트 (Blue Tinted) | `#1a1d24` | `#232830` | `#2d3340` | `#8b9dc3` | `#6ea8fe` |
+
+**2. 색상 계열 특징**
+
+- **순수 그레이 (Neutral Gray)**: 무채색 기반, 깔끔하고 모던한 느낌
+- **그린 틴트 (Green Tinted)**: 자연스러운 그린 톤, 편안하고 안정적인 느낌 (지난주 실적에 적합)
+- **웜 그레이 (Warm Gray)**: 따뜻한 브라운 톤, 친근하고 부드러운 느낌 (금주 실적에 적합)
+- **블루 틴트 (Blue Tinted)**: 차가운 블루 톤, 전문적이고 신뢰감 있는 느낌 (팝업에 적합)
+
+**3. CSS 변수 적용 예시**
+
+```css
+/* 페이지 기본 - 순수 그레이 */
+.dark .page-base {
+    --bg-primary: #1f1f23;
+    --bg-secondary: #28282e;
+    --bg-tertiary: #35353c;
+    --text-header: #9ca3af;
+    --accent: #60a5fa;
+}
+
+/* 지난주 섹션 - 그린 틴트 */
+.dark #sec-lastweek {
+    --bg-primary: #1a211e;
+    --bg-secondary: #232b28;
+    --bg-tertiary: #2d3835;
+    --text-header: #8bb9a3;
+    --accent: #6ee7b7;
+}
+
+/* 금주 섹션 - 웜 그레이 */
+.dark #sec-thisweek {
+    --bg-primary: #211f1d;
+    --bg-secondary: #2a2826;
+    --bg-tertiary: #38342f;
+    --text-header: #b8a99a;
+    --accent: #fbbf24;
+}
+
+/* 팝업 - 블루 틴트 */
+.dark .wr-popup-content {
+    --bg-primary: #1a1d24;
+    --bg-secondary: #232830;
+    --bg-tertiary: #2d3340;
+    --text-header: #8b9dc3;
+    --accent: #6ea8fe;
+}
+```
+
+**4. 색상 계층 구조 원칙**
+
+각 영역 내에서 배경색은 다음 계층 순서를 따릅니다:
+```
+가장 어두움 ← 컨테이너 배경 < 래퍼 배경 < 데이터 행 배경 → 가장 밝음
+```
+
+예시 (팝업 블루 틴트):
+- 팝업 배경: `#1a1d24` (가장 어두움)
+- 테이블 래퍼: `#232830` (중간)
+- 데이터 행: `#2d3340` (가장 밝음)
+
+**5. 샘플 파일 참조**
+
+색상 샘플은 `/sample/dark-popup-table-samples.html` 파일에서 시각적으로 확인할 수 있습니다.
+
+---
+
 **테마 전환 버튼 위치**:
 1. **사이드바**: 하단 또는 상단에 테마 토글 버튼
 2. **보고서 상단**: 각 주간/월간 보고서 헤더에 테마 토글 버튼
@@ -536,9 +616,124 @@ import { ThemeToggle } from '@/components/layout/ThemeToggle';
 
 ---
 
-## 5. 데이터 관리
+## 5.10 요소 ID 명명 규칙 (Element ID Naming Convention)
 
-### 5.1 API 호출 (`services/api.ts`)
+> **목적**: 페이지 내 섹션, 테이블, 차트 등에 고유 ID를 부여하여 디버깅, 스타일링, 자동화 테스트, 앵커 링크 등에 활용
+
+### ID 접두어 규칙
+
+| 요소 유형 | 접두어 | 예시 | 설명 |
+|----------|--------|------|------|
+| 섹션(Section) | `sec-` | `sec-lastweek`, `sec-thisweek` | 페이지의 주요 영역 구분 |
+| 테이블(Table) | `tbl-` | `tbl-mating-type`, `tbl-farrowing-detail` | 데이터 테이블 |
+| 차트(ECharts) | `cht-` | `cht-mating-bar`, `cht-psy-trend` | ECharts 차트 컨테이너 |
+| 팝업(Popup) | `pop-` | `pop-mating`, `pop-accident` | 팝업/모달 컨테이너 |
+| 그리드(Grid) | `grd-` | `grd-result`, `grd-schedule` | CSS Grid 기반 데이터 표시 |
+| 폼(Form) | `frm-` | `frm-search`, `frm-filter` | 입력 폼 |
+| 탭(Tab) | `tab-` | `tab-mating-table`, `tab-mating-chart` | 탭 패널 |
+
+### ID 작성 규칙
+
+**1. 구조**: `{접두어}-{컨텍스트}-{세부사항}`
+```
+sec-lastweek              # 지난주 섹션
+tbl-mating-type           # 교배 유형별 테이블
+cht-farrowing-trend       # 분만 추이 차트
+pop-accident              # 사고 팝업
+```
+
+**2. 명명 규칙**
+- **소문자 + 케밥케이스**: `sec-last-week` (O), `secLastWeek` (X)
+- **영문 약어 사용**: 한글 로마자 변환 허용 (mating, farrowing, weaning 등)
+- **고유성 보장**: 페이지 내에서 중복 ID 금지
+- **의미있는 이름**: 요소의 목적을 명확히 표현
+
+**3. 컨텍스트 약어 표준**
+
+| 한글 | 영문 약어 | 사용 예시 |
+|------|-----------|-----------|
+| 모돈 | modon | `sec-modon`, `tbl-modon-status` |
+| 교배 | mating | `cht-mating-bar`, `pop-mating` |
+| 분만 | farrowing | `tbl-farrowing-detail` |
+| 이유 | weaning | `cht-weaning-trend` |
+| 사고 | accident | `pop-accident`, `tbl-accident-cause` |
+| 도태폐사 | culling | `pop-culling`, `cht-culling-bar` |
+| 출하 | shipment | `pop-shipment`, `tbl-shipment-grade` |
+| 지난주 | lastweek | `sec-lastweek` |
+| 금주 | thisweek | `sec-thisweek` |
+| 부가정보 | extra | `sec-extra` |
+| PSY | psy | `cht-psy-trend` |
+| 경매 | auction | `pop-auction` |
+| 날씨 | weather | `sec-weather`, `pop-weather` |
+
+### 적용 예시
+
+**섹션 컴포넌트**:
+```tsx
+// LastWeekSection.tsx
+<div className="report-card" id="sec-lastweek">
+    <div className="result-grid" id="grd-lastweek-result">
+        {/* 그리드 내용 */}
+    </div>
+</div>
+```
+
+**팝업 컴포넌트**:
+```tsx
+// MatingPopup.tsx
+<PopupContainer id="pop-mating">
+    {/* 탭1: 테이블 */}
+    <div id="tab-mating-table">
+        <table id="tbl-mating-type">...</table>
+    </div>
+
+    {/* 탭2: 차트 */}
+    <div id="tab-mating-chart">
+        <ReactECharts id="cht-mating-recur" />
+    </div>
+</PopupContainer>
+```
+
+**차트 컴포넌트**:
+```tsx
+// ReactECharts에 ID 전달
+<ReactECharts
+    option={chartOption}
+    style={{ width: '100%', height: '300px' }}
+    opts={{ renderer: 'svg' }}
+    // ECharts는 wrapper div에 id 적용
+/>
+
+// 또는 wrapper div 사용
+<div id="cht-mating-recur">
+    <ReactECharts option={chartOption} />
+</div>
+```
+
+### ID 활용 사례
+
+1. **CSS 타겟팅**: 특정 요소에 고유 스타일 적용
+   ```css
+   #tbl-mating-type .sum-row { background: #f0f0f0; }
+   ```
+
+2. **앵커 링크**: 페이지 내 특정 섹션으로 이동
+   ```html
+   <a href="#sec-lastweek">지난주 실적으로 이동</a>
+   ```
+
+3. **자동화 테스트**: Selenium, Playwright 등에서 요소 선택
+   ```javascript
+   await page.locator('#tbl-mating-type').click();
+   ```
+
+4. **디버깅**: 개발자 도구에서 요소 식별 용이
+
+---
+
+## 6. 데이터 관리
+
+### 6.1 API 호출 (`services/api.ts`)
 
 ```typescript
 import { weeklyApi } from '@/services/api';
@@ -556,7 +751,7 @@ const popupData = await weeklyApi.getPopupData(type, id);
 const chartData = await weeklyApi.getChartData(chartType);
 ```
 
-### 5.2 Mock vs 실제 API
+### 6.2 Mock vs 실제 API
 환경 변수로 제어:
 ```env
 # .env.local
@@ -566,9 +761,9 @@ NEXT_PUBLIC_USE_MOCK=false  # 실제 API 호출
 
 ---
 
-## 6. 타입 정의 (`types/weekly.ts`)
+## 7. 타입 정의 (`types/weekly.ts`)
 
-### 6.1 주요 인터페이스
+### 7.1 주요 인터페이스
 ```typescript
 // 주간 보고서 전체 데이터
 interface WeeklyReportData {
@@ -600,16 +795,16 @@ interface LastWeekData {
 
 ---
 
-## 7. 개발 워크플로우
+## 8. 개발 워크플로우
 
-### 7.1 새 페이지 추가
+### 8.1 새 페이지 추가
 1. `app/(report)/[name]/page.tsx` 생성
 2. `components/[name]/` 폴더에 컴포넌트 작성
 3. `types/[name].ts`에 타입 정의
 4. `services/mockData.ts`에 Mock 데이터 추가
 5. `services/api.ts`에 API 메서드 추가
 
-### 7.2 새 컴포넌트 추가
+### 8.2 새 컴포넌트 추가
 1. 용도에 따라 폴더 선택:
    - `components/common/`: 전역 공통
    - `components/ui/`: 재사용 UI
@@ -620,14 +815,14 @@ interface LastWeekData {
 
 ---
 
-## 8. 코딩 컨벤션
+## 9. 코딩 컨벤션
 
-### 8.1 파일명
+### 9.1 파일명
 - 컴포넌트: `PascalCase.tsx` (예: `Header.tsx`)
 - 유틸리티: `camelCase.ts` (예: `api.ts`)
 - 스타일: `kebab-case.css` (예: `weekly.css`)
 
-### 8.2 컴포넌트 구조
+### 9.2 컴포넌트 구조
 ```typescript
 "use client"; // 클라이언트 컴포넌트인 경우
 
@@ -648,7 +843,7 @@ export const MyComponent: React.FC<MyComponentProps> = ({ title, onAction }) => 
 };
 ```
 
-### 8.3 Import 순서
+### 9.3 Import 순서
 1. React 관련
 2. Next.js 관련
 3. 외부 라이브러리
@@ -667,45 +862,45 @@ import './styles.css';
 
 ---
 
-## 9. 빌드 & 배포
+## 10. 빌드 & 배포
 
-### 9.1 개발 서버
+### 10.1 개발 서버
 ```bash
 npm run dev
 ```
 
-### 9.2 프로덕션 빌드
+### 10.2 프로덕션 빌드
 ```bash
 npm run build
 npm start
 ```
 
-### 9.3 타입 체크
+### 10.3 타입 체크
 ```bash
 npm run type-check
 ```
 
 ---
 
-## 10. 주의사항
+## 11. 주의사항
 
-### 10.1 Next.js App Router
+### 11.1 Next.js App Router
 - `"use client"` 지시어: 클라이언트 컴포넌트에 필수
 - `params`는 Promise: `await params` 사용
 - 동적 라우트: `[id]` 폴더명 사용
 
-### 10.2 Tailwind CSS v4
+### 11.2 Tailwind CSS v4
 - `@tailwind` 대신 `@reference "tailwindcss"` 사용
 - `@apply` 사용 시 주의 (v4에서 제한적)
 
-### 10.3 TypeScript
+### 11.3 TypeScript
 - `any` 타입 지양
 - Props 인터페이스 명시
 - Null 체크: `value ?? undefined` 사용
 
 ---
 
-## 11. 유용한 명령어
+## 12. 유용한 명령어
 
 ```bash
 # 개발 서버 실행
@@ -726,7 +921,7 @@ npm update
 
 ---
 
-## 12. 참고 자료
+## 13. 참고 자료
 
 - [Next.js 공식 문서](https://nextjs.org/docs)
 - [Tailwind CSS v4](https://tailwindcss.com/docs)

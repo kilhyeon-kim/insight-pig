@@ -168,8 +168,9 @@ export const PsyTrendPopup: React.FC<PsyTrendPopupProps> = ({ isOpen, onClose, d
             title="PSY & 입력지연 상관관계 분석"
             subtitle="모니터링농가 기준 (약 50%)"
             maxWidth="max-w-2xl"
+            id="pop-psy"
         >
-            <div ref={chartRef} style={{ width: '100%', height: '400px' }} />
+            <div id="cht-psy-heatmap" ref={chartRef} style={{ width: '100%', height: '400px' }} />
         </PopupContainer>
     );
 };

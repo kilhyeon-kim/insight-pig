@@ -1,9 +1,13 @@
+'use client';
+
 import React, { useState } from 'react';
 import ReactECharts from 'echarts-for-react';
 import { AccidentPopupData } from '@/types/weekly';
 import { PopupContainer } from './PopupContainer';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTable, faChartSimple } from '@fortawesome/free-solid-svg-icons';
+import { useTheme } from '@/contexts/ThemeContext';
+import { useChartResponsive } from './useChartResponsive';
 
 interface AccidentPopupProps {
     isOpen: boolean;
@@ -16,49 +20,102 @@ interface AccidentPopupProps {
  * - 탭1: 원인별 사고복수 테이블
  * - 탭2: 임신일별 사고복수 차트
  * @see popup.js tpl-accident
+ * @see com.js _initAccidentChart()
  */
 export const AccidentPopup: React.FC<AccidentPopupProps> = ({ isOpen, onClose, data }) => {
     const [activeTab, setActiveTab] = useState<'table' | 'chart'>('table');
+    const { theme } = useTheme();
+    const chartSizes = useChartResponsive();
+
+    // 다크모드 색상
+    const isDark = theme === 'dark';
+    const textColor = isDark ? '#e6edf3' : '#1d1d1f';
+    const splitLineColor = isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.08)';
+    const dataLabelColor = isDark ? '#ffd700' : '#333';  // 다크모드: 골드 (확 뜨는 색상)
 
     // 합계 계산
     const lastWeekTotal = data.table.reduce((sum, row) => sum + row.lastWeek, 0);
     const lastMonthTotal = data.table.reduce((sum, row) => sum + row.lastMonth, 0);
 
-    // 차트 옵션 (임신일별 사고복수)
+    // 차트 옵션 (임신일별 사고복수) - com.js _initAccidentChart() 기준
     const chartOption = {
         tooltip: {
-            trigger: 'axis',
-            axisPointer: { type: 'shadow' }
+            trigger: 'axis' as const,
+            axisPointer: { type: 'shadow' as const },
+            textStyle: { fontSize: chartSizes.tooltipSize },
+            formatter: (params: { name: string; value: number }[]) => {
+                return params[0].name + '일: ' + params[0].value + '복';
+            }
         },
         grid: {
+            top: '15%',
             left: '3%',
-            right: '4%',
-            bottom: '3%',
+            right: '5%',
+            bottom: '18%',
             containLabel: true
         },
         xAxis: {
-            type: 'category',
-            name: '임신일',
+            type: 'category' as const,
             data: data.chart.xAxis,
-            axisLabel: { fontSize: 11, interval: 0 }
+            axisLabel: {
+                color: textColor,
+                fontSize: chartSizes.axisLabelSize,
+                fontWeight: 500,
+                interval: 0,
+                rotate: 45
+            }
         },
         yAxis: {
-            type: 'value',
-            name: '복수',
-            nameTextStyle: { fontSize: 11 }
+            type: 'value' as const,
+            name: '(복)',
+            nameLocation: 'end' as const,
+            nameGap: 20,
+            minInterval: 1,
+            axisLabel: {
+                color: textColor,
+                fontSize: chartSizes.axisLabelSize
+            },
+            nameTextStyle: {
+                color: textColor,
+                fontSize: chartSizes.axisNameSize,
+                align: 'right' as const
+            },
+            splitLine: {
+                lineStyle: {
+                    type: 'dashed' as const,
+                    width: 1,
+                    color: splitLineColor
+                }
+            }
         },
         series: [{
             name: '사고복수',
-            type: 'bar',
+            type: 'bar' as const,
             data: data.chart.data,
             itemStyle: {
                 color: '#dc3545',
                 borderRadius: [4, 4, 0, 0]
             },
+            barWidth: '60%',
             label: {
                 show: true,
-                position: 'top',
-                fontSize: 10
+                position: 'top' as const,
+                fontSize: chartSizes.dataLabelSize,
+                fontWeight: 600,
+                color: dataLabelColor,
+                formatter: '{c}'
+            }
+        }],
+        graphic: [{
+            type: 'text' as const,
+            right: '5%',
+            top: '83%',
+            style: {
+                text: '(임신일)',
+                fill: textColor,
+                fontSize: chartSizes.axisLabelSize,
+                fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                fontWeight: 500
             }
         }]
     };
@@ -69,6 +126,7 @@ export const AccidentPopup: React.FC<AccidentPopupProps> = ({ isOpen, onClose, d
             onClose={onClose}
             title="임신사고"
             subtitle="지난주 원인별 및 임신일별 사고현황"
+            id="pop-accident"
         >
             {/* 탭 헤더 */}
             <div className="popup-tabs">
@@ -84,23 +142,16 @@ export const AccidentPopup: React.FC<AccidentPopupProps> = ({ isOpen, onClose, d
                 >
                     <FontAwesomeIcon icon={faChartSimple} className="fa-sm" /> 임신일별 사고복수
                 </button>
-                <div
-                    className="popup-tab-indicator"
-                    style={{
-                        left: activeTab === 'table' ? '0' : '50%',
-                        width: '50%'
-                    }}
-                />
             </div>
 
             {/* 탭 컨텐츠: 테이블 */}
             {activeTab === 'table' && (
-                <div className="popup-tab-content">
+                <div className="popup-tab-content" id="tab-accident-table">
                     <div className="popup-section-desc justify-end">
                         <span>단위: 복</span>
                     </div>
                     <div className="popup-table-wrap">
-                        <table className="popup-table-02">
+                        <table className="popup-table-02" id="tbl-accident-cause">
                             <thead>
                                 <tr>
                                     <th>구분</th>
@@ -110,12 +161,12 @@ export const AccidentPopup: React.FC<AccidentPopupProps> = ({ isOpen, onClose, d
                             </thead>
                             <tbody>
                                 {data.table.map((row, index) => {
+                                    // 비율: 합계 기준 (100% = 합계)
                                     const lastWeekPercent = lastWeekTotal > 0 ? (row.lastWeek / lastWeekTotal * 100).toFixed(1) : '0';
                                     const lastMonthPercent = lastMonthTotal > 0 ? (row.lastMonth / lastMonthTotal * 100).toFixed(1) : '0';
-                                    const maxLastWeek = Math.max(...data.table.map(r => r.lastWeek), 1);
-                                    const maxLastMonth = Math.max(...data.table.map(r => r.lastMonth), 1);
-                                    const lastWeekBarWidth = (row.lastWeek / maxLastWeek * 100);
-                                    const lastMonthBarWidth = (row.lastMonth / maxLastMonth * 100);
+                                    // 바 너비: 합계 대비 비율
+                                    const lastWeekBarWidth = lastWeekTotal > 0 ? (row.lastWeek / lastWeekTotal * 100) : 0;
+                                    const lastMonthBarWidth = lastMonthTotal > 0 ? (row.lastMonth / lastMonthTotal * 100) : 0;
 
                                     return (
                                         <tr key={index}>
@@ -136,7 +187,7 @@ export const AccidentPopup: React.FC<AccidentPopupProps> = ({ isOpen, onClose, d
                                                 <div className="cell-with-bar">
                                                     <div className="bar-bg">
                                                         <div
-                                                            className="bar-fill red"
+                                                            className="bar-fill gray"
                                                             style={{ width: `${lastMonthBarWidth}%` }}
                                                         />
                                                     </div>
@@ -160,15 +211,17 @@ export const AccidentPopup: React.FC<AccidentPopupProps> = ({ isOpen, onClose, d
 
             {/* 탭 컨텐츠: 차트 */}
             {activeTab === 'chart' && (
-                <div className="popup-tab-content">
+                <div className="popup-tab-content" id="tab-accident-chart">
                     <div className="popup-section-desc justify-end">
                         <span>임돈전출/판매 제외</span>
                     </div>
-                    <ReactECharts
-                        option={chartOption}
-                        style={{ width: '100%', height: '300px' }}
-                        opts={{ renderer: 'svg' }}
-                    />
+                    <div id="cht-accident-preg">
+                        <ReactECharts
+                            option={chartOption}
+                            style={{ width: '100%', height: '300px' }}
+                            opts={{ renderer: 'svg' }}
+                        />
+                    </div>
                 </div>
             )}
         </PopupContainer>

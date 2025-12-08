@@ -40,9 +40,10 @@ export const AlertMdPopup: React.FC<AlertMdPopupProps> = ({ isOpen, onClose, dat
             onClose={onClose}
             title="관리대상모돈 상세 현황"
             subtitle="이유후/사고후 미교배 중점 관리"
+            id="pop-alert"
         >
             <div className="popup-table-wrap">
-                <table className="popup-table-02">
+                <table className="popup-table-02" id="tbl-alert-status">
                     <thead>
                         <tr>
                             <th>초과일수</th>

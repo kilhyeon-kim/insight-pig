@@ -35,7 +35,7 @@ export const ThisWeekSection: React.FC<ThisWeekSectionProps> = ({ data, onPopupO
     };
 
     return (
-        <div className="report-card" id="secThisWeek">
+        <div className="report-card" id="sec-thisweek">
             <div className="card-header">
                 <div className="card-header-top">
                     <div className="card-title">

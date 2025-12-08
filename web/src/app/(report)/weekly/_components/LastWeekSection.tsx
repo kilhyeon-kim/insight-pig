@@ -11,7 +11,7 @@ interface LastWeekSectionProps {
 
 export const LastWeekSection: React.FC<LastWeekSectionProps> = ({ data, onPopupOpen }) => {
     return (
-        <div className="report-card" id="secLastWeek">
+        <div className="report-card" id="sec-lastweek">
             <div className="card-header">
                 <div className="card-header-top">
                     <div className="card-title">

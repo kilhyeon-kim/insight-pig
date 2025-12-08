@@ -20,17 +20,17 @@
    [섹션 목록]
    1. report-header: 보고서 헤더
    2. report-card: 기본 카드 스타일
-   3. alert-card: 알림 카드
-   4. result-grid: 실적 그리드
-   5. calendar-grid: 캘린더 그리드
-   6. summary-section: 주간 요약 섹션
-   7. info-accordion: 부가정보 아코디언
-   8. mgmt-section: 관리 포인트
-   9. legend: 범례
-   10. info-note: 안내 메모
-   11. unit-info: 단위 정보
-   12. wr-layer-popup: 팝업 레이어
-   13. stats-bar: 스탯 바
+   3. 섹션별 색상 (sec-lastweek, sec-thisweek)
+   4. alert-card: 알림 카드
+   5. result-grid: 실적 그리드
+   6. calendar-grid: 캘린더 그리드
+   7. summary-section: 주간 요약 섹션
+   8. info-accordion: 부가정보 아코디언
+   9. mgmt-section: 관리 포인트
+   10. legend: 범례
+   11. info-note: 안내 메모
+   12. unit-info: 단위 정보
+   13. wr-layer-popup: 팝업 레이어
    14. metrics-2x2: 메트릭스 그리드
    15. grade-chart-wrap: 등급 차트 래퍼
    16. scroll-to-top: 위로가기 버튼
@@ -57,7 +57,7 @@
     .report-header {
         background: var(--rp-bg-header);
         color: var(--rp-text-inverse);
-        padding: 16px 24px;
+        padding: 16px 14px; /* 모바일 */
         margin: 0;
         box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
         border-radius: 0;
@@ -143,22 +143,106 @@
         transition: all var(--rp-transition);
     }
 
-    /* 카드 타이틀 아이콘 색상 */
-    #secLastWeek .card-title svg {
-        color: #0071e3;
+    /* 카드 타이틀 아이콘 색상 - sec-lastweek, sec-thisweek 섹션에서 별도 정의 */
+
+    /* ============================================
+       섹션별 색상 (그린 틴트 / 웜 앰버)
+       - 헤더와 보더만 계열색, 본문은 기존 색상 유지
+       ============================================ */
+
+    /* 지난주 주요실적 - 그린 틴트 계열 (라이트모드) - 헤더/보더만 */
+    #sec-lastweek {
+        border: 1px solid rgba(34, 197, 94, 0.2);
+        box-shadow: 0 2px 8px rgba(34, 197, 94, 0.08);
     }
 
-    #secThisWeek .card-title svg {
-        color: #ff9500;
+    #sec-lastweek .card-header {
+        background: linear-gradient(135deg, rgba(34, 197, 94, 0.06) 0%, rgba(34, 197, 94, 0.02) 100%);
     }
 
-    #secThisWeek .card-header {
-        background: linear-gradient(135deg, rgba(255, 149, 0, 0.10) 0%, rgba(255, 179, 64, 0.04) 100%);
+    #sec-lastweek .card-title svg {
+        color: #16a34a;
     }
 
-    #secThisWeek {
-        border: 1px solid rgba(255, 149, 0, 0.25);
-        box-shadow: 0 2px 8px rgba(255, 149, 0, 0.1);
+    /* 금주 작업예정 - 웜 앰버 계열 (라이트모드) - 헤더/보더만 */
+    #sec-thisweek {
+        border: 1px solid rgba(245, 158, 11, 0.2);
+        box-shadow: 0 2px 8px rgba(245, 158, 11, 0.08);
+    }
+
+    #sec-thisweek .card-header {
+        background: linear-gradient(135deg, rgba(245, 158, 11, 0.06) 0%, rgba(245, 158, 11, 0.02) 100%);
+    }
+
+    #sec-thisweek .card-title svg {
+        color: #f59e0b;
+    }
+
+    /* 지난주 주요실적 - 그린 틴트 계열 (다크모드) */
+    .dark #sec-lastweek {
+        --section-bg: #1a211e;
+        --section-card-bg: #232b28;
+        --section-cell-alt: #2d3835;
+        --section-header-color: #8bb9a3;
+        --section-accent: #6ee7b7;
+        background: #1a211e;
+        border-color: rgba(110, 231, 183, 0.25);
+    }
+
+    .dark #sec-lastweek .card-header {
+        background: linear-gradient(135deg, rgba(110, 231, 183, 0.08) 0%, rgba(110, 231, 183, 0.02) 100%);
+    }
+
+    .dark #sec-lastweek .cell.header,
+    .dark #sec-lastweek .cell.label {
+        background: #232b28;
+    }
+
+    .dark #sec-lastweek .cell.lastweek {
+        background: rgba(110, 231, 183, 0.1);
+    }
+
+    .dark #sec-lastweek .cell.header-main {
+        color: #6ee7b7;
+        border-bottom-color: #6ee7b7;
+    }
+
+    /* 금주 작업예정 - 웜 그레이 계열 */
+    .dark #sec-thisweek {
+        --section-bg: #211f1d;
+        --section-card-bg: #2a2826;
+        --section-cell-alt: #38342f;
+        --section-header-color: #b8a99a;
+        --section-accent: #fbbf24;
+        background: #211f1d;
+        border-color: rgba(251, 191, 36, 0.25);
+    }
+
+    .dark #sec-thisweek .card-header {
+        background: linear-gradient(135deg, rgba(251, 191, 36, 0.08) 0%, rgba(251, 191, 36, 0.02) 100%);
+    }
+
+    .dark #sec-thisweek .schedule-card {
+        background: #2a2826;
+        border-color: rgba(251, 191, 36, 0.15);
+    }
+
+    .dark #sec-thisweek .calendar-header,
+    .dark #sec-thisweek .calendar-section,
+    .dark #sec-thisweek .calendar-header.corner {
+        background: #38342f;
+    }
+
+    .dark #sec-thisweek .calendar-row-label {
+        background: #2a2826;
+    }
+
+    .dark #sec-thisweek .summary-card:hover {
+        background: rgba(251, 191, 36, 0.1);
+    }
+
+    .dark #sec-thisweek .summary-section {
+        border-top-color: #fbbf24;
     }
 
     /* 카드 헤더 */
@@ -191,7 +275,7 @@
     }
 
     .card-title {
-        font-size: 20px;
+        font-size: 17px;
         font-weight: 700;
         color: var(--rp-text-primary);
         letter-spacing: -0.5px;
@@ -890,6 +974,10 @@
         color: #0e39b7;
     }
 
+    .dark .info-accordion-preview {
+        color: #93c5fd;
+    }
+
     .info-accordion-preview span {
         display: flex;
         align-items: center;
@@ -1358,8 +1446,9 @@
         transition: background 0.3s ease, box-shadow 0.3s ease;
     }
 
+    /* 팝업 다크모드 - 블루 틴트 계열 */
     .dark .wr-popup-content {
-        background: #2d2d32;
+        background: #1a1d24;
     }
 
     .wr-popup-content.max-w-xl {
@@ -1458,40 +1547,6 @@
 
     .wr-popup-section-desc {
         font-size: 11px;
-    }
-
-    /* ============================================
-       스탯 바 (.stats-bar)
-       ============================================ */
-    .stats-bar {
-        display: flex;
-        gap: 8px;
-        margin-bottom: 16px;
-    }
-
-    .stats-bar-item {
-        flex: 1;
-        padding: 12px 8px;
-        background: var(--rp-bg-cell-alt);
-        border-radius: 8px;
-        text-align: center;
-        border-left: 4px solid var(--rp-accent-secondary);
-    }
-
-    .stats-bar-item.total {
-        background: var(--rp-bg-highlight);
-        border-left-color: var(--rp-accent-primary);
-    }
-
-    .stats-bar-value {
-        font-size: 24px;
-        font-weight: 700;
-    }
-
-    .stats-bar-label {
-        font-size: 12px;
-        color: var(--rp-text-tertiary);
-        margin-top: 4px;
     }
 
     /* ============================================
@@ -1599,6 +1654,17 @@
         display: flex;
     }
 
+    /* 다크모드 */
+    .dark .scroll-to-top {
+        background: #4a6fa5;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+    }
+
+    .dark .scroll-to-top:hover {
+        background: #5a82b8;
+        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.6);
+    }
+
     /* ============================================
        card-date-wrap 스타일
        ============================================ */
@@ -1646,6 +1712,10 @@
             padding: 20px;
         }
 
+        .report-header {
+            padding: 16px 18px; /* 태블릿 */
+        }
+
         .report-card {
             border-radius: 14px;
         }
@@ -1667,11 +1737,11 @@
         }
 
         .card-title {
-            font-size: 22px;
+            font-size: 19px;
         }
 
         .card-title svg {
-            font-size: 22px;
+            font-size: 19px;
             margin-right: 4px;
         }
 
@@ -2063,6 +2133,10 @@
             padding: 20px;
         }
 
+        .report-header {
+            padding: 18px 24px; /* 데스크탑 */
+        }
+
         .report-card {
             border-radius: 18px;
             margin-bottom: 20px;
@@ -2098,11 +2172,11 @@
         }
 
         .card-title {
-            font-size: 24px;
+            font-size: 21px;
         }
 
         .card-title svg {
-            font-size: 24px;
+            font-size: 21px;
         }
 
         .card-date {

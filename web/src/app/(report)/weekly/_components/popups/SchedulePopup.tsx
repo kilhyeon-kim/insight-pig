@@ -10,27 +10,52 @@ interface SchedulePopupProps {
 }
 
 export const SchedulePopup: React.FC<SchedulePopupProps> = ({ isOpen, onClose, data, title }) => {
+    // 합계 계산
+    const totalCount = data.events.reduce((sum, event) => sum + event.count, 0);
+
     return (
-        <PopupContainer isOpen={isOpen} onClose={onClose} title={title}>
-            <div className="space-y-4">
-                <div className="text-sm text-gray-500 dark:text-gray-400 mb-2">{data.date} 기준</div>
-                <div className="space-y-2">
-                    {data.events.length > 0 ? (
-                        data.events.map((event, index) => (
-                            <div key={index} className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-                                <div className="flex justify-between items-center">
-                                    <span className="font-medium text-gray-900 dark:text-white">{event.title}</span>
-                                    <span className="text-sm text-gray-500 dark:text-gray-400">{event.count}두</span>
-                                </div>
-                            </div>
-                        ))
-                    ) : (
-                        <div className="text-center py-8 text-gray-400">
-                            예정된 작업이 없습니다.
-                        </div>
-                    )}
+        <PopupContainer isOpen={isOpen} onClose={onClose} title={title} subtitle={`${data.date} 기준`}>
+            <>
+                {/* 단위 표시 */}
+                <div className="popup-section-desc justify-end">
+                    <span>단위: 복</span>
                 </div>
-            </div>
+
+                {/* 테이블 */}
+                <div className="popup-table-wrap">
+                    <table className="popup-table-02">
+                        <thead>
+                            <tr>
+                                <th>작업명</th>
+                                <th>대상복수</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {data.events.length > 0 ? (
+                                <>
+                                    {data.events.map((event, index) => (
+                                        <tr key={index}>
+                                            <td className="label">{event.title}</td>
+                                            <td className="total">{event.count}</td>
+                                        </tr>
+                                    ))}
+                                    {/* 합계 행 */}
+                                    <tr className="sum-row">
+                                        <td className="label">합계</td>
+                                        <td className="total">{totalCount}</td>
+                                    </tr>
+                                </>
+                            ) : (
+                                <tr>
+                                    <td colSpan={2} className="text-center py-8" style={{ color: 'var(--rp-text-tertiary)' }}>
+                                        예정된 작업이 없습니다.
+                                    </td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            </>
         </PopupContainer>
     );
 };

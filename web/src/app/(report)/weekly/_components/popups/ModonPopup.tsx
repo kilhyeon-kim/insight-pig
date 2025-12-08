@@ -7,6 +7,7 @@ import { PopupContainer } from './PopupContainer';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTable, faChartSimple, faCaretUp, faCaretDown } from '@fortawesome/free-solid-svg-icons';
 import { useChartResponsive } from './useChartResponsive';
+import { useTheme } from '@/contexts/ThemeContext';
 
 interface ModonPopupProps {
     isOpen: boolean;
@@ -23,6 +24,13 @@ interface ModonPopupProps {
 export const ModonPopup: React.FC<ModonPopupProps> = ({ isOpen, onClose, data }) => {
     const [activeTab, setActiveTab] = useState<'table' | 'chart'>('table');
     const chartSizes = useChartResponsive();
+    const { theme } = useTheme();
+
+    // 다크모드 색상
+    const isDark = theme === 'dark';
+    const textColor = isDark ? '#e6edf3' : '#1d1d1f';
+    const splitLineColor = isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.08)';
+    const dataLabelColor = isDark ? '#ffd700' : '#333';  // 다크모드: 골드 (확 뜨는 색상)
 
     // 행 합계 계산
     const calculateRowTotal = (row: typeof data.table[0]) =>
@@ -74,6 +82,7 @@ export const ModonPopup: React.FC<ModonPopupProps> = ({ isOpen, onClose, data })
             type: 'category',
             data: data.chart.xAxis,
             axisLabel: {
+                color: textColor,
                 fontSize: chartSizes.axisLabelSize,
                 rotate: 45,
                 interval: 0
@@ -82,8 +91,9 @@ export const ModonPopup: React.FC<ModonPopupProps> = ({ isOpen, onClose, data })
         yAxis: {
             type: 'value',
             name: '두수',
-            nameTextStyle: { fontSize: chartSizes.axisNameSize },
-            axisLabel: { fontSize: chartSizes.axisLabelSize }
+            nameTextStyle: { color: textColor, fontSize: chartSizes.axisNameSize },
+            axisLabel: { color: textColor, fontSize: chartSizes.axisLabelSize },
+            splitLine: { lineStyle: { type: 'dashed' as const, color: splitLineColor } }
         },
         series: [{
             name: '모돈수',
@@ -97,7 +107,8 @@ export const ModonPopup: React.FC<ModonPopupProps> = ({ isOpen, onClose, data })
                 show: true,
                 position: 'top',
                 fontSize: chartSizes.dataLabelSize,
-                fontWeight: 600
+                fontWeight: 600,
+                color: dataLabelColor
             }
         }]
     };
@@ -120,6 +131,7 @@ export const ModonPopup: React.FC<ModonPopupProps> = ({ isOpen, onClose, data })
             title="모돈 현황"
             subtitle="모돈구성비율 (11.24)"
             maxWidth="max-w-3xl"
+            id="pop-modon"
         >
             {/* 탭 헤더 - 프로토타입 스타일 (밑줄 형태) */}
             <div className="popup-tabs">
@@ -139,7 +151,7 @@ export const ModonPopup: React.FC<ModonPopupProps> = ({ isOpen, onClose, data })
 
             {/* 탭 컨텐츠: 테이블 */}
             {activeTab === 'table' && (
-                <div className="popup-tab-content">
+                <div className="popup-tab-content" id="tab-modon-table">
                     <div className="popup-section-desc">
                         <span className="flex items-center gap-1">
                             <FontAwesomeIcon icon={faCaretUp} className="text-green-500" />
@@ -149,7 +161,7 @@ export const ModonPopup: React.FC<ModonPopupProps> = ({ isOpen, onClose, data })
                         <span>단위: 복</span>
                     </div>
                     <div className="popup-table-wrap" style={{ overflowX: 'auto' }}>
-                        <table className="popup-table-02" style={{ minWidth: '550px' }}>
+                        <table className="popup-table-02" id="tbl-modon-parity" style={{ minWidth: '550px' }}>
                             <thead>
                                 <tr>
                                     <th>구분</th>
@@ -235,12 +247,14 @@ export const ModonPopup: React.FC<ModonPopupProps> = ({ isOpen, onClose, data })
 
             {/* 탭 컨텐츠: 차트 */}
             {activeTab === 'chart' && (
-                <div className="popup-tab-content">
-                    <ReactECharts
-                        option={chartOption}
-                        style={{ width: '100%', height: '300px' }}
-                        opts={{ renderer: 'svg' }}
-                    />
+                <div className="popup-tab-content" id="tab-modon-chart">
+                    <div id="cht-modon-parity">
+                        <ReactECharts
+                            option={chartOption}
+                            style={{ width: '100%', height: '300px' }}
+                            opts={{ renderer: 'svg' }}
+                        />
+                    </div>
                 </div>
             )}
         </PopupContainer>

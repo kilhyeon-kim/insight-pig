@@ -8,6 +8,7 @@ interface ScheduleDetailPopupProps {
     data: ScheduleDetailItem[];
     title: string;
     subtitle?: string;
+    id?: string;
 }
 
 export const ScheduleDetailPopup: React.FC<ScheduleDetailPopupProps> = ({
@@ -15,7 +16,8 @@ export const ScheduleDetailPopup: React.FC<ScheduleDetailPopupProps> = ({
     onClose,
     data,
     title,
-    subtitle
+    subtitle,
+    id
 }) => {
     // 합계 계산
     const totalCount = data.reduce((sum, item) => sum + item.count, 0);
@@ -27,16 +29,17 @@ export const ScheduleDetailPopup: React.FC<ScheduleDetailPopupProps> = ({
             title={title}
             subtitle={subtitle}
             maxWidth="max-w-xl"
+            id={id}
         >
-            <div className="space-y-4">
+            <>
                 {/* 단위 표시 */}
-                <div className="flex justify-end text-xs text-gray-500 dark:text-gray-400">
-                    단위: 복
+                <div className="popup-section-desc justify-end">
+                    <span>단위: 복</span>
                 </div>
 
                 {/* 테이블 */}
-                <div className="wr-table-card-wrap">
-                    <table className="wr-table card-style">
+                <div className="popup-table-wrap">
+                    <table className="popup-table-02" id={id ? `tbl-${id.replace('pop-', '')}` : undefined}>
                         <thead>
                             <tr>
                                 <th>작업명</th>
@@ -51,22 +54,22 @@ export const ScheduleDetailPopup: React.FC<ScheduleDetailPopupProps> = ({
                                 <>
                                     {data.map((item, index) => (
                                         <tr key={index}>
-                                            <td>{item.taskNm}</td>
+                                            <td className="label">{item.taskNm}</td>
                                             <td>{item.baseTask}</td>
                                             <td>{item.targetGroup}</td>
                                             <td>{item.elapsedDays}</td>
-                                            <td className="font-semibold">{item.count}</td>
+                                            <td className="total">{item.count}</td>
                                         </tr>
                                     ))}
                                     {/* 합계 행 */}
-                                    <tr className="total-row">
-                                        <td colSpan={4}>합계</td>
-                                        <td style={{ color: 'var(--rp-accent-primary)' }}>{totalCount}</td>
+                                    <tr className="sum-row">
+                                        <td className="label" colSpan={4}>합계</td>
+                                        <td className="total">{totalCount}</td>
                                     </tr>
                                 </>
                             ) : (
                                 <tr>
-                                    <td colSpan={5} className="py-8" style={{ color: 'var(--rp-text-tertiary)' }}>
+                                    <td colSpan={5} className="text-center py-8" style={{ color: 'var(--rp-text-tertiary)' }}>
                                         예정된 작업이 없습니다.
                                     </td>
                                 </tr>
@@ -74,7 +77,7 @@ export const ScheduleDetailPopup: React.FC<ScheduleDetailPopupProps> = ({
                         </tbody>
                     </table>
                 </div>
-            </div>
+            </>
         </PopupContainer>
     );
 };

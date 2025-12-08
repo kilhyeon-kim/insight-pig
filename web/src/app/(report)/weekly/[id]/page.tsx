@@ -74,94 +74,128 @@ export default function WeeklyDetailPage({ params }: WeeklyDetailPageProps) {
                 <MgmtSection data={MOCK_MGMT_DATA} />
             </div>
 
-            {/* Popups */}
-            <AlertMdPopup
-                isOpen={activePopup === 'alertMd'}
-                onClose={handlePopupClose}
-                data={popupData.alertMd}
-            />
-            <ModonPopup
-                isOpen={activePopup === 'modon'}
-                onClose={handlePopupClose}
-                data={popupData.modon}
-            />
-            <MatingPopup
-                isOpen={activePopup === 'mating'}
-                onClose={handlePopupClose}
-                data={popupData.mating}
-            />
-            <FarrowingPopup
-                isOpen={activePopup === 'farrowing'}
-                onClose={handlePopupClose}
-                data={popupData.farrowing}
-            />
-            <WeaningPopup
-                isOpen={activePopup === 'weaning'}
-                onClose={handlePopupClose}
-                data={popupData.weaning}
-            />
-            <AccidentPopup
-                isOpen={activePopup === 'accident'}
-                onClose={handlePopupClose}
-                data={popupData.accident}
-            />
-            <CullingPopup
-                isOpen={activePopup === 'culling'}
-                onClose={handlePopupClose}
-                data={popupData.culling}
-            />
-            <ShipmentPopup
-                isOpen={activePopup === 'shipment'}
-                onClose={handlePopupClose}
-                data={popupData.shipment}
-            />
+            {/* Popups - 조건부 마운트로 메모리 최적화 */}
+            {activePopup === 'alertMd' && (
+                <AlertMdPopup
+                    isOpen={true}
+                    onClose={handlePopupClose}
+                    data={popupData.alertMd}
+                />
+            )}
+            {activePopup === 'modon' && (
+                <ModonPopup
+                    isOpen={true}
+                    onClose={handlePopupClose}
+                    data={popupData.modon}
+                />
+            )}
+            {activePopup === 'mating' && (
+                <MatingPopup
+                    isOpen={true}
+                    onClose={handlePopupClose}
+                    data={popupData.mating}
+                />
+            )}
+            {activePopup === 'farrowing' && (
+                <FarrowingPopup
+                    isOpen={true}
+                    onClose={handlePopupClose}
+                    data={popupData.farrowing}
+                />
+            )}
+            {activePopup === 'weaning' && (
+                <WeaningPopup
+                    isOpen={true}
+                    onClose={handlePopupClose}
+                    data={popupData.weaning}
+                />
+            )}
+            {activePopup === 'accident' && (
+                <AccidentPopup
+                    isOpen={true}
+                    onClose={handlePopupClose}
+                    data={popupData.accident}
+                />
+            )}
+            {activePopup === 'culling' && (
+                <CullingPopup
+                    isOpen={true}
+                    onClose={handlePopupClose}
+                    data={popupData.culling}
+                />
+            )}
+            {activePopup === 'shipment' && (
+                <ShipmentPopup
+                    isOpen={true}
+                    onClose={handlePopupClose}
+                    data={popupData.shipment}
+                />
+            )}
 
             {/* Schedule Detail Popups (금주 작업예정) */}
-            <ScheduleDetailPopup
-                isOpen={activePopup === 'scheduleGb'}
-                onClose={handlePopupClose}
-                data={MOCK_SCHEDULE_POPUP_DATA.scheduleGb}
-                title="교배 예정"
-                subtitle="금주 교배 대기돈 현황"
-            />
-            <ScheduleDetailPopup
-                isOpen={activePopup === 'scheduleBm'}
-                onClose={handlePopupClose}
-                data={MOCK_SCHEDULE_POPUP_DATA.scheduleBm}
-                title="분만 예정"
-                subtitle="금주 분만 예정돈 현황"
-            />
-            <ScheduleDetailPopup
-                isOpen={activePopup === 'scheduleEu'}
-                onClose={handlePopupClose}
-                data={MOCK_SCHEDULE_POPUP_DATA.scheduleEu}
-                title="이유 예정"
-                subtitle="금주 이유 예정돈 현황"
-            />
-            <ScheduleDetailPopup
-                isOpen={activePopup === 'scheduleVaccine'}
-                onClose={handlePopupClose}
-                data={MOCK_SCHEDULE_POPUP_DATA.scheduleVaccine}
-                title="모돈백신 예정"
-                subtitle="금주 백신 예정돈 현황"
-            />
+            {activePopup === 'scheduleGb' && (
+                <ScheduleDetailPopup
+                    isOpen={true}
+                    onClose={handlePopupClose}
+                    data={MOCK_SCHEDULE_POPUP_DATA.scheduleGb}
+                    title="교배 예정"
+                    subtitle="금주 교배 대기돈 현황"
+                    id="pop-schedule-mating"
+                />
+            )}
+            {activePopup === 'scheduleBm' && (
+                <ScheduleDetailPopup
+                    isOpen={true}
+                    onClose={handlePopupClose}
+                    data={MOCK_SCHEDULE_POPUP_DATA.scheduleBm}
+                    title="분만 예정"
+                    subtitle="금주 분만 예정돈 현황"
+                    id="pop-schedule-farrowing"
+                />
+            )}
+            {activePopup === 'scheduleEu' && (
+                <ScheduleDetailPopup
+                    isOpen={true}
+                    onClose={handlePopupClose}
+                    data={MOCK_SCHEDULE_POPUP_DATA.scheduleEu}
+                    title="이유 예정"
+                    subtitle="금주 이유 예정돈 현황"
+                    id="pop-schedule-weaning"
+                />
+            )}
+            {activePopup === 'scheduleVaccine' && (
+                <ScheduleDetailPopup
+                    isOpen={true}
+                    onClose={handlePopupClose}
+                    data={MOCK_SCHEDULE_POPUP_DATA.scheduleVaccine}
+                    title="모돈백신 예정"
+                    subtitle="금주 백신 예정돈 현황"
+                    id="pop-schedule-vaccine"
+                />
+            )}
 
             {/* Extra Section Popups (부가정보) */}
-            <PsyTrendPopup
-                isOpen={activePopup === 'psytrend'}
-                onClose={handlePopupClose}
-                data={MOCK_PSY_TREND_DATA}
-            />
-            <AuctionPopup
-                isOpen={activePopup === 'auction'}
-                onClose={handlePopupClose}
-                data={MOCK_AUCTION_DATA}
-            />
-            <WeatherPopup
-                isOpen={activePopup === 'weather'}
-                onClose={handlePopupClose}
-                data={MOCK_WEATHER_DATA}
-            />
+            {activePopup === 'psytrend' && (
+                <PsyTrendPopup
+                    isOpen={true}
+                    onClose={handlePopupClose}
+                    data={MOCK_PSY_TREND_DATA}
+                />
+            )}
+            {activePopup === 'auction' && (
+                <AuctionPopup
+                    isOpen={true}
+                    onClose={handlePopupClose}
+                    data={MOCK_AUCTION_DATA}
+                />
+            )}
+            {activePopup === 'weather' && (
+                <WeatherPopup
+                    isOpen={true}
+                    onClose={handlePopupClose}
+                    data={MOCK_WEATHER_DATA}
+                />
+            )}
         </div>
     );
 }

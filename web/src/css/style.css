@@ -132,8 +132,8 @@
     --rp-mgmt-recommend-border: #4a4a50;
 
     /* 카드 스타일 테이블 */
-    --rp-card-wrap-bg: #2d2d32;
-    --rp-card-row-bg: #3a3a40;
+    --rp-card-wrap-bg: #38383e;
+    --rp-card-row-bg: #48484e;
     --rp-card-row-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 

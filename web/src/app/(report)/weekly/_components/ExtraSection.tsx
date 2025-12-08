@@ -54,7 +54,7 @@ export const ExtraSection: React.FC<ExtraSectionProps> = ({ data, onPopupOpen })
     };
 
     return (
-        <div className={`info-accordion ${isOpen ? 'open' : ''}`} id="secExtra">
+        <div className={`info-accordion ${isOpen ? 'open' : ''}`} id="sec-extra">
             {/* 아코디언 헤더 */}
             <div className="info-accordion-header" onClick={handleToggle}>
                 <div className="info-accordion-title">

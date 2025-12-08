@@ -22,7 +22,7 @@ interface MgmtSectionProps {
  */
 export const MgmtSection: React.FC<MgmtSectionProps> = ({ data }) => {
     return (
-        <div className="mgmt-section" id="secMgmt">
+        <div className="mgmt-section" id="sec-mgmt">
             <div className="section-title">
                 <FontAwesomeIcon icon={faCalendarCheck} />
                 현재 시기 관리 포인트

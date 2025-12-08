@@ -212,8 +212,9 @@ export const AuctionPopup: React.FC<AuctionPopupProps> = ({ isOpen, onClose, dat
             title="경락가격 추이"
             subtitle="축산물품질평가원 지육거래정보 (제주제외, 탕박)"
             maxWidth="max-w-2xl"
+            id="pop-auction"
         >
-            <div ref={chartRef} style={{ width: '100%', height: '350px' }} />
+            <div id="cht-auction-price" ref={chartRef} style={{ width: '100%', height: '350px' }} />
         </PopupContainer>
     );
 };
