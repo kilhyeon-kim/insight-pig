@@ -2,10 +2,11 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faChartPie, faCalendarAlt, faChartBar, faCog, faSignOutAlt, faTimes } from '@fortawesome/free-solid-svg-icons';
 import { ThemeToggle } from './ThemeToggle';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface SidebarProps {
     isOpen: boolean;
@@ -14,7 +15,7 @@ interface SidebarProps {
 
 export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     const pathname = usePathname();
-    const router = useRouter();
+    const { logout } = useAuth();
 
     const menuItems = [
         { name: 'Weekly 보고서', path: '/weekly', icon: faCalendarAlt },
@@ -22,11 +23,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
         { name: '분기 보고서', path: '/quarterly', icon: faChartBar },
         { name: '환경설정', path: '/settings', icon: faCog },
     ];
-
-    const handleLogout = () => {
-        // TODO: Clear auth tokens
-        router.push('/login');
-    };
 
     return (
         <>
@@ -73,7 +69,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                         <ThemeToggle variant="button" className="sidebar-theme-btn" />
                     </div>
                     <button
-                        onClick={handleLogout}
+                        type="button"
+                        onClick={() => logout()}
                         className="flex items-center gap-3 px-4 py-3 w-full text-left text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                     >
                         <FontAwesomeIcon icon={faSignOutAlt} className="w-5 h-5" />

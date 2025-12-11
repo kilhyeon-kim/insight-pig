@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { TsInsMaster, TsInsFarm, TsInsFarmSub } from '../../entities';
+import { TsInsMaster, TsInsFarm, TsInsFarmSub } from './entities';
 import * as mockData from '../../data/mock/weekly.mock';
 
 /**

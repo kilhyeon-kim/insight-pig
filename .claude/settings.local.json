@@ -19,7 +19,10 @@
       "Bash(netstat:*)",
       "Bash(tasklist /FI 'IMAGENAME eq node.exe' /FO CSV)",
       "Bash(taskkill:*)",
-      "Bash(findstr:*)"
+      "Bash(findstr:*)",
+      "Bash(code --install-extension:*)",
+      "Bash(mkdir:*)",
+      "Bash(npm run build:*)"
     ],
     "deny": [],
     "ask": []

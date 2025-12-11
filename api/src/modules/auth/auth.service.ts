@@ -2,27 +2,8 @@ import { Injectable, UnauthorizedException, ForbiddenException } from '@nestjs/c
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { TaMember, TaFarm, TsInsService } from '../../entities';
-
-export interface JwtPayload {
-  memberId: string;
-  farmNo: number;
-  farmNm: string;
-  name: string;
-  memberType: string;
-}
-
-export interface LoginResponse {
-  accessToken: string;
-  user: {
-    memberId: string;
-    name: string;
-    farmNo: number;
-    farmNm: string;
-    memberType: string;
-    email: string;
-  };
-}
+import { TaMember, TaFarm, TsInsService } from './entities';
+import { JwtPayload, LoginResponseDto } from './dto';
 
 @Injectable()
 export class AuthService {
@@ -41,11 +22,8 @@ export class AuthService {
    * 1. 아이디/비밀번호 체크
    * 2. FARM_NO가 부여된 회원인지 체크
    * 3. TS_INS_SERVICE에서 서비스 사용권한 체크
-   *
-   * @param memberId 회원 ID
-   * @param password 비밀번호
    */
-  async login(memberId: string, password: string): Promise<LoginResponse> {
+  async login(memberId: string, password: string): Promise<LoginResponseDto> {
     // 1단계: 아이디/비밀번호 체크
     const member = await this.memberRepository.findOne({
       where: { memberId, password, useYn: 'Y' },
@@ -70,10 +48,6 @@ export class AuthService {
     }
 
     // 서비스 활성화 조건 체크
-    // - INSPIG_YN = 'Y' (서비스 신청됨)
-    // - USE_YN = 'Y' (사용중)
-    // - INSPIG_TO_DT IS NULL OR INSPIG_TO_DT >= SYSDATE (종료일 미경과)
-    // - INSPIG_STOP_DT IS NULL (중단되지 않음)
     if (service.inspigYn !== 'Y') {
       throw new ForbiddenException('인사이트피그플랜 서비스가 활성화되지 않았습니다.');
     }
@@ -133,7 +107,7 @@ export class AuthService {
   }
 
   /**
-   * 회원 정보 조회
+   * 회원 정보 조회 (farmNo 기준)
    */
   async getMemberByFarmNo(farmNo: number): Promise<TaMember | null> {
     return this.memberRepository.findOne({

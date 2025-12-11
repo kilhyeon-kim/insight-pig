@@ -7,11 +7,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
-
-class LoginDto {
-  memberId: string;
-  password: string;
-}
+import { LoginRequestDto } from './dto';
 
 /**
  * 인증 API 컨트롤러
@@ -26,7 +22,7 @@ export class AuthController {
    * POST /api/auth/login
    */
   @Post('login')
-  async login(@Body() loginDto: LoginDto) {
+  async login(@Body() loginDto: LoginRequestDto) {
     const result = await this.authService.login(
       loginDto.memberId,
       loginDto.password,
@@ -56,13 +52,14 @@ export class AuthController {
         memberId: payload.memberId,
         name: payload.name,
         farmNo: payload.farmNo,
+        farmNm: payload.farmNm,
         memberType: payload.memberType,
       },
     };
   }
 
   /**
-   * 토큰 갱신 (선택적)
+   * 토큰 갱신
    * POST /api/auth/refresh
    */
   @Post('refresh')
