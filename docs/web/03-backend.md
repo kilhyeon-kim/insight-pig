@@ -1,29 +1,58 @@
 # Backend API 및 데이터베이스 가이드
 
-**대상**: Backend 개발자  
-**최종 업데이트**: 2025-12-03
+**대상**: Backend 개발자, LLM  
+**최종 업데이트**: 2025-12-11
 
 ---
 
-## 1. 프로젝트 구조
+## 1. 프로젝트 구조 (Project Structure)
+
+`api/` 디렉토리의 전체 구조입니다.
 
 ```
 api/
 ├── src/
-│   ├── app.module.ts           # 메인 모듈 (TypeORM 설정)
-│   ├── main.ts                 # 진입점
-│   ├── config/                 # 설정 파일 (예정)
-│   ├── entities/               # TypeORM Entities (예정)
-│   ├── common/                 # 공통 모듈 (예정)
-│   └── modules/
-│       ├── auth/               # 인증 모듈 (예정)
-│       └── weekly/             # 주간 보고서 모듈
+│   ├── app.module.ts           # 메인 모듈 (TypeORM, Config, 공통 모듈 통합)
+│   ├── app.controller.ts       # 메인 컨트롤러 (Health Check)
+│   ├── app.service.ts          # 메인 서비스
+│   ├── main.ts                 # 애플리케이션 진입점 (Global Pipes, Interceptors 설정)
+│   │
+│   ├── config/                 # 환경 설정 (Configuration)
+│   │   ├── index.ts            # 설정 모듈 통합 Export
+│   │   ├── app.config.ts       # 앱 기본 설정 (Port, Prefix, Env)
+│   │   ├── database.config.ts  # Oracle DB 연결 설정
+│   │   └── jwt.config.ts       # JWT 인증 설정
+│   │
+│   ├── common/                 # 공통 유틸리티 및 미들웨어
+│   │   ├── index.ts
+│   │   ├── guards/             # 인증/인가 가드 (예: JwtAuthGuard)
+│   │   ├── interceptors/       # 응답/요청 변환 (예: Logging, Transform)
+│   │   ├── filters/            # 예외 처리 필터 (예: HttpExceptionFilter)
+│   │   ├── decorators/         # 커스텀 데코레이터 (예: @User)
+│   │   └── typeorm-logger.ts   # 커스텀 SQL 로거
+│   │
+│   ├── data/                   # 정적 데이터 및 Mock
+│   │   └── mock/
+│   │       └── weekly.mock.ts  # 주간 보고서 Mock 데이터
+│   │
+│   └── modules/                # 비즈니스 로직 모듈 (Domain Modules)
+│       ├── auth/               # [인증] 로그인, 토큰 발급
+│       │   ├── dto/            # 데이터 전송 객체 (Validation 포함)
+│       │   ├── entities/       # DB 엔티티 (TypeORM)
+│       │   ├── sql/            # Raw SQL 쿼리 저장소
+│       │   ├── auth.controller.ts
+│       │   ├── auth.service.ts
+│       │   └── auth.module.ts
+│       │
+│       └── weekly/             # [주간보고서] 조회 및 데이터 처리
+│           ├── dto/
+│           ├── entities/
+│           ├── sql/
 │           ├── weekly.controller.ts
 │           ├── weekly.service.ts
-│           ├── weekly.module.ts
-│           ├── dto/            # Data Transfer Objects
-│           └── mock-data.ts    # Mock 데이터
-├── .env                        # 환경 변수
+│           └── weekly.module.ts
+│
+├── .env                        # 환경 변수 (Git 제외)
 ├── package.json
 ├── nest-cli.json
 └── tsconfig.json
@@ -31,482 +60,131 @@ api/
 
 ---
 
-## 2. 현재 상태
+## 2. 핵심 아키텍처 패턴 (Key Patterns)
 
-### 2.1 완료된 작업
-- ✅ NestJS 프로젝트 초기화
-- ✅ TypeORM 설정 (Oracle 연결)
-- ✅ 환경 변수 설정 (`.env`)
-- ✅ Weekly 모듈 구조 생성
+### 2.1 SQL 관리 (Repository Pattern with Raw SQL)
+TypeORM의 QueryBuilder 대신, **복잡한 쿼리는 별도 SQL 파일로 분리**하여 관리합니다. (MyBatis 스타일)
+*   **위치**: `src/modules/{module}/sql/{module}.sql.ts`
+*   **장점**: DBA와의 협업 용이, 쿼리 튜닝 및 가독성 확보.
 
-### 2.2 개발 모드
-**현재**: Mock 데이터 사용 중  
-**목표**: Oracle DB 연동
-
----
-
-## 3. API 엔드포인트 설계
-
-### 3.1 주간 보고서 API
-
-#### 목록 조회
-```
-GET /api/weekly/list?from=2023-09-01&to=2023-10-31
+#### SQL ID 규칙
+모든 SQL 쿼리에는 주석으로 SQL ID를 포함해야 합니다:
+```sql
+/* 서비스.SQL파일.쿼리ID : 간략한 설명 */
+SELECT ...
 ```
 
-**Response**:
-```json
-{
-  "success": true,
-  "data": [
-    {
-      "id": "40",
-      "title": "10월 1주차 주간 보고서",
-      "period": "2023.10.01 ~ 2023.10.07",
-      "date": "2023.10.08"
-    }
-  ]
-}
-```
-
-#### 상세 조회
-```
-GET /api/weekly/detail/:id
-```
-
-**Response**:
-```json
-{
-  "success": true,
-  "data": {
-    "header": { "farmName": "행복한 농장", ... },
-    "alertMd": { "count": 3, ... },
-    "lastWeek": { ... },
-    "thisWeek": { ... },
-    "kpi": { ... },
-    "weather": { ... },
-    "todo": { ... }
-  }
-}
-```
-
-#### 팝업 데이터
-```
-GET /api/weekly/popup/:type/:id
-```
-
-**type**: `alertMd`, `modon`, `mating`, `farrowing`, `weaning`, `accident`, `culling`, `shipment`, `schedule`
-
-#### 차트 데이터
-```
-GET /api/weekly/chart/:type
-```
-
-**type**: `sowChart`, `matingChart`, `parityReturn`, `accidentPeriod`, 등
-
----
-
-## 4. 구현 단계
-
-### Phase 1: Mock 데이터 기반 API (현재)
-
-#### 4.1 Controller 구현
-**파일**: `src/modules/weekly/weekly.controller.ts`
+#### SQL 스타일 가이드
+*   **대문자**: 모든 SQL 키워드와 테이블/컬럼명은 대문자로 작성
+*   **테이블 별칭**: 1~2자 대문자로 테이블 성격을 표현 (예: M=Master, W=Week, S=Sub)
 
 ```typescript
-import { Controller, Get, Param, Query } from '@nestjs/common';
-import { WeeklyService } from './weekly.service';
-
-@Controller('api/weekly')
-export class WeeklyController {
-  constructor(private readonly weeklyService: WeeklyService) {}
-
-  @Get('list')
-  getList(@Query('from') from?: string, @Query('to') to?: string) {
-    return this.weeklyService.getList(from, to);
-  }
-
-  @Get('detail/:id')
-  getDetail(@Param('id') id: string) {
-    return this.weeklyService.getDetail(id);
-  }
-
-  @Get('popup/:type/:id')
-  getPopupData(@Param('type') type: string, @Param('id') id: string) {
-    return this.weeklyService.getPopupData(type, id);
-  }
-
-  @Get('chart/:type')
-  getChartData(@Param('type') type: string) {
-    return this.weeklyService.getChartData(type);
-  }
-}
-```
-
-#### 4.2 Service 구현
-**파일**: `src/modules/weekly/weekly.service.ts`
-
-```typescript
-import { Injectable } from '@nestjs/common';
-import { MOCK_DATA } from './mock-data';
-
-@Injectable()
-export class WeeklyService {
-  private useMockData = process.env.USE_MOCK_DATA === 'true';
-
-  async getList(from?: string, to?: string) {
-    if (this.useMockData) {
-      return {
-        success: true,
-        data: MOCK_DATA.reportList,
-      };
-    }
-
-    // TODO: Oracle DB 쿼리
-    // const reports = await this.weeklyRepository.find({ ... });
-    // return { success: true, data: reports };
-  }
-
-  async getDetail(id: string) {
-    if (this.useMockData) {
-      return {
-        success: true,
-        data: MOCK_DATA.weeklyDetail,
-      };
-    }
-
-    // TODO: Oracle DB 쿼리
-  }
-
-  async getPopupData(type: string, id: string) {
-    if (this.useMockData) {
-      return {
-        success: true,
-        data: MOCK_DATA.popupData[type],
-      };
-    }
-
-    // TODO: Oracle DB 쿼리
-  }
-
-  async getChartData(type: string) {
-    if (this.useMockData) {
-      return {
-        success: true,
-        data: MOCK_DATA.chartData[type],
-      };
-    }
-
-    // TODO: Oracle DB 쿼리
-  }
-}
-```
-
-#### 4.3 Mock 데이터
-**파일**: `src/modules/weekly/mock-data.ts`
-
-```typescript
-export const MOCK_DATA = {
-  reportList: [
-    { id: '40', title: '10월 1주차 주간 보고서', period: '2023.10.01 ~ 2023.10.07', date: '2023.10.08' },
-    // ... 나머지 데이터
-  ],
-  weeklyDetail: {
-    header: { farmName: '행복한 농장', period: '2023.10.01 ~ 2023.10.07', owner: '홍길동', weekNum: 40 },
-    alertMd: { count: 3, list: [ /* ... */ ] },
-    lastWeek: { /* ... */ },
-    thisWeek: { /* ... */ },
-    kpi: { psy: 25.5, weaningAge: 24.5, marketPrice: 5800 },
-    weather: { forecast: [] },
-    todo: { items: [] },
-  },
-  popupData: {
-    alertMd: [ /* ... */ ],
-    modon: { /* ... */ },
-    // ... 나머지 팝업
-  },
-  chartData: {
-    sowChart: [ /* ... */ ],
-    // ... 나머지 차트
-  },
+// 예시: src/modules/auth/sql/auth.sql.ts
+export const AUTH_SQL = {
+  /** 회원 로그인 조회 */
+  login: `
+    /* auth.auth.login : 회원 로그인 조회 */
+    SELECT
+        M.MEMBER_ID,
+        M.MEMBER_NM,
+        M.FARM_NO
+    FROM TA_MEMBER M
+    WHERE M.MEMBER_ID = :memberId
+      AND M.USE_YN = 'Y'
+  `,
 };
 ```
 
-### Phase 2: Oracle DB Entity 정의 (준비 중)
+### 2.2 요청 검증 (DTO Validation)
+`class-validator`를 사용하여 요청 데이터를 엄격하게 검증합니다.
+*   **위치**: `src/modules/{module}/dto/*.dto.ts`
+*   **적용**: Controller 핸들러의 파라미터에 DTO 타입 지정.
 
-#### 5.1 Entity 예시
-**파일**: `src/entities/sow.entity.ts`
-
-```typescript
-import { Entity, Column, PrimaryGeneratedColumn } from 'typeorm';
-
-@Entity('TB_SOW') // Oracle 테이블명
-export class Sow {
-  @PrimaryGeneratedColumn()
-  id: number;
-
-  @Column({ name: 'SOW_ID' })
-  sowId: string;
-
-  @Column({ name: 'PARITY' })
-  parity: number;
-
-  @Column({ name: 'STATUS' })
-  status: string;
-
-  @Column({ name: 'LAST_EVENT_DATE', type: 'date' })
-  lastEventDate: Date;
-
-  // ... 기타 컬럼
-}
-```
-
-**파일**: `src/entities/mating.entity.ts`
-
-```typescript
-import { Entity, Column, PrimaryGeneratedColumn } from 'typeorm';
-
-@Entity('TB_MATING')
-export class Mating {
-  @PrimaryGeneratedColumn()
-  id: number;
-
-  @Column({ name: 'SOW_ID' })
-  sowId: string;
-
-  @Column({ name: 'MATING_DATE', type: 'date' })
-  matingDate: Date;
-
-  @Column({ name: 'BOAR_ID' })
-  boarId: string;
-
-  // ... 기타 컬럼
-}
-```
-
-### Phase 3: Oracle DB 연동 (대기 중)
-
-#### 6.1 TypeORM 설정
-**파일**: `src/app.module.ts`
-
-```typescript
-import { Module } from '@nestjs/common';
-import { ConfigModule, ConfigService } from '@nestjs/config';
-import { TypeOrmModule } from '@nestjs/typeorm';
-
-@Module({
-  imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
-    TypeOrmModule.forRootAsync({
-      imports: [ConfigModule],
-      inject: [ConfigService],
-      useFactory: (configService: ConfigService) => ({
-        type: 'oracle',
-        host: configService.get<string>('DB_HOST'),
-        port: configService.get<number>('DB_PORT') || 1521,
-        username: configService.get<string>('DB_USER'),
-        password: configService.get<string>('DB_PASSWORD'),
-        serviceName: configService.get<string>('DB_SERVICE_NAME'),
-        entities: [__dirname + '/**/*.entity{.ts,.js}'],
-        synchronize: false, // 프로덕션에서는 false
-        logging: true,
-      }),
-    }),
-    // ... 모듈
-  ],
-})
-export class AppModule {}
-```
-
-#### 6.2 Repository 주입
-**파일**: `src/modules/weekly/weekly.module.ts`
-
-```typescript
-import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { WeeklyController } from './weekly.controller';
-import { WeeklyService } from './weekly.service';
-import { Sow } from '../../entities/sow.entity';
-import { Mating } from '../../entities/mating.entity';
-
-@Module({
-  imports: [
-    TypeOrmModule.forFeature([Sow, Mating, /* ... */]),
-  ],
-  controllers: [WeeklyController],
-  providers: [WeeklyService],
-})
-export class WeeklyModule {}
-```
-
-#### 6.3 Service 수정 (DB 쿼리)
-```typescript
-import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { Sow } from '../../entities/sow.entity';
-
-@Injectable()
-export class WeeklyService {
-  constructor(
-    @InjectRepository(Sow)
-    private sowRepository: Repository<Sow>,
-  ) {}
-
-  async getList(from?: string, to?: string) {
-    if (process.env.USE_MOCK_DATA === 'true') {
-      return { success: true, data: MOCK_DATA.reportList };
-    }
-
-    // 실제 Oracle DB 쿼리
-    const reports = await this.sowRepository
-      .createQueryBuilder('sow')
-      .select([/* ... */])
-      .where('sow.date BETWEEN :from AND :to', { from, to })
-      .getMany();
-
-    return { success: true, data: reports };
-  }
-}
-```
-
----
-
-## 7. 환경 변수
-
-**파일**: `api/.env`
-
-```env
-# 개발 모드
-NODE_ENV=development
-USE_MOCK_DATA=true          # Mock 데이터 사용
-
-# Oracle Database - 로컬
-DB_DRIVER=net.sf.log4jdbc.sql.jdbcapi.DriverSpy
-DB_HOST=192.168.3.244
-DB_PORT=1521
-DB_SID=ORCLCDB
-DB_USER=pksu
-DB_PASSWORD=pksu
-
-# Oracle Database - 운영 (추가 설정)
-# DB_IDLE_TIMEOUT=60
-# DB_MAX_POOL_SIZE=50
-# DB_MIN_IDLE=10
-# DB_TEST_QUERY=SELECT 1 FROM DUAL
-
-# JWT (인증 구현 시)
-JWT_SECRET=your-secret-key
-JWT_EXPIRES_IN=1d
-```
-
-**TypeORM 설정 예시** (`app.module.ts`):
-```typescript
-TypeOrmModule.forRootAsync({
-  imports: [ConfigModule],
-  inject: [ConfigService],
-  useFactory: (configService: ConfigService) => ({
-    type: 'oracle',
-    host: configService.get<string>('DB_HOST'),
-    port: configService.get<number>('DB_PORT') || 1521,
-    sid: configService.get<string>('DB_SID'),
-    username: configService.get<string>('DB_USER'),
-    password: configService.get<string>('DB_PASSWORD'),
-    synchronize: false, // 프로덕션에서는 false
-    logging: true,
-    // 운영 환경 추가 설정
-    extra: {
-      connectionTimeout: configService.get<number>('DB_IDLE_TIMEOUT') || 60,
-      maxPoolSize: configService.get<number>('DB_MAX_POOL_SIZE') || 50,
-      minPoolSize: configService.get<number>('DB_MIN_IDLE') || 10,
-    },
-  }),
-}),
-```
-
----
-
-## 8. 개발 워크플로우
-
-### 8.1 로컬 실행
-```bash
-cd api
-npm install
-npm run start:dev
-# http://localhost:3001
-```
-
-### 8.2 API 테스트
-```bash
-# 목록 조회
-curl http://localhost:3001/api/weekly/list
-
-# 상세 조회
-curl http://localhost:3001/api/weekly/detail/40
-
-# 팝업 데이터
-curl http://localhost:3001/api/weekly/popup/modon/40
-
-# 차트 데이터
-curl http://localhost:3001/api/weekly/chart/sowChart
-```
-
----
-
-## 9. 에러 처리
-
-### 9.1 공통 응답 형식
-**성공**:
+### 2.3 응답 표준화 (Response Standardization)
+모든 API 응답은 `TransformInterceptor`를 통해 일관된 형식을 갖습니다.
 ```json
 {
   "success": true,
-  "data": { /* ... */ }
+  "data": { ... },
+  "timestamp": "..."
 }
 ```
 
-**실패**:
-```json
-{
-  "success": false,
-  "message": "Error message",
-  "error": "ERROR_CODE"
-}
-```
-
-### 9.2 Exception Filter (예정)
-```typescript
-import { ExceptionFilter, Catch, ArgumentsHost, HttpException } from '@nestjs/common';
-
-@Catch(HttpException)
-export class HttpExceptionFilter implements ExceptionFilter {
-  catch(exception: HttpException, host: ArgumentsHost) {
-    const ctx = host.switchToHttp();
-    const response = ctx.getResponse();
-    const status = exception.getStatus();
-
-    response.status(status).json({
-      success: false,
-      message: exception.message,
-      error: exception.name,
-    });
-  }
-}
-```
+### 2.4 커스텀 로깅 (Custom Logging)
+`CustomTypeOrmLogger`를 통해 실행된 SQL 쿼리를 가독성 좋게 콘솔에 출력합니다. (파라미터 바인딩 포함)
 
 ---
 
-## 10. 다음 단계
+## 3. 주요 모듈 설명 (Module Descriptions)
 
-1. **Mock API 완성**: 모든 엔드포인트 Mock 데이터 구현
-2. **DB 스키마 분석**: Oracle DB 테이블 구조 파악
-3. **Entity 정의**: TypeORM Entity 생성
-4. **Repository 구현**: 실제 DB 쿼리 작성
-5. **Mock → DB 전환**: `USE_MOCK_DATA=false`로 테스트
+### 3.1 Config Module (`src/config`)
+*   환경 변수(`process.env`)를 Type-safe하게 로드하고 네임스페이스(`app`, `database`, `jwt`)로 구분하여 제공합니다.
+*   `ConfigService`를 주입받아 사용합니다.
+
+### 3.2 Common Module (`src/common`)
+*   **Guards**: `JwtAuthGuard` - 요청 헤더의 Bearer Token 검증.
+*   **Decorators**: `@User()` - Request 객체에서 사용자 정보 추출.
+*   **Filters**: `HttpExceptionFilter` - 예외 발생 시 표준 에러 응답 반환.
+*   **Interceptors**: `LoggingInterceptor` (실행 시간 로깅), `TransformInterceptor` (응답 래핑).
+
+### 3.3 Auth Module (`src/modules/auth`)
+*   **기능**: 사용자 로그인, JWT Access Token 발급, **공유 토큰 관리**.
+*   **테이블**: `TA_MEMBER` (사용자), `TA_FARM` (농장), `TS_INS_SERVICE` (서비스).
+*   **책임 영역**:
+    *   로그인/로그아웃 처리
+    *   JWT 발급 및 검증
+    *   **공유 토큰 (Share Token)** 생성, 검증, 만료 처리
+    *   사용자 권한 관리
+*   **SQL 파일**:
+    *   `auth.sql.ts`: 로그인, 농장/서비스 조회
+    *   `share-token.sql.ts`: 공유 토큰 생성/검증/조회
+*   **Flow**: `LoginDto` 검증 -> `AuthService.validateUser` -> `AUTH_SQL.login` -> JWT 발급.
+
+### 3.4 Weekly Module (`src/modules/weekly`)
+*   **기능**: 주간 보고서 목록/상세 조회, 차트/팝업 데이터 제공.
+*   **테이블**: `TS_INS_MASTER` (보고서 마스터), `TS_INS_WEEK` (주간 요약), `TS_INS_WEEK_SUB` (상세 데이터).
+*   **책임 영역**:
+    *   보고서 목록/상세 데이터 조회
+    *   차트/팝업 데이터 제공
+    *   ⚠️ **토큰 관련 로직은 Auth 모듈에서 처리** (Weekly는 데이터 조회만 담당)
+*   **SQL 파일**: `weekly.sql.ts`에 정의.
 
 ---
 
-## 11. 참고 자료
+## 4. API 엔드포인트 요약 (API Summary)
 
-- [NestJS 공식 문서](https://docs.nestjs.com)
-- [TypeORM 공식 문서](https://typeorm.io)
-- [Oracle Node.js Driver](https://oracle.github.io/node-oracledb/)
+### Auth
+*   `POST /api/auth/login`: 로그인 및 토큰 발급
+
+### Weekly Report
+*   `GET /api/weekly/list`: 보고서 목록 조회 (기간 필터)
+*   `GET /api/weekly/detail/:id`: 보고서 상세 데이터 조회
+*   `GET /api/weekly/popup/:type/:id`: 팝업용 상세 데이터 (type: `modon`, `mating` 등)
+*   `GET /api/weekly/chart/:type`: 차트용 데이터
+
+---
+
+## 5. 개발 가이드 (Development Guide)
+
+### 5.1 새 모듈 생성
+```bash
+# 1. 모듈 디렉토리 생성
+mkdir -p src/modules/new-feature/{dto,entities,sql}
+
+# 2. 파일 생성 (Controller, Service, Module, SQL, DTO)
+# ... (표준 네이밍 준수)
+```
+
+### 5.2 로컬 실행
+```bash
+npm run start:dev
+```
+*   서버는 `http://localhost:3001` (기본값)에서 실행됩니다.
+*   Swagger 문서는 (설정된 경우) `/api/docs`에서 확인 가능합니다.
+
+### 5.3 환경 변수 (.env)
+```env
+NODE_ENV=development
+DB_HOST=...
+JWT_SECRET=...
+```

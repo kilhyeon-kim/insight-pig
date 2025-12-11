@@ -1,16 +1,11 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, use } from 'react';
+import { useRouter } from 'next/navigation';
 import {
-    MOCK_WEEKLY_DATA,
-    MOCK_POPUP_DATA,
-    MOCK_EXTRA_DATA,
-    MOCK_MGMT_DATA,
-    MOCK_SCHEDULE_POPUP_DATA,
-    MOCK_PSY_TREND_DATA,
-    MOCK_AUCTION_DATA,
-    MOCK_WEATHER_DATA
-} from '@/services/mockData';
+    parseApiError,
+    parseFetchError
+} from '@/err';
 import { WeeklyHeader } from '../_components/WeeklyHeader';
 import { AlertCard } from '../_components/AlertCard';
 import { LastWeekSection } from '../_components/LastWeekSection';
@@ -32,14 +27,112 @@ import { PsyTrendPopup } from '../_components/popups/PsyTrendPopup';
 import { AuctionPopup } from '../_components/popups/AuctionPopup';
 import { WeatherPopup } from '../_components/popups/WeatherPopup';
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+
 interface WeeklyDetailPageProps {
     params: Promise<{ id: string }>;
 }
 
+interface ReportData {
+    header: {
+        farmNo: number;
+        farmNm: string;
+        ownerNm: string;
+        year: number;
+        weekNo: number;
+        period: { from: string; to: string };
+    };
+    alertMd: {
+        count: number;
+        hubo: number;
+        euMiCnt: number;
+        sgMiCnt: number;
+        bmDelayCnt: number;
+        euDelayCnt: number;
+        items: any[];
+    };
+    lastWeek: any;
+    thisWeek: any;
+    kpi: any;
+    popupData?: any;
+    extra?: any;
+    mgmt?: any;
+    scheduleData?: any;
+    psyTrend?: any;
+    auction?: any;
+    weather?: any;
+}
+
 export default function WeeklyDetailPage({ params }: WeeklyDetailPageProps) {
-    const data = MOCK_WEEKLY_DATA;
-    const popupData = MOCK_POPUP_DATA;
+    const resolvedParams = use(params);
+    const id = resolvedParams.id; // 이것이 토큰입니다.
+    const router = useRouter();
+
+    const [data, setData] = useState<ReportData | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [expired, setExpired] = useState(false);
     const [activePopup, setActivePopup] = useState<string | null>(null);
+    const [isLoginAccess, setIsLoginAccess] = useState(false);
+
+    useEffect(() => {
+        const fetchReport = async () => {
+            try {
+                setLoading(true);
+                setError(null);
+                setExpired(false);
+
+                // 로그인 토큰 가져오기
+                const token = sessionStorage.getItem('token');
+                const headers: HeadersInit = {};
+                if (token) {
+                    headers['Authorization'] = `Bearer ${token}`;
+                }
+
+                const response = await fetch(`${API_BASE_URL}/api/weekly/view/${id}`, {
+                    headers
+                });
+                const result = await response.json();
+
+                // 만료된 경우
+                if (!result.success && result.expired) {
+                    setExpired(true);
+                    setError(result.message || '공유 링크가 만료되었습니다.');
+                    return;
+                }
+
+                // 기타 오류
+                if (!result.success) {
+                    setError(result.message || '리포트를 찾을 수 없습니다.');
+                    return;
+                }
+
+                // 성공: 세션 토큰 저장 (후속 API 호출용)
+                if (result.sessionToken) {
+                    sessionStorage.setItem('shareSessionToken', result.sessionToken);
+                }
+
+                setData(result.data);
+                setIsLoginAccess(result.isLoginAccess);
+            } catch (err) {
+                setError(err instanceof Error ? err.message : '알 수 없는 오류가 발생했습니다.');
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        if (id) {
+            fetchReport();
+        } else {
+            setError('유효하지 않은 리포트 ID입니다.');
+            setLoading(false);
+        }
+    }, [id]);
+
+    // 로그인 페이지로 이동
+    const handleLoginRedirect = () => {
+        router.push('/login');
+    };
 
     const handlePopupOpen = (type: string) => {
         setActivePopup(type);
@@ -49,15 +142,64 @@ export default function WeeklyDetailPage({ params }: WeeklyDetailPageProps) {
         setActivePopup(null);
     };
 
+    // 로딩 상태
+    if (loading) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+                <div className="text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                    <p className="text-gray-600 dark:text-gray-400">리포트를 불러오는 중...</p>
+                </div>
+            </div>
+        );
+    }
+
+    // 에러 상태
+    if (error || !data) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+                <div className="text-center max-w-md mx-auto p-6">
+                    <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <svg className="w-8 h-8 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                    </div>
+                    <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+                        {expired ? '링크가 만료되었습니다' : '리포트를 불러올 수 없습니다'}
+                    </h2>
+                    <p className="text-gray-600 dark:text-gray-400 mb-6">{error}</p>
+
+                    {/* 만료되었거나 리포트를 찾을 수 없는 경우 로그인 버튼 표시 */}
+                    {(expired || error?.includes('찾을 수 없습니다')) && (
+                        <button
+                            onClick={handleLoginRedirect}
+                            className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                        >
+                            로그인하여 확인하기
+                        </button>
+                    )}
+                </div>
+            </div>
+        );
+    }
+
+    // 데이터를 기존 형식으로 변환
+    const headerData = {
+        farmName: data.header.farmNm,
+        owner: data.header.ownerNm,
+        weekNum: data.header.weekNo,
+        period: data.header.period,
+    };
+
     return (
         <div className="report-page-wrapper">
             {/* Header */}
-            <WeeklyHeader data={data.header} />
+            <WeeklyHeader data={headerData} />
 
             {/* Content */}
             <div className="p-2 sm:p-3 lg:p-4 space-y-6">
                 {/* Alert Card */}
-                {data.alertMd.count > 0 && (
+                {data.alertMd?.count > 0 && (
                     <AlertCard data={data.alertMd} onClick={() => handlePopupOpen('alertMd')} />
                 )}
 
@@ -68,132 +210,134 @@ export default function WeeklyDetailPage({ params }: WeeklyDetailPageProps) {
                 <ThisWeekSection data={data.thisWeek} onPopupOpen={handlePopupOpen} />
 
                 {/* Extra Section (부가 정보 아코디언) */}
-                <ExtraSection data={MOCK_EXTRA_DATA} onPopupOpen={handlePopupOpen} />
+                {data.extra && <ExtraSection data={data.extra} onPopupOpen={handlePopupOpen} />}
 
                 {/* Mgmt Section (현재 시기 관리 포인트) */}
-                <MgmtSection data={MOCK_MGMT_DATA} />
+                {data.mgmt && <MgmtSection data={data.mgmt} />}
             </div>
 
             {/* Popups - 조건부 마운트로 메모리 최적화 */}
-            {activePopup === 'alertMd' && (
+            {activePopup === 'alertMd' && data.alertMd?.items && (
                 <AlertMdPopup
                     isOpen={true}
                     onClose={handlePopupClose}
-                    data={popupData.alertMd}
+                    data={data.alertMd.items}
                 />
             )}
-            {activePopup === 'modon' && (
+
+            {activePopup === 'modon' && data.popupData?.modon && (
                 <ModonPopup
                     isOpen={true}
                     onClose={handlePopupClose}
-                    data={popupData.modon}
+                    data={data.popupData.modon}
                 />
             )}
-            {activePopup === 'mating' && (
+
+            {activePopup === 'mating' && data.popupData?.mating && (
                 <MatingPopup
                     isOpen={true}
                     onClose={handlePopupClose}
-                    data={popupData.mating}
+                    data={data.popupData.mating}
                 />
             )}
-            {activePopup === 'farrowing' && (
+
+            {activePopup === 'farrowing' && data.popupData?.farrowing && (
                 <FarrowingPopup
                     isOpen={true}
                     onClose={handlePopupClose}
-                    data={popupData.farrowing}
+                    data={data.popupData.farrowing}
                 />
             )}
-            {activePopup === 'weaning' && (
+
+            {activePopup === 'weaning' && data.popupData?.weaning && (
                 <WeaningPopup
                     isOpen={true}
                     onClose={handlePopupClose}
-                    data={popupData.weaning}
+                    data={data.popupData.weaning}
                 />
             )}
-            {activePopup === 'accident' && (
+
+            {activePopup === 'accident' && data.popupData?.accident && (
                 <AccidentPopup
                     isOpen={true}
                     onClose={handlePopupClose}
-                    data={popupData.accident}
+                    data={data.popupData.accident}
                 />
             )}
-            {activePopup === 'culling' && (
+
+            {activePopup === 'culling' && data.popupData?.culling && (
                 <CullingPopup
                     isOpen={true}
                     onClose={handlePopupClose}
-                    data={popupData.culling}
+                    data={data.popupData.culling}
                 />
             )}
-            {activePopup === 'shipment' && (
+
+            {activePopup === 'shipment' && data.popupData?.shipment && (
                 <ShipmentPopup
                     isOpen={true}
                     onClose={handlePopupClose}
-                    data={popupData.shipment}
+                    data={data.popupData.shipment}
                 />
             )}
 
-            {/* Schedule Detail Popups (금주 작업예정) */}
-            {activePopup === 'scheduleGb' && (
+            {activePopup === 'scheduleGb' && data.scheduleData?.gb && (
                 <ScheduleDetailPopup
                     isOpen={true}
                     onClose={handlePopupClose}
-                    data={MOCK_SCHEDULE_POPUP_DATA.scheduleGb}
+                    data={data.scheduleData.gb}
                     title="교배 예정"
-                    subtitle="금주 교배 대기돈 현황"
-                    id="pop-schedule-mating"
-                />
-            )}
-            {activePopup === 'scheduleBm' && (
-                <ScheduleDetailPopup
-                    isOpen={true}
-                    onClose={handlePopupClose}
-                    data={MOCK_SCHEDULE_POPUP_DATA.scheduleBm}
-                    title="분만 예정"
-                    subtitle="금주 분만 예정돈 현황"
-                    id="pop-schedule-farrowing"
-                />
-            )}
-            {activePopup === 'scheduleEu' && (
-                <ScheduleDetailPopup
-                    isOpen={true}
-                    onClose={handlePopupClose}
-                    data={MOCK_SCHEDULE_POPUP_DATA.scheduleEu}
-                    title="이유 예정"
-                    subtitle="금주 이유 예정돈 현황"
-                    id="pop-schedule-weaning"
-                />
-            )}
-            {activePopup === 'scheduleVaccine' && (
-                <ScheduleDetailPopup
-                    isOpen={true}
-                    onClose={handlePopupClose}
-                    data={MOCK_SCHEDULE_POPUP_DATA.scheduleVaccine}
-                    title="모돈백신 예정"
-                    subtitle="금주 백신 예정돈 현황"
-                    id="pop-schedule-vaccine"
                 />
             )}
 
-            {/* Extra Section Popups (부가정보) */}
-            {activePopup === 'psytrend' && (
+            {activePopup === 'scheduleBm' && data.scheduleData?.bm && (
+                <ScheduleDetailPopup
+                    isOpen={true}
+                    onClose={handlePopupClose}
+                    data={data.scheduleData.bm}
+                    title="분만 예정"
+                />
+            )}
+
+            {activePopup === 'scheduleEu' && data.scheduleData?.eu && (
+                <ScheduleDetailPopup
+                    isOpen={true}
+                    onClose={handlePopupClose}
+                    data={data.scheduleData.eu}
+                    title="이유 예정"
+                />
+            )}
+
+            {activePopup === 'scheduleVaccine' && data.scheduleData?.vaccine && (
+                <ScheduleDetailPopup
+                    isOpen={true}
+                    onClose={handlePopupClose}
+                    data={data.scheduleData.vaccine}
+                    title="백신 예정"
+                />
+            )}
+
+            {activePopup === 'psyTrend' && data.psyTrend && (
                 <PsyTrendPopup
                     isOpen={true}
                     onClose={handlePopupClose}
-                    data={MOCK_PSY_TREND_DATA}
+                    data={data.psyTrend}
                 />
             )}
-            {activePopup === 'auction' && (
+
+            {activePopup === 'auction' && data.auction && (
                 <AuctionPopup
                     isOpen={true}
                     onClose={handlePopupClose}
-                    data={MOCK_AUCTION_DATA}
+                    data={data.auction}
                 />
             )}
-            {activePopup === 'weather' && (
+
+            {activePopup === 'weather' && data.weather && (
                 <WeatherPopup
                     isOpen={true}
                     onClose={handlePopupClose}
-                    data={MOCK_WEATHER_DATA}
+                    data={data.weather}
                 />
             )}
         </div>

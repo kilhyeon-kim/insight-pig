@@ -22,12 +22,12 @@ export default function LoginPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedAccount, setSelectedAccount] = useState('');
 
-  // 이미 로그인된 경우 리다이렉트
-  useEffect(() => {
-    if (!isLoading && isAuthenticated) {
-      router.push('/weekly');
-    }
-  }, [isAuthenticated, isLoading, router]);
+  // 이미 로그인된 경우 리다이렉트 (주석 처리 - 수동 로그아웃 후 재로그인 허용)
+  // useEffect(() => {
+  //   if (!isLoading && isAuthenticated) {
+  //     router.push('/weekly');
+  //   }
+  // }, [isAuthenticated, isLoading, router]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -85,21 +85,21 @@ export default function LoginPage() {
           <div className="flex justify-center mb-4">
             <svg className="w-20 h-20" viewBox="0 0 100 100">
               {/* 돼지 얼굴 */}
-              <circle cx="50" cy="50" r="35" fill="#22c55e"/>
+              <circle cx="50" cy="50" r="35" fill="#22c55e" />
               {/* 귀 */}
-              <ellipse cx="25" cy="25" rx="12" ry="15" fill="#22c55e"/>
-              <ellipse cx="75" cy="25" rx="12" ry="15" fill="#22c55e"/>
-              <ellipse cx="25" cy="25" rx="8" ry="10" fill="#16a34a"/>
-              <ellipse cx="75" cy="25" rx="8" ry="10" fill="#16a34a"/>
+              <ellipse cx="25" cy="25" rx="12" ry="15" fill="#22c55e" />
+              <ellipse cx="75" cy="25" rx="12" ry="15" fill="#22c55e" />
+              <ellipse cx="25" cy="25" rx="8" ry="10" fill="#16a34a" />
+              <ellipse cx="75" cy="25" rx="8" ry="10" fill="#16a34a" />
               {/* 코 */}
-              <ellipse cx="50" cy="58" rx="18" ry="14" fill="#16a34a"/>
-              <circle cx="43" cy="58" r="4" fill="#1f2937"/>
-              <circle cx="57" cy="58" r="4" fill="#1f2937"/>
+              <ellipse cx="50" cy="58" rx="18" ry="14" fill="#16a34a" />
+              <circle cx="43" cy="58" r="4" fill="#1f2937" />
+              <circle cx="57" cy="58" r="4" fill="#1f2937" />
               {/* 눈 */}
-              <circle cx="35" cy="42" r="6" fill="#1f2937"/>
-              <circle cx="65" cy="42" r="6" fill="#1f2937"/>
-              <circle cx="37" cy="40" r="2" fill="white"/>
-              <circle cx="67" cy="40" r="2" fill="white"/>
+              <circle cx="35" cy="42" r="6" fill="#1f2937" />
+              <circle cx="65" cy="42" r="6" fill="#1f2937" />
+              <circle cx="37" cy="40" r="2" fill="white" />
+              <circle cx="67" cy="40" r="2" fill="white" />
             </svg>
           </div>
           <h1 className="text-2xl font-bold text-white">인사이트피그플랜</h1>

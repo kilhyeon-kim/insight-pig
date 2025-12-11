@@ -27,16 +27,16 @@ CREATE OR REPLACE PROCEDURE SP_INS_WEEK_FARM_PROCESS (
             (다른 농장 처리 계속 진행)
 
     재실행 대비 (오류농장 수동 재처리 시):
-      - TS_INS_FARM_SUB: 동일 PK(MASTER_SEQ, FARM_NO) 삭제 후 재생성
-      - TS_INS_FARM: MERGE로 존재시 상태/집계값 초기화, 없으면 INSERT
+      - TS_INS_WEEK_SUB: 동일 PK(MASTER_SEQ, FARM_NO) 삭제 후 재생성
+      - TS_INS_WEEK: MERGE로 존재시 상태/집계값 초기화, 없으면 INSERT
     ================================================================
     */
     P_MASTER_SEQ    IN  NUMBER,
     P_JOB_NM        IN  VARCHAR2,
     P_DAY_GB        IN  VARCHAR2,       -- 기간구분 (WEEK, MON, QT)
     P_FARM_NO       IN  NUMBER,
-    P_DT_FROM       IN  DATE,
-    P_DT_TO         IN  DATE
+    P_DT_FROM       IN  VARCHAR2,       -- YYYYMMDD
+    P_DT_TO         IN  VARCHAR2        -- YYYYMMDD
 ) AS
     V_LOCALE        VARCHAR2(10);
     V_ERR_CODE      NUMBER;
@@ -59,13 +59,13 @@ BEGIN
     -- 기존 데이터 처리 (재실행 대비)
     -- ================================================
 
-    -- 1. TS_INS_FARM_SUB: 동일 PK 존재시 삭제 후 재생성
-    DELETE FROM TS_INS_FARM_SUB
+    -- 1. TS_INS_WEEK_SUB: 동일 PK 존재시 삭제 후 재생성
+    DELETE FROM TS_INS_WEEK_SUB
     WHERE MASTER_SEQ = P_MASTER_SEQ
       AND FARM_NO = P_FARM_NO;
 
-    -- 2. TS_INS_FARM: MERGE (상태 초기화, 오류농장 재처리 대비)
-    MERGE INTO TS_INS_FARM TGT
+    -- 2. TS_INS_WEEK: MERGE (상태 초기화, 오류농장 재처리 대비)
+    MERGE INTO TS_INS_WEEK TGT
     USING (
         SELECT P_MASTER_SEQ AS MASTER_SEQ,
                P_FARM_NO AS FARM_NO
@@ -160,9 +160,16 @@ BEGIN
     -- SP_INS_WEEK_CH(P_MASTER_SEQ, P_JOB_NM, P_FARM_NO, V_LOCALE, P_DT_FROM, P_DT_TO);
     -- SP_INS_WEEK_SCHEDULE(P_MASTER_SEQ, P_JOB_NM, P_FARM_NO, V_LOCALE, P_DT_FROM, P_DT_TO);
 
-    -- 농장 상태 업데이트 (COMPLETE)
-    UPDATE TS_INS_FARM
-    SET STATUS_CD = 'COMPLETE'
+    -- 농장 상태 업데이트 (COMPLETE) + 공유 토큰 생성 + 만료일 설정 (7일)
+    -- STANDARD_HASH 사용 (Oracle 12c+, 권한 불필요)
+    -- RAW → VARCHAR2 변환: RAWTOHEX 사용
+    UPDATE TS_INS_WEEK
+    SET STATUS_CD = 'COMPLETE',
+        SHARE_TOKEN = LOWER(RAWTOHEX(STANDARD_HASH(
+            P_MASTER_SEQ || '-' || P_FARM_NO || '-' || TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS') || '-' || DBMS_RANDOM.STRING('X', 16),
+            'SHA256'
+        ))),
+        TOKEN_EXPIRE_DT = TO_CHAR(SYSDATE + 7, 'YYYYMMDD')  -- 토큰 유효기간: 7일
     WHERE MASTER_SEQ = P_MASTER_SEQ AND FARM_NO = P_FARM_NO;
     COMMIT;
 
@@ -172,7 +179,7 @@ EXCEPTION
         V_ERR_MSG := SUBSTR(SQLERRM, 1, 4000);
 
         -- 농장 상태 업데이트 (ERROR)
-        UPDATE TS_INS_FARM
+        UPDATE TS_INS_WEEK
         SET STATUS_CD = 'ERROR'
         WHERE MASTER_SEQ = P_MASTER_SEQ AND FARM_NO = P_FARM_NO;
 
@@ -217,7 +224,7 @@ CREATE OR REPLACE PROCEDURE SP_INS_WEEK_MAIN (
     ================================================================
     - 용도: 주간 리포트 생성의 진입점 (DBMS_SCHEDULER JOB에서 호출)
     - 호출: JOB_INS_WEEKLY_REPORT (매주 월요일 02:00 KST)
-    - 대상 테이블: TS_INS_MASTER, TS_INS_FARM, TS_INS_FARM_SUB
+    - 대상 테이블: TS_INS_MASTER, TS_INS_WEEK, TS_INS_WEEK_SUB
 
     스케줄 실행 제어:
       - 전체: TA_SYS_CONFIG.INS_SCHEDULE_YN = 'Y'
@@ -234,14 +241,15 @@ CREATE OR REPLACE PROCEDURE SP_INS_WEEK_MAIN (
     테스트 모드 (P_TEST_MODE='Y'):
       - 금주 데이터 생성 (월요일 ~ 오늘)
       - 기존 시스템 데이터 비교 목적
-      - 예시: EXEC SP_INS_WEEK_MAIN('WEEK', NULL, 4, 'Y');
+      - P_TEST_FARMS: 테스트 대상 농장 (콤마 구분, NULL이면 전체)
+      - 예시: EXEC SP_INS_WEEK_MAIN('WEEK', NULL, 4, 'Y', '1456,1387,4629,4440');
 
     실행 순서:
       0. TA_SYS_CONFIG.INS_SCHEDULE_YN 체크 → 'Y' 아니면 종료
       1. SP_INS_COM_LOG_CLEAR → 전일 로그 삭제
       1.5 중복 실행 체크 → 동일 기간 리포트 존재 시 종료
       2. TS_INS_MASTER 생성 → 마스터 레코드 INSERT
-      3. TS_INS_FARM 초기화 → 대상 농장별 레코드 생성
+      3. TS_INS_WEEK 초기화 → 대상 농장별 레코드 생성
       4. 농장별 병렬 처리 (DBMS_JOB)
       5. 완료 대기 후 TS_INS_MASTER 상태 업데이트
     ================================================================
@@ -249,14 +257,15 @@ CREATE OR REPLACE PROCEDURE SP_INS_WEEK_MAIN (
     P_DAY_GB          IN  VARCHAR2 DEFAULT 'WEEK',    -- 기간구분: WEEK(주간), MON(월간), QT(분기)
     P_BASE_DT         IN  DATE DEFAULT NULL,          -- 기준일 (NULL=오늘)
     P_PARALLEL_LEVEL  IN  NUMBER DEFAULT 4,           -- 병렬 수준 (동시 실행 농장 수)
-    P_TEST_MODE       IN  VARCHAR2 DEFAULT 'N'        -- 테스트모드: Y=금주(오늘포함), N=지난주(기본)
+    P_TEST_MODE       IN  VARCHAR2 DEFAULT 'N',       -- 테스트모드: Y=금주(오늘포함), N=지난주(기본)
+    P_TEST_FARMS      IN  VARCHAR2 DEFAULT NULL       -- 테스트 농장 (콤마 구분, 예: '1456,1387,4629,4440')
 ) AS
     V_JOB_NM        VARCHAR2(50) := 'JOB_INS_WEEKLY_REPORT';
     V_LOG_SEQ       NUMBER;
     V_MASTER_SEQ    NUMBER;
     V_BASE_DT       DATE;
-    V_DT_FROM       DATE;
-    V_DT_TO         DATE;
+    V_DT_FROM       VARCHAR2(8);        -- YYYYMMDD
+    V_DT_TO         VARCHAR2(8);        -- YYYYMMDD
     V_YEAR          NUMBER(4);
     V_WEEK_NO       NUMBER(2);
     V_TARGET_CNT    INTEGER := 0;
@@ -274,7 +283,7 @@ CREATE OR REPLACE PROCEDURE SP_INS_WEEK_MAIN (
     V_MAX_WAIT      INTEGER := 600;  -- 최대 대기 시간 (초) = 10분
 
     -- 농장 목록 저장용
-    TYPE T_FARM_LIST IS TABLE OF TS_INS_FARM.FARM_NO%TYPE;
+    TYPE T_FARM_LIST IS TABLE OF TS_INS_WEEK.FARM_NO%TYPE;
     V_FARMS         T_FARM_LIST := T_FARM_LIST();
     V_IDX           INTEGER := 1;
 
@@ -307,15 +316,15 @@ BEGIN
     V_YEAR := TO_NUMBER(TO_CHAR(V_BASE_DT, 'IYYY'));
     V_WEEK_NO := TO_NUMBER(TO_CHAR(V_BASE_DT, 'IW'));
 
-    -- 기간 계산
+    -- 기간 계산 (VARCHAR YYYYMMDD 형식으로 저장)
     IF P_TEST_MODE = 'Y' THEN
         -- 테스트 모드: 금주 (오늘 포함) - 기존 시스템 데이터 비교용
-        V_DT_FROM := TRUNC(V_BASE_DT, 'IW');  -- 금주 월요일
-        V_DT_TO := V_BASE_DT;                  -- 오늘 (기준일)
+        V_DT_FROM := TO_CHAR(TRUNC(V_BASE_DT, 'IW'), 'YYYYMMDD');  -- 금주 월요일
+        V_DT_TO := TO_CHAR(V_BASE_DT, 'YYYYMMDD');                  -- 오늘 (기준일)
     ELSE
         -- 운영 모드: 지난주 (기본)
-        V_DT_TO := TRUNC(V_BASE_DT, 'IW') - 1;  -- 지난주 일요일
-        V_DT_FROM := V_DT_TO - 6;                -- 지난주 월요일
+        V_DT_TO := TO_CHAR(TRUNC(V_BASE_DT, 'IW') - 1, 'YYYYMMDD');  -- 지난주 일요일
+        V_DT_FROM := TO_CHAR(TRUNC(V_BASE_DT, 'IW') - 7, 'YYYYMMDD'); -- 지난주 월요일
     END IF;
 
     -- ================================================
@@ -350,7 +359,8 @@ BEGIN
     SP_INS_COM_LOG_START(V_MASTER_SEQ, V_JOB_NM, 'SP_INS_WEEK_MAIN', NULL, V_LOG_SEQ, P_DAY_GB, V_YEAR, V_WEEK_NO);
 
     -- ================================================
-    -- 3. 대상 농장 조회 및 TS_INS_FARM 초기 생성
+    -- 3. 대상 농장 조회 및 TS_INS_WEEK 초기 생성
+    --    테스트 모드 + P_TEST_FARMS 지정 시 해당 농장만 처리
     -- ================================================
     FOR farm_rec IN (
         SELECT DISTINCT F.FARM_NO, F.FARM_NM, F.PRINCIPAL_NM, F.SIGUN_CD,
@@ -360,13 +370,19 @@ BEGIN
         WHERE F.USE_YN = 'Y'
           AND S.INSPIG_YN = 'Y'
           AND S.USE_YN = 'Y'
-          AND (S.INSPIG_TO_DT IS NULL OR S.INSPIG_TO_DT >= V_TODAY)
+          AND (S.INSPIG_TO_DT IS NULL OR S.INSPIG_TO_DT >= TO_CHAR(V_TODAY, 'YYYYMMDD'))
           AND S.INSPIG_STOP_DT IS NULL
+          -- 테스트 모드 + 농장 지정 시 해당 농장만 필터링
+          AND (
+              P_TEST_MODE != 'Y'
+              OR P_TEST_FARMS IS NULL
+              OR INSTR(',' || P_TEST_FARMS || ',', ',' || F.FARM_NO || ',') > 0
+          )
         ORDER BY F.FARM_NO
     ) LOOP
         V_TARGET_CNT := V_TARGET_CNT + 1;
 
-        INSERT INTO TS_INS_FARM (
+        INSERT INTO TS_INS_WEEK (
             MASTER_SEQ, FARM_NO, REPORT_YEAR, REPORT_WEEK_NO,
             DT_FROM, DT_TO, FARM_NM, OWNER_NM, SIGUNGU_CD, STATUS_CD
         ) VALUES (
@@ -411,9 +427,7 @@ BEGIN
                 job  => V_JOB_NO,
                 what => 'BEGIN SP_INS_WEEK_FARM_PROCESS(' ||
                         V_MASTER_SEQ || ', ''' || V_JOB_NM || ''', ''' || P_DAY_GB || ''', ' ||
-                        V_FARMS(V_IDX) || ', ' ||
-                        'TO_DATE(''' || TO_CHAR(V_DT_FROM, 'YYYYMMDD') || ''', ''YYYYMMDD''), ' ||
-                        'TO_DATE(''' || TO_CHAR(V_DT_TO, 'YYYYMMDD') || ''', ''YYYYMMDD'')); END;',
+                        V_FARMS(V_IDX) || ', ''' || V_DT_FROM || ''', ''' || V_DT_TO || '''); END;',
                 next_date => SYSDATE
             );
             COMMIT;
@@ -433,7 +447,7 @@ BEGIN
     LOOP
         -- 아직 READY 또는 RUNNING 상태인 농장 수 확인
         SELECT COUNT(*) INTO V_RUNNING_CNT
-        FROM TS_INS_FARM
+        FROM TS_INS_WEEK
         WHERE MASTER_SEQ = V_MASTER_SEQ
           AND STATUS_CD IN ('READY', 'RUNNING');
 
@@ -446,7 +460,7 @@ BEGIN
     -- 타임아웃 처리
     IF V_WAIT_CNT >= V_MAX_WAIT THEN
         -- RUNNING 상태로 남은 농장을 ERROR로 변경
-        UPDATE TS_INS_FARM
+        UPDATE TS_INS_WEEK
         SET STATUS_CD = 'ERROR'
         WHERE MASTER_SEQ = V_MASTER_SEQ
           AND STATUS_CD IN ('READY', 'RUNNING');
@@ -459,11 +473,11 @@ BEGIN
     -- 6. 결과 집계 및 MASTER 상태 업데이트
     -- ================================================
     SELECT COUNT(*) INTO V_COMPLETE_CNT
-    FROM TS_INS_FARM
+    FROM TS_INS_WEEK
     WHERE MASTER_SEQ = V_MASTER_SEQ AND STATUS_CD = 'COMPLETE';
 
     SELECT COUNT(*) INTO V_ERROR_CNT
-    FROM TS_INS_FARM
+    FROM TS_INS_WEEK
     WHERE MASTER_SEQ = V_MASTER_SEQ AND STATUS_CD = 'ERROR';
 
     UPDATE TS_INS_MASTER
@@ -526,8 +540,8 @@ CREATE OR REPLACE PROCEDURE SP_INS_WEEK_RETRY_ERROR (
 ) AS
     V_JOB_NM        VARCHAR2(50) := 'JOB_INS_WEEKLY_REPORT';
     V_DAY_GB        VARCHAR2(10);
-    V_DT_FROM       DATE;
-    V_DT_TO         DATE;
+    V_DT_FROM       VARCHAR2(8);        -- YYYYMMDD
+    V_DT_TO         VARCHAR2(8);        -- YYYYMMDD
     V_TARGET_CNT    INTEGER := 0;
     V_COMPLETE_CNT  INTEGER := 0;
     V_ERROR_CNT     INTEGER := 0;
@@ -541,7 +555,7 @@ CREATE OR REPLACE PROCEDURE SP_INS_WEEK_RETRY_ERROR (
     V_MAX_WAIT      INTEGER := 600;
 
     -- 농장 목록 저장용
-    TYPE T_FARM_LIST IS TABLE OF TS_INS_FARM.FARM_NO%TYPE;
+    TYPE T_FARM_LIST IS TABLE OF TS_INS_WEEK.FARM_NO%TYPE;
     V_FARMS         T_FARM_LIST := T_FARM_LIST();
     V_IDX           INTEGER := 1;
 
@@ -555,7 +569,7 @@ BEGIN
     -- 오류 농장 목록 조회
     FOR farm_rec IN (
         SELECT FARM_NO
-        FROM TS_INS_FARM
+        FROM TS_INS_WEEK
         WHERE MASTER_SEQ = P_MASTER_SEQ
           AND STATUS_CD = 'ERROR'
           AND (P_FARM_NO IS NULL OR FARM_NO = P_FARM_NO)
@@ -585,7 +599,7 @@ BEGIN
     COMMIT;
 
     -- 오류 농장 상태 초기화 (READY)
-    UPDATE TS_INS_FARM
+    UPDATE TS_INS_WEEK
     SET STATUS_CD = 'READY'
     WHERE MASTER_SEQ = P_MASTER_SEQ
       AND STATUS_CD = 'ERROR'
@@ -608,9 +622,7 @@ BEGIN
                 job  => V_JOB_NO,
                 what => 'BEGIN SP_INS_WEEK_FARM_PROCESS(' ||
                         P_MASTER_SEQ || ', ''' || V_JOB_NM || ''', ''' || V_DAY_GB || ''', ' ||
-                        V_FARMS(V_IDX) || ', ' ||
-                        'TO_DATE(''' || TO_CHAR(V_DT_FROM, 'YYYYMMDD') || ''', ''YYYYMMDD''), ' ||
-                        'TO_DATE(''' || TO_CHAR(V_DT_TO, 'YYYYMMDD') || ''', ''YYYYMMDD'')); END;',
+                        V_FARMS(V_IDX) || ', ''' || V_DT_FROM || ''', ''' || V_DT_TO || '''); END;',
                 next_date => SYSDATE
             );
             COMMIT;
@@ -626,7 +638,7 @@ BEGIN
     V_WAIT_CNT := 0;
     LOOP
         SELECT COUNT(*) INTO V_RUNNING_CNT
-        FROM TS_INS_FARM
+        FROM TS_INS_WEEK
         WHERE MASTER_SEQ = P_MASTER_SEQ
           AND STATUS_CD IN ('READY', 'RUNNING');
 
@@ -640,11 +652,11 @@ BEGIN
     -- 결과 집계 및 MASTER 상태 업데이트
     -- ================================================
     SELECT COUNT(*) INTO V_COMPLETE_CNT
-    FROM TS_INS_FARM
+    FROM TS_INS_WEEK
     WHERE MASTER_SEQ = P_MASTER_SEQ AND STATUS_CD = 'COMPLETE';
 
     SELECT COUNT(*) INTO V_ERROR_CNT
-    FROM TS_INS_FARM
+    FROM TS_INS_WEEK
     WHERE MASTER_SEQ = P_MASTER_SEQ AND STATUS_CD = 'ERROR';
 
     UPDATE TS_INS_MASTER

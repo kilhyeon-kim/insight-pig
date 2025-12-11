@@ -22,7 +22,12 @@
       "Bash(findstr:*)",
       "Bash(code --install-extension:*)",
       "Bash(mkdir:*)",
-      "Bash(npm run build:*)"
+      "Bash(npm run build:*)",
+      "Bash(cmd //c \"taskkill /PID 32684 /F\")",
+      "Bash(cmd //c \"taskkill /PID 71828 /F\")",
+      "Bash(cmd //c \"taskkill /PID 7916 /F\")",
+      "Bash(cmd //c \"taskkill /PID 39856 /F\")",
+      "Bash(npx kill-port:*)"
     ],
     "deny": [],
     "ask": []

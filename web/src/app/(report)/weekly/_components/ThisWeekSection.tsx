@@ -42,7 +42,7 @@ export const ThisWeekSection: React.FC<ThisWeekSectionProps> = ({ data, onPopupO
                         <FontAwesomeIcon icon={faCalendarWeek} /> 금주 작업예정
                     </div>
                     <div className="card-date-wrap right horizontal">
-                        <div className="card-badge">Week {grid?.weekNum ?? data.summary.matingGoal}</div>
+                        <div className="card-badge">Week {grid?.weekNum ?? data?.summary?.matingGoal ?? ''}</div>
                         <div className="card-date">{grid?.periodFrom ?? ''} ~ {grid?.periodTo ?? ''}</div>
                     </div>
                 </div>

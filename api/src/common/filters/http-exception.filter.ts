@@ -7,6 +7,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
+import { ErrorType, getErrorTypeByStatus } from '../err';
 
 /**
  * HTTP 예외 필터
@@ -28,12 +29,16 @@ export class HttpExceptionFilter implements ExceptionFilter {
         ? exceptionResponse
         : (exceptionResponse as any).message || exception.message;
 
+    // 에러 유형 분류 (중앙화된 함수 사용)
+    const errorType = getErrorTypeByStatus(status);
+
     this.logger.error(
-      `${request.method} ${request.url} ${status} - ${errorMessage}`,
+      `[${errorType}] ${request.method} ${request.url} ${status} - ${errorMessage}`,
     );
 
     response.status(status).json({
       success: false,
+      errorType,
       statusCode: status,
       message: errorMessage,
       timestamp: new Date().toISOString(),
@@ -64,13 +69,17 @@ export class AllExceptionsFilter implements ExceptionFilter {
         ? exception.message
         : '서버 내부 오류가 발생했습니다.';
 
+    // 에러 유형 (예상치 못한 에러는 DB 또는 BACKEND로 분류)
+    const errorType = status >= 500 ? 'DB' : 'BACKEND';
+
     this.logger.error(
-      `${request.method} ${request.url} ${status} - ${message}`,
+      `[${errorType}] ${request.method} ${request.url} ${status} - ${message}`,
       exception instanceof Error ? exception.stack : '',
     );
 
     response.status(status).json({
       success: false,
+      errorType, // 에러 유형 추가
       statusCode: status,
       message,
       timestamp: new Date().toISOString(),

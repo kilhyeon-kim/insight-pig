@@ -1,8 +1,8 @@
 import { Entity, Column, PrimaryColumn, ManyToOne, JoinColumn } from 'typeorm';
-import { TsInsFarm } from './ts-ins-farm.entity';
+import { TsInsWeek } from './ts-ins-week.entity';
 
 /**
- * TS_INS_FARM_SUB: 리포트 상세 테이블 (팝업 데이터)
+ * TS_INS_WEEK_SUB: 리포트 상세 테이블 (팝업 데이터)
  *
  * GUBUN 코드별 데이터 용도:
  * - ALERT_MD: 관리대상 모돈 상세 (모돈번호, 상태, 일수 등)
@@ -18,8 +18,8 @@ import { TsInsFarm } from './ts-ins-farm.entity';
  * - CARCASS: 도체중/등지방분포
  * - SCHEDULE_*: 예정 작업 (GB, IMSIN, BM, EU, VACCINE, SHIP)
  */
-@Entity({ name: 'TS_INS_FARM_SUB' })
-export class TsInsFarmSub {
+@Entity({ name: 'TS_INS_WEEK_SUB' })
+export class TsInsWeekSub {
   @PrimaryColumn({ name: 'MASTER_SEQ', type: 'number' })
   masterSeq: number;
 
@@ -78,18 +78,14 @@ export class TsInsFarmSub {
   @Column({ name: 'STR_2', type: 'varchar2', length: 100, nullable: true })
   str2: string;
 
-  // 일자 데이터
-  @Column({ name: 'WK_DATE', type: 'date', nullable: true })
-  wkDate: Date;
-
   @Column({ name: 'LOG_INS_DT', type: 'date', default: () => 'SYSDATE' })
   logInsDt: Date;
 
   // Relations
-  @ManyToOne(() => TsInsFarm, (farm) => farm.subs)
+  @ManyToOne(() => TsInsWeek, (week) => week.subs)
   @JoinColumn([
     { name: 'MASTER_SEQ', referencedColumnName: 'masterSeq' },
     { name: 'FARM_NO', referencedColumnName: 'farmNo' },
   ])
-  farm: TsInsFarm;
+  week: TsInsWeek;
 }

@@ -1,4 +1,5 @@
-import { Controller, Get, Param, Query, NotFoundException } from '@nestjs/common';
+import { Controller, Get, Param, Query, NotFoundException, ForbiddenException, Headers } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
 import { WeeklyService } from './weekly.service';
 import { ChartType } from '../../data/mock/weekly.mock';
 
@@ -9,7 +10,10 @@ import { ChartType } from '../../data/mock/weekly.mock';
  */
 @Controller('api/weekly')
 export class WeeklyController {
-  constructor(private readonly weeklyService: WeeklyService) {}
+  constructor(
+    private readonly weeklyService: WeeklyService,
+    private readonly jwtService: JwtService,
+  ) { }
 
   // ─────────────────────────────────────────────────────────────────────────────
   // 보고서 목록/상세/팝업 API (Frontend 연동용)
@@ -55,6 +59,113 @@ export class WeeklyController {
     return {
       success: true,
       data,
+    };
+  }
+
+  /**
+   * 공유 토큰으로 주간 보고서 조회 (인증 불필요, 만료일 검증 포함)
+   * GET /api/weekly/share/:token
+   *
+   * 응답:
+   * - success: true → data에 리포트, sessionToken에 임시 세션 JWT
+   * - success: false, expired: true → 만료됨, 로그인 페이지로 이동 필요
+   * - success: false, expired: false → 존재하지 않음
+   */
+  @Get('share/:token')
+  async getReportByShareToken(@Param('token') token: string) {
+    // 토큰 형식 검증 (64자 hex)
+    if (!token || !/^[a-f0-9]{64}$/i.test(token)) {
+      throw new NotFoundException('Invalid share token');
+    }
+
+    const result = await this.weeklyService.getReportByShareTokenWithExpiry(token);
+
+    // 만료된 경우: ForbiddenException 대신 expired 플래그로 응답
+    if (!result.success) {
+      return {
+        success: false,
+        expired: result.expired,
+        message: result.message,
+        data: null,
+      };
+    }
+
+    // 성공: 임시 세션 JWT 발급 (해당 리포트만 접근 가능, 1시간 유효)
+    const sessionToken = this.jwtService.sign(
+      {
+        type: 'share_session',
+        shareToken: token,
+        farmNo: result.data.header.farmNo,
+        masterSeq: result.data.header.masterSeq || null,
+      },
+      { expiresIn: '1h' },
+    );
+
+    return {
+      success: true,
+      data: result.data,
+      sessionToken, // 프론트엔드에서 저장하여 후속 API 호출에 사용
+    };
+  }
+
+  /**
+   * 통합 리포트 뷰 (로그인/공유 공용)
+   * GET /api/weekly/view/:token
+   */
+  @Get('view/:token')
+  async getView(
+    @Param('token') token: string,
+    @Headers('authorization') authHeader: string,
+  ) {
+    // 토큰 형식 검증
+    if (!token || !/^[a-f0-9]{64}$/i.test(token)) {
+      throw new NotFoundException('Invalid token');
+    }
+
+    let skipExpiryCheck = false;
+
+    // 로그인 여부 확인 (Authorization 헤더)
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      try {
+        const jwtToken = authHeader.split(' ')[1];
+        // verify는 실패 시 에러 발생
+        const payload = this.jwtService.verify(jwtToken);
+        // 로그인 토큰인 경우 (sub가 존재하거나 type이 login 등)
+        if (payload) {
+          skipExpiryCheck = true;
+        }
+      } catch (e) {
+        // 토큰 검증 실패 시 무시 (공유 링크로 간주)
+      }
+    }
+
+    const result = await this.weeklyService.getReportByShareTokenWithExpiry(token, skipExpiryCheck);
+
+    if (!result.success) {
+      return {
+        success: false,
+        expired: result.expired,
+        message: result.message,
+        data: null,
+      };
+    }
+
+    // 세션 토큰 발급 (공유 접속일 경우 필요, 로그인 접속이어도 팝업 등을 위해 발급 가능)
+    const sessionToken = this.jwtService.sign(
+      {
+        type: 'share_session',
+        shareToken: token,
+        farmNo: result.data.header.farmNo,
+        masterSeq: result.data.header.masterSeq || null,
+      },
+      { expiresIn: '1h' },
+    );
+
+    return {
+      success: true,
+      data: result.data,
+      sessionToken,
+      isLoginAccess: skipExpiryCheck
     };
   }
 

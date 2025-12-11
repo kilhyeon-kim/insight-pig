@@ -76,6 +76,29 @@ SELECT NVL(COUNTRY_CODE, 'KOR') AS LOCALE FROM TA_FARM WHERE FARM_NO = :farm_no;
 | **월간 (MON)** | 전월 1일 ~ 마지막일 | 전월 마지막일 (DT_TO) = 기말 | - |
 | **분기 (QT)** | 전분기 시작 ~ 종료 | 전분기 마지막일 (DT_TO) | 예정 |
 
+### 1.6 날짜 처리 원칙 (API SQL)
+
+> **중요**: API에서 사용하는 SQL 작성 시 아래 날짜 변환 규칙을 반드시 준수해야 합니다.
+
+#### SELECT 절 (조회)
+*   **함수**: `SF_GET_LOCALE_VW_DATE_2022(LOCALE, DATE_COL)` + `TO_CHAR(..., 'FORMAT')`
+*   **포맷**: `'YYYY.MM.DD'` (기본 표출용)
+*   **예시**:
+    ```sql
+    -- 기본 날짜 표출
+    TO_CHAR(SF_GET_LOCALE_VW_DATE_2022('KOR', M.LOG_INS_DT), 'YYYY.MM.DD') AS LOG_INS_DT
+    ```
+
+#### WHERE 절 (조건)
+*   **함수**: `SF_GET_LOCALE_DATE_2020(LOCALE, DATE_COL)` + `TO_CHAR(..., 'FORMAT')`
+*   **비교**: 입력받은 파라미터(YYYYMMDD 문자열)와 비교 시 `TO_CHAR`로 변환하여 비교
+*   **예시**:
+    ```sql
+    -- 날짜 조건 비교
+    WHERE TO_CHAR(SF_GET_LOCALE_DATE_2020('KOR', M.INS_DT), 'YYYYMMDD') >= :from
+      AND TO_CHAR(SF_GET_LOCALE_DATE_2020('KOR', M.INS_DT), 'YYYYMMDD') <= :to
+    ```
+
 #### 기간 계산 예시
 
 ```sql
@@ -353,14 +376,14 @@ WHERE WK_GUBUN='E' AND WK.DAERI_YN = 'N'  -- 이유가 끝난 모돈(교배대�
 ```
 TS_INS_MASTER (리포트 마스터)
     │
-    ├── TS_INS_FARM (농장별 요약)
+    ├── TS_INS_WEEK (농장별 요약)
     │       │
-    │       └── TS_INS_FARM_SUB (상세 데이터, GUBUN별)
+    │       └── TS_INS_WEEK_SUB (상세 데이터, GUBUN별)
     │
     └── TS_INS_JOB_LOG (실행 로그)
 ```
 
-### 10.2 TS_INS_FARM_SUB GUBUN 코드
+### 10.2 TS_INS_WEEK_SUB GUBUN 코드
 
 | GUBUN | 용도 | CNT_1~5 매핑 |
 |-------|------|-------------|

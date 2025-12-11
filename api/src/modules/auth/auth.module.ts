@@ -1,14 +1,12 @@
 import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
-import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
-import { TaMember, TaFarm, TsInsService } from './entities';
+import { ShareTokenService } from './share-token.service';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([TaMember, TaFarm, TsInsService]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -21,7 +19,7 @@ import { TaMember, TaFarm, TsInsService } from './entities';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService],
-  exports: [AuthService, JwtModule],
+  providers: [AuthService, ShareTokenService],
+  exports: [AuthService, ShareTokenService, JwtModule],
 })
 export class AuthModule {}

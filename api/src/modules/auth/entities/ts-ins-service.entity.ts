@@ -12,17 +12,17 @@ export class TsInsService {
   @Column({ name: 'INSPIG_YN', type: 'varchar2', length: 1, default: 'N' })
   inspigYn: string;
 
-  @Column({ name: 'INSPIG_REG_DT', type: 'date', nullable: true })
-  inspigRegDt: Date;
+  @Column({ name: 'INSPIG_REG_DT', type: 'varchar2', length: 8, nullable: true })
+  inspigRegDt: string; // YYYYMMDD
 
-  @Column({ name: 'INSPIG_FROM_DT', type: 'date', nullable: true })
-  inspigFromDt: Date;
+  @Column({ name: 'INSPIG_FROM_DT', type: 'varchar2', length: 8, nullable: true })
+  inspigFromDt: string; // YYYYMMDD
 
-  @Column({ name: 'INSPIG_TO_DT', type: 'date', nullable: true })
-  inspigToDt: Date;
+  @Column({ name: 'INSPIG_TO_DT', type: 'varchar2', length: 8, nullable: true })
+  inspigToDt: string; // YYYYMMDD
 
-  @Column({ name: 'INSPIG_STOP_DT', type: 'date', nullable: true })
-  inspigStopDt: Date;
+  @Column({ name: 'INSPIG_STOP_DT', type: 'varchar2', length: 8, nullable: true })
+  inspigStopDt: string; // YYYYMMDD
 
   @Column({ name: 'WEB_PAY_YN', type: 'varchar2', length: 1, nullable: true })
   webPayYn: string;

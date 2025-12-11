@@ -1,15 +1,17 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
-import DatePicker from 'react-datepicker';
-import "react-datepicker/dist/react-datepicker.css";
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faSearch, faUser } from '@fortawesome/free-solid-svg-icons';
+import { faSearch, faCalendarAlt, faChevronLeft, faChevronRight } from '@fortawesome/free-solid-svg-icons';
 import { ReportList } from '@/components/report/ReportList';
 import { useAuth, useRequireAuth } from '@/contexts/AuthContext';
 
 // API 베이스 URL
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+
+// 페이지당 표시 건수
+const PAGE_SIZE = 10;
 
 interface ReportItem {
   id: string;
@@ -18,18 +20,64 @@ interface ReportItem {
   date: string;
   masterSeq?: number;
   farmNo?: number;
+  shareToken?: string;
 }
+
+// 6개월 전 날짜 계산
+const getSixMonthsAgo = (): Date => {
+  const date = new Date();
+  date.setMonth(date.getMonth() - 6);
+  return date;
+};
+
+// 날짜를 yyyy-MM-dd 형식으로 포맷
+const formatDateForInput = (date: Date): string => {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+};
+
+// 날짜를 yyyyMMdd 형식으로 포맷 (API용)
+const formatDateForApi = (date: Date): string => {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}${m}${d}`;
+};
+
+// 날짜 포맷팅 함수 (표시용)
+const formatDate = (dateStr: string): string => {
+  if (!dateStr) return '';
+  // YYYYMMDD -> YYYY.MM.DD
+  if (dateStr.length === 8) {
+    return `${dateStr.substring(0, 4)}.${dateStr.substring(4, 6)}.${dateStr.substring(6, 8)}`;
+  }
+  // ISO string -> YYYY.MM.DD
+  const date = new Date(dateStr);
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}.${m}.${d}`;
+};
 
 export default function WeeklyListPage() {
   // 인증 체크 - 로그인 안됐으면 리다이렉트
   const { isLoading: authLoading } = useRequireAuth('/login');
-  const { user, activeFarmNo, testFarmNo, setTestFarmNo, logout } = useAuth();
+  const { user, activeFarmNo, testFarmNo, setTestFarmNo } = useAuth();
+  const router = useRouter();
 
-  const [startDate, setStartDate] = useState<Date | null>(new Date(2024, 0, 1)); // 2024.01.01
-  const [endDate, setEndDate] = useState<Date | null>(new Date()); // 오늘
-  const [testFarmNoInput, setTestFarmNoInput] = useState<string>(''); // 테스트용 농장번호 입력
+  // 최근 6개월 기본값
+  const [startDate, setStartDate] = useState<string>(formatDateForInput(getSixMonthsAgo()));
+  const [endDate, setEndDate] = useState<string>(formatDateForInput(new Date()));
+  const [testFarmNoInput, setTestFarmNoInput] = useState<string>('');
   const [reports, setReports] = useState<ReportItem[]>([]);
   const [loading, setLoading] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [hasSearched, setHasSearched] = useState(false);
+
+  // 자동 조회 플래그
+  const initialFetchDone = useRef(false);
 
   // 테스트 농장번호 초기화
   useEffect(() => {
@@ -38,18 +86,9 @@ export default function WeeklyListPage() {
     }
   }, [testFarmNo]);
 
-  const formatDate = (date: Date | null): string => {
-    if (!date) return '';
-    const y = date.getFullYear();
-    const m = String(date.getMonth() + 1).padStart(2, '0');
-    const d = String(date.getDate()).padStart(2, '0');
-    return `${y}${m}${d}`;
-  };
-
   const handleTestFarmNoChange = (value: string) => {
     setTestFarmNoInput(value);
     if (value === '' || value === String(user?.farmNo)) {
-      // 빈값이거나 원래 farmNo와 같으면 테스트모드 해제
       setTestFarmNo(null);
     } else {
       const numValue = parseInt(value, 10);
@@ -59,48 +98,111 @@ export default function WeeklyListPage() {
     }
   };
 
-  const handleSearch = async () => {
+  const handleSearch = useCallback(async () => {
     if (!activeFarmNo) {
-      alert('농장번호가 없습니다. 다시 로그인해주세요.');
       return;
     }
 
     setLoading(true);
+    setHasSearched(true);
     try {
-      const from = formatDate(startDate);
-      const to = formatDate(endDate);
+      const from = formatDateForApi(new Date(startDate));
+      const to = formatDateForApi(new Date(endDate));
       const url = `${API_BASE_URL}/api/weekly/list?farmNo=${activeFarmNo}&from=${from}&to=${to}`;
 
       const res = await fetch(url);
+
+      // HTTP 상태 코드 체크
+      if (!res.ok) {
+        let errorData: any = {};
+        try {
+          errorData = await res.json();
+        } catch {
+          errorData = { message: await res.text() };
+        }
+
+        // 에러 처리 로직... (간소화)
+        alert(errorData.message || '오류가 발생했습니다.');
+        setReports([]);
+        return;
+      }
+
       const json = await res.json();
 
-      if (json.success && json.data) {
-        const items: ReportItem[] = json.data.map((item: {
-          id: string;
-          masterSeq: number;
-          year: number;
-          weekNo: number;
-          period: { from: string; to: string };
-          createdAt: string;
-        }) => ({
-          id: `${item.masterSeq}/${activeFarmNo}`,
+      if (json.success && Array.isArray(json.data)) {
+        const items: ReportItem[] = json.data.map((item: any) => ({
+          id: `${item.masterSeq}-${activeFarmNo}`,
           masterSeq: item.masterSeq,
           farmNo: activeFarmNo,
-          title: `${item.year}년 ${item.weekNo}주차 주간 보고서`,
-          period: `${item.period.from} ~ ${item.period.to}`,
-          date: item.createdAt,
+          title: `${item.year}년 ${item.weekNo}주차 주간 리포트`,
+          period: `${formatDate(item.period.from)} ~ ${formatDate(item.period.to)}`,
+          date: formatDate(item.createdAt),
+          shareToken: item.shareToken
         }));
         setReports(items);
+        setCurrentPage(1);
       } else {
+        if (json.message) {
+          alert(`[API 응답 에러] ${json.message}`);
+        }
         setReports([]);
       }
     } catch (error) {
       console.error('API 호출 오류:', error);
+      alert('API 호출 중 오류가 발생했습니다.');
       setReports([]);
     } finally {
       setLoading(false);
     }
+  }, [activeFarmNo, startDate, endDate]);
+
+  // 페이지 진입시 자동 조회
+  useEffect(() => {
+    if (!authLoading && activeFarmNo && !initialFetchDone.current) {
+      initialFetchDone.current = true;
+      handleSearch();
+    }
+  }, [authLoading, activeFarmNo, handleSearch]);
+
+  const handleItemClick = async (item: ReportItem) => {
+    if (item.shareToken) {
+      router.push(`/weekly/${item.shareToken}`);
+      return;
+    }
+
+    // 토큰 생성
+    try {
+      const token = sessionStorage.getItem('token');
+      const res = await fetch(`${API_BASE_URL}/api/weekly/share/create`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          masterSeq: item.masterSeq,
+          farmNo: item.farmNo,
+          expireDays: 365 // 로그인 사용자는 긴 만료일
+        })
+      });
+      const result = await res.json();
+      if (result.success) {
+        router.push(`/weekly/${result.token}`);
+      } else {
+        alert('리포트 토큰 생성 실패: ' + result.message);
+      }
+    } catch (e) {
+      console.error(e);
+      alert('오류가 발생했습니다.');
+    }
   };
+
+  // 페이징 계산
+  const totalPages = Math.ceil(reports.length / PAGE_SIZE);
+  const paginatedReports = reports.slice(
+    (currentPage - 1) * PAGE_SIZE,
+    currentPage * PAGE_SIZE
+  );
 
   // 인증 로딩 중
   if (authLoading) {
@@ -112,94 +214,124 @@ export default function WeeklyListPage() {
   }
 
   return (
-    <div className="p-2 sm:p-3 lg:p-4 space-y-6">
-      {/* 사용자 정보 영역 */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <FontAwesomeIcon icon={faUser} className="w-5 h-5 text-gray-500 dark:text-gray-400" />
-            <div>
-              <span className="text-sm font-medium text-gray-900 dark:text-white">
-                {user?.name || '-'}
-              </span>
-              <span className="text-xs text-gray-500 dark:text-gray-400 ml-2">
-                ({user?.memberId})
-              </span>
-              <span className="text-xs text-gray-500 dark:text-gray-400 ml-2">
-                농장: {user?.farmNm || user?.farmNo}
-              </span>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={() => logout()}
-            className="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-          >
-            로그아웃
-          </button>
-        </div>
+    <div className="report-list-page p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
+      <div className="mb-8">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+          주간 리포트
+        </h1>
+        <p className="text-gray-600 dark:text-gray-400">
+          농장의 주간 생산 성적을 확인하세요.
+        </p>
       </div>
 
-      {/* 조회 영역 */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
-        <div className="flex flex-wrap items-center gap-4">
-          {/* 농장번호 입력 (테스트용) */}
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">농장번호</span>
+      {/* 검색 필터 */}
+      <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 mb-6">
+        <div className="flex flex-col sm:flex-row gap-4 items-end">
+          <div className="w-full sm:w-auto">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              조회 기간
+            </label>
+            <div className="flex items-center gap-2">
+              <div className="relative">
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white w-full sm:w-40"
+                />
+                <FontAwesomeIcon
+                  icon={faCalendarAlt}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                />
+              </div>
+              <span className="text-gray-500">~</span>
+              <div className="relative">
+                <input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  min={startDate}
+                  className="px-2 py-1.5 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white w-full sm:w-40"
+                />
+                <FontAwesomeIcon
+                  icon={faCalendarAlt}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* 테스트용 농장번호 입력 필드 (개발/테스트 환경용) */}
+          <div className="w-full sm:w-auto">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              농장 번호 (테스트)
+            </label>
             <input
               type="text"
               value={testFarmNoInput}
               onChange={(e) => handleTestFarmNoChange(e.target.value)}
               placeholder={String(user?.farmNo || '')}
-              className="w-24 px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm text-center focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 dark:text-white"
+              className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white w-full sm:w-32"
             />
-            {testFarmNo !== null && (
-              <span className="text-xs text-orange-500 dark:text-orange-400">
-                (테스트 모드)
-              </span>
-            )}
           </div>
 
-          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">조회기간</span>
-          <div className="flex items-center gap-2 bg-gray-50 dark:bg-gray-700 p-2 rounded-lg border border-gray-200 dark:border-gray-600">
-            <DatePicker
-              selected={startDate}
-              onChange={(date) => setStartDate(date)}
-              selectsStart
-              startDate={startDate}
-              endDate={endDate}
-              className="w-28 bg-transparent text-sm text-center focus:outline-none text-gray-900 dark:text-white"
-              dateFormat="yyyy.MM.dd"
-            />
-            <span className="text-gray-400">~</span>
-            <DatePicker
-              selected={endDate}
-              onChange={(date) => setEndDate(date)}
-              selectsEnd
-              startDate={startDate}
-              endDate={endDate}
-              minDate={startDate ?? undefined}
-              className="w-28 bg-transparent text-sm text-center focus:outline-none text-gray-900 dark:text-white"
-              dateFormat="yyyy.MM.dd"
-            />
-          </div>
           <button
             onClick={handleSearch}
             disabled={loading}
-            className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm flex items-center gap-2"
+            className="w-full sm:w-auto px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
-            <FontAwesomeIcon icon={faSearch} className="w-4 h-4" />
-            {loading ? '조회중...' : '조회'}
+            {loading ? (
+              <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+            ) : (
+              <>
+                <FontAwesomeIcon icon={faSearch} />
+                <span>조회</span>
+              </>
+            )}
           </button>
         </div>
       </div>
 
-      {/* 리스트 영역 */}
-      {reports.length > 0 ? (
-        <ReportList items={reports} basePath="/weekly" />
+      {/* 리포트 목록 */}
+      {loading ? (
+        <div className="text-center py-12">
+          <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-gray-500 dark:text-gray-400">리포트를 불러오는 중...</p>
+        </div>
+      ) : reports.length > 0 ? (
+        <>
+          <ReportList items={paginatedReports} basePath="/weekly" onItemClick={handleItemClick} />
+
+          {/* 페이지네이션 */}
+          {totalPages > 1 && (
+            <div className="mt-6 flex justify-center gap-2">
+              <button
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+                className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                <FontAwesomeIcon icon={faChevronLeft} className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+              </button>
+              <span className="px-4 py-2 text-gray-600 dark:text-gray-400 font-medium">
+                {currentPage} / {totalPages}
+              </span>
+              <button
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                disabled={currentPage === totalPages}
+                className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                <FontAwesomeIcon icon={faChevronRight} className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+              </button>
+            </div>
+          )}
+        </>
+      ) : hasSearched ? (
+        <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+          <p className="text-gray-500 dark:text-gray-400">조회된 리포트가 없습니다.</p>
+        </div>
       ) : (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-8 text-center text-gray-500 dark:text-gray-400">
-          {loading ? '조회 중...' : '조회 버튼을 클릭하여 주간 리포트를 검색하세요.'}
+        <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+          <p className="text-gray-500 dark:text-gray-400">기간을 선택하고 조회 버튼을 눌러주세요.</p>
         </div>
       )}
     </div>

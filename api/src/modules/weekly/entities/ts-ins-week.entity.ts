@@ -7,14 +7,14 @@ import {
   JoinColumn,
 } from 'typeorm';
 import { TsInsMaster } from './ts-ins-master.entity';
-import { TsInsFarmSub } from './ts-ins-farm-sub.entity';
+import { TsInsWeekSub } from './ts-ins-week-sub.entity';
 
 /**
- * TS_INS_FARM: 농장별 리포트 테이블
- * 농장별 주간/월간/분기 리포트 요약 데이터
+ * TS_INS_WEEK: 주간 리포트 테이블
+ * 농장별 주간 리포트 요약 데이터
  */
-@Entity({ name: 'TS_INS_FARM' })
-export class TsInsFarm {
+@Entity({ name: 'TS_INS_WEEK' })
+export class TsInsWeek {
   @PrimaryColumn({ name: 'MASTER_SEQ', type: 'number' })
   masterSeq: number;
 
@@ -33,11 +33,11 @@ export class TsInsFarm {
   })
   reportWeekNo: number;
 
-  @Column({ name: 'DT_FROM', type: 'date', nullable: true })
-  dtFrom: Date;
+  @Column({ name: 'DT_FROM', type: 'varchar2', length: 8, nullable: true })
+  dtFrom: string; // YYYYMMDD
 
-  @Column({ name: 'DT_TO', type: 'date', nullable: true })
-  dtTo: Date;
+  @Column({ name: 'DT_TO', type: 'varchar2', length: 8, nullable: true })
+  dtTo: string; // YYYYMMDD
 
   // 헤더 정보
   @Column({ name: 'FARM_NM', type: 'varchar2', length: 100, nullable: true })
@@ -205,14 +205,21 @@ export class TsInsFarm {
   @Column({ name: 'STATUS_CD', type: 'varchar2', length: 10, default: 'READY' })
   statusCd: string;
 
+  // 공유 토큰 (외부 URL 공유용)
+  @Column({ name: 'SHARE_TOKEN', type: 'varchar2', length: 64, nullable: true })
+  shareToken: string;
+
+  @Column({ name: 'TOKEN_EXPIRE_DT', type: 'varchar2', length: 8, nullable: true })
+  tokenExpireDt: string; // YYYYMMDD
+
   @Column({ name: 'LOG_INS_DT', type: 'date', default: () => 'SYSDATE' })
   logInsDt: Date;
 
   // Relations
-  @ManyToOne(() => TsInsMaster, (master) => master.farms)
+  @ManyToOne(() => TsInsMaster, (master) => master.weeks)
   @JoinColumn({ name: 'MASTER_SEQ' })
   master: TsInsMaster;
 
-  @OneToMany(() => TsInsFarmSub, (sub) => sub.farm)
-  subs: TsInsFarmSub[];
+  @OneToMany(() => TsInsWeekSub, (sub) => sub.week)
+  subs: TsInsWeekSub[];
 }

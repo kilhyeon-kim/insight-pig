@@ -21,7 +21,7 @@ CREATE OR REPLACE PROCEDURE SP_INS_WEEK_MANAGE_SOW (
     ================================================================
     - 용도: 미교배, 분만지연, 이유지연 등 관리대상 모돈 추출
     - 호출: SP_INS_WEEK_MAIN에서 농장별 순차 호출
-    - 대상 테이블: TS_INS_FARM (요약), TS_INS_FARM_SUB (상세, GUBUN='ALERT')
+    - 대상 테이블: TS_INS_WEEK (요약), TS_INS_WEEK_SUB (상세, GUBUN='ALERT')
 
     추출 대상:
       1. 미교배 후보돈: (기준일-출생일) - 후보돈초교배일령(140007) >= 0
@@ -364,9 +364,9 @@ BEGIN
     );
 
     -- ================================================
-    -- 6. TS_INS_FARM 요약 업데이트
+    -- 6. TS_INS_WEEK 요약 업데이트
     -- ================================================
-    UPDATE TS_INS_FARM
+    UPDATE TS_INS_WEEK
     SET ALERT_TOTAL = V_TOTAL_HUBO + V_TOTAL_EU_MI + V_TOTAL_SG_MI + V_TOTAL_BM_DELAY + V_TOTAL_EU_DELAY,
         ALERT_HUBO = V_TOTAL_HUBO,
         ALERT_EU_MI = V_TOTAL_EU_MI,
@@ -377,11 +377,11 @@ BEGIN
       AND FARM_NO = P_FARM_NO;
 
     -- ================================================
-    -- 7. TS_INS_FARM_SUB 상세 데이터 INSERT (GUBUN='ALERT')
+    -- 7. TS_INS_WEEK_SUB 상세 데이터 INSERT (GUBUN='ALERT')
     -- ================================================
 
     -- ~3일 구간
-    INSERT INTO TS_INS_FARM_SUB (
+    INSERT INTO TS_INS_WEEK_SUB (
         MASTER_SEQ, FARM_NO, GUBUN, SORT_NO, CODE_1,
         CNT_1, CNT_2, CNT_3, CNT_4, CNT_5
     ) VALUES (
@@ -391,7 +391,7 @@ BEGIN
     V_PROC_CNT := V_PROC_CNT + 1;
 
     -- 4~7일 구간
-    INSERT INTO TS_INS_FARM_SUB (
+    INSERT INTO TS_INS_WEEK_SUB (
         MASTER_SEQ, FARM_NO, GUBUN, SORT_NO, CODE_1,
         CNT_1, CNT_2, CNT_3, CNT_4, CNT_5
     ) VALUES (
@@ -401,7 +401,7 @@ BEGIN
     V_PROC_CNT := V_PROC_CNT + 1;
 
     -- 8~14일 구간
-    INSERT INTO TS_INS_FARM_SUB (
+    INSERT INTO TS_INS_WEEK_SUB (
         MASTER_SEQ, FARM_NO, GUBUN, SORT_NO, CODE_1,
         CNT_1, CNT_2, CNT_3, CNT_4, CNT_5
     ) VALUES (
@@ -411,7 +411,7 @@ BEGIN
     V_PROC_CNT := V_PROC_CNT + 1;
 
     -- 14일~ 구간
-    INSERT INTO TS_INS_FARM_SUB (
+    INSERT INTO TS_INS_WEEK_SUB (
         MASTER_SEQ, FARM_NO, GUBUN, SORT_NO, CODE_1,
         CNT_1, CNT_2, CNT_3, CNT_4, CNT_5
     ) VALUES (

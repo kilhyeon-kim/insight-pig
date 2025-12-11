@@ -1,8 +1,16 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { TsInsMaster, TsInsFarm, TsInsFarmSub } from './entities';
+import { DataSource } from 'typeorm';
+import { TsInsWeekSub } from './entities';
+import { WEEKLY_SQL } from './sql';
+import { SHARE_TOKEN_SQL } from '../auth/sql/share-token.sql';
 import * as mockData from '../../data/mock/weekly.mock';
+
+/**
+ * Named parameter를 TypeORM query에 전달하기 위한 헬퍼
+ * TypeORM Oracle 드라이버는 named parameter 객체를 지원하지만
+ * TypeScript 타입 정의가 any[]로 되어 있어 캐스팅 필요
+ */
+const params = (obj: Record<string, any>): any => obj;
 
 /**
  * 주간 리포트 서비스
@@ -13,14 +21,7 @@ import * as mockData from '../../data/mock/weekly.mock';
 export class WeeklyService {
   private readonly logger = new Logger(WeeklyService.name);
 
-  constructor(
-    @InjectRepository(TsInsMaster)
-    private readonly masterRepository: Repository<TsInsMaster>,
-    @InjectRepository(TsInsFarm)
-    private readonly farmRepository: Repository<TsInsFarm>,
-    @InjectRepository(TsInsFarmSub)
-    private readonly farmSubRepository: Repository<TsInsFarmSub>,
-  ) {}
+  constructor(private readonly dataSource: DataSource) { }
 
   // ─────────────────────────────────────────────────────────────────────────────
   // 보고서 목록/상세 (실제 DB 연동)
@@ -34,41 +35,173 @@ export class WeeklyService {
    */
   async getReportList(farmNo: number, from?: string, to?: string) {
     try {
-      const query = this.masterRepository
-        .createQueryBuilder('m')
-        .innerJoin('m.farms', 'f')
-        .where('f.farmNo = :farmNo', { farmNo })
-        .andWhere('m.dayGb = :dayGb', { dayGb: 'WEEK' })
-        .andWhere('m.statusCd = :status', { status: 'COMPLETE' });
+      let results: any[];
 
-      if (from) {
-        query.andWhere('m.insDt >= :from', { from });
-      }
-      if (to) {
-        query.andWhere('m.insDt <= :to', { to });
+      if (from && to) {
+        results = await this.dataSource.query(
+          WEEKLY_SQL.getReportListWithPeriod,
+          params({ farmNo, dtFrom: from, dtTo: to }),
+        );
+      } else {
+        results = await this.dataSource.query(WEEKLY_SQL.getReportList, params({ farmNo }));
       }
 
-      const masters = await query
-        .orderBy('m.reportYear', 'DESC')
-        .addOrderBy('m.reportWeekNo', 'DESC')
-        .getMany();
-
-      return masters.map((m) => ({
-        id: `${m.seq}`,
-        masterSeq: m.seq,
-        year: m.reportYear,
-        weekNo: m.reportWeekNo,
+      return results.map((row: any) => ({
+        id: `${row.SEQ}`,
+        masterSeq: row.SEQ,
+        year: row.REPORT_YEAR,
+        weekNo: row.REPORT_WEEK_NO,
         period: {
-          from: m.dtFrom,
-          to: m.dtTo,
+          from: row.DT_FROM,
+          to: row.DT_TO,
         },
-        statusCd: m.statusCd,
-        createdAt: m.logInsDt,
+        statusCd: row.STATUS_CD,
+        createdAt: row.LOG_INS_DT,
+        shareToken: row.SHARE_TOKEN || null,
+        farmNm: row.FARM_NM,
       }));
     } catch (error) {
-      this.logger.warn('DB 연결 실패, Mock 데이터 반환', error.message);
-      return mockData.reportList;
+      this.logger.error('리포트 목록 조회 실패', error.message);
+      // Mock 데이터 대신 빈 배열 반환 (에러 상황을 명확히 표시)
+      return [];
     }
+  }
+
+  /**
+   * 공유 토큰 검증 (만료일 체크 포함)
+   * 역할: 토큰 검증 및 PK 추출만 수행
+   * @param shareToken 공유 토큰 (64자 SHA256 해시)
+   * @param skipExpiryCheck 만료일 검증 건너뛰기 여부 (로그인 사용자용)
+   */
+  async validateShareToken(shareToken: string, skipExpiryCheck: boolean = false): Promise<{
+    valid: boolean;
+    expired: boolean;
+    masterSeq: number | null;
+    farmNo: number | null;
+    message?: string;
+  }> {
+    try {
+      // SHARE_TOKEN_SQL 사용 (토큰 검증 및 PK 추출만)
+      const results = await this.dataSource.query(SHARE_TOKEN_SQL.validateToken, params({ shareToken }));
+      const tokenData = results[0];
+
+      if (!tokenData) {
+        return {
+          valid: false,
+          expired: false,
+          masterSeq: null,
+          farmNo: null,
+          message: '해당 공유 토큰에 대한 리포트를 찾을 수 없습니다. 리포트가 삭제되었거나 토큰이 잘못되었을 수 있습니다.'
+        };
+      }
+
+      // 만료일 체크 (skipExpiryCheck가 true면 건너뜀)
+      if (!skipExpiryCheck && tokenData.TOKEN_EXPIRE_DT) {
+        const now = new Date();
+        // TOKEN_EXPIRE_DT가 문자열(YYYYMMDD)인 경우 처리
+        let expireDate: Date;
+        if (typeof tokenData.TOKEN_EXPIRE_DT === 'string' && tokenData.TOKEN_EXPIRE_DT.length === 8) {
+          const year = parseInt(tokenData.TOKEN_EXPIRE_DT.substring(0, 4));
+          const month = parseInt(tokenData.TOKEN_EXPIRE_DT.substring(4, 6)) - 1;
+          const day = parseInt(tokenData.TOKEN_EXPIRE_DT.substring(6, 8));
+          expireDate = new Date(year, month, day, 23, 59, 59);
+        } else {
+          expireDate = new Date(tokenData.TOKEN_EXPIRE_DT);
+        }
+
+        if (now > expireDate) {
+          return {
+            valid: false,
+            expired: true,
+            masterSeq: tokenData.MASTER_SEQ,
+            farmNo: tokenData.FARM_NO,
+            message: '공유 링크가 만료되었습니다. 이 링크는 유효기간(7일)이 지났습니다.'
+          };
+        }
+      }
+
+      return {
+        valid: true,
+        expired: false,
+        masterSeq: tokenData.MASTER_SEQ,
+        farmNo: tokenData.FARM_NO
+      };
+    } catch (error) {
+      this.logger.error('토큰 검증 실패', error.message);
+      return {
+        valid: false,
+        expired: false,
+        masterSeq: null,
+        farmNo: null,
+        message: '토큰 검증 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.'
+      };
+    }
+  }
+
+  /**
+   * 공유 토큰으로 주간 보고서 조회 (만료일 검증 없음 - 로그인 사용자용)
+   * 역할: 토큰 검증 후 getReportDetail 재사용
+   * @param shareToken 공유 토큰 (64자 SHA256 해시)
+   */
+  async getReportByShareToken(shareToken: string) {
+    try {
+      // 1. 토큰 검증 및 PK 추출 (SHARE_TOKEN_SQL 사용)
+      const results = await this.dataSource.query(SHARE_TOKEN_SQL.validateToken, params({ shareToken }));
+      const tokenData = results[0];
+
+      if (!tokenData) {
+        this.logger.warn(`Report not found for token: ${shareToken.substring(0, 8)}...`);
+        return null;
+      }
+
+      // 2. PK로 리포트 상세 조회 (getReportDetail 재사용)
+      return this.getReportDetail(tokenData.MASTER_SEQ, tokenData.FARM_NO);
+    } catch (error) {
+      this.logger.error('공유 토큰 조회 실패', error.message);
+      return null;
+    }
+  }
+
+  /**
+   * 공유 토큰으로 주간 보고서 조회 (만료일 검증 포함 - 외부 공유 링크용)
+   * 역할: 토큰 검증 후 getReportDetail 재사용
+   * @param skipExpiryCheck 만료일 검증 건너뛰기 여부 (로그인 사용자용)
+   */
+  async getReportByShareTokenWithExpiry(shareToken: string, skipExpiryCheck: boolean = false): Promise<{
+    success: boolean;
+    expired: boolean;
+    data: any;
+    message?: string;
+  }> {
+    // 1. 토큰 검증 (만료일 체크 포함)
+    const validation = await this.validateShareToken(shareToken, skipExpiryCheck);
+
+    if (!validation.valid || !validation.masterSeq || !validation.farmNo) {
+      return {
+        success: false,
+        expired: validation.expired,
+        data: null,
+        message: validation.message,
+      };
+    }
+
+    // 2. PK로 리포트 상세 조회 (getReportDetail 재사용)
+    const reportData = await this.getReportDetail(validation.masterSeq, validation.farmNo);
+
+    if (!reportData) {
+      return {
+        success: false,
+        expired: false,
+        data: null,
+        message: '리포트 데이터를 불러올 수 없습니다.',
+      };
+    }
+
+    return {
+      success: true,
+      expired: false,
+      data: reportData,
+    };
   }
 
   /**
@@ -78,25 +211,23 @@ export class WeeklyService {
    */
   async getReportDetail(masterSeq: number, farmNo: number) {
     try {
-      // 1. TS_INS_FARM 조회
-      const farm = await this.farmRepository.findOne({
-        where: { masterSeq, farmNo },
-        relations: ['master'],
-      });
+      // 1. WEEK 조회
+      const weekResults = await this.dataSource.query(
+        WEEKLY_SQL.getReportDetail,
+        params({ masterSeq, farmNo }),
+      );
+      const week = weekResults[0];
 
-      if (!farm) {
-        this.logger.warn(`Farm not found: masterSeq=${masterSeq}, farmNo=${farmNo}`);
+      if (!week) {
+        this.logger.warn(`Week not found: masterSeq=${masterSeq}, farmNo=${farmNo}`);
         return null;
       }
 
-      // 2. TS_INS_FARM_SUB 조회 (팝업 상세 데이터)
-      const subs = await this.farmSubRepository.find({
-        where: { masterSeq, farmNo },
-        order: { gubun: 'ASC', sortNo: 'ASC' },
-      });
+      // 2. SUB 데이터 조회
+      const subs = await this.dataSource.query(WEEKLY_SQL.getReportSub, params({ masterSeq, farmNo }));
 
-      // 3. 데이터 변환 (프론트엔드 형식)
-      return this.transformToReportDetail(farm, subs);
+      // 3. 데이터 변환
+      return this.transformToReportDetailFromRow(week, subs);
     } catch (error) {
       this.logger.warn('DB 조회 실패, Mock 데이터 반환', error.message);
       return mockData.reportDetail;
@@ -104,98 +235,104 @@ export class WeeklyService {
   }
 
   /**
-   * DB 데이터를 프론트엔드 형식으로 변환
+   * Raw SQL 결과를 프론트엔드 형식으로 변환
    */
-  private transformToReportDetail(farm: TsInsFarm, subs: TsInsFarmSub[]) {
-    const master = farm.master;
+  private transformToReportDetailFromRow(week: any, subRows: any[]) {
+    const subs = subRows.map((row) => this.mapRowToWeekSub(row));
 
     return {
       header: {
-        farmNo: farm.farmNo,
-        farmNm: farm.farmNm,
-        ownerNm: farm.ownerNm,
-        year: farm.reportYear,
-        weekNo: farm.reportWeekNo,
+        farmNo: week.FARM_NO,
+        farmNm: week.FARM_NM,
+        ownerNm: week.OWNER_NM,
+        year: week.REPORT_YEAR,
+        weekNo: week.REPORT_WEEK_NO,
         period: {
-          from: this.formatDate(farm.dtFrom),
-          to: this.formatDate(farm.dtTo),
+          from: this.formatDate(week.DT_FROM),
+          to: this.formatDate(week.DT_TO),
         },
       },
       alertMd: {
-        total: farm.alertTotal,
-        hubo: farm.alertHubo,
-        euMi: farm.alertEuMi,
-        sgMi: farm.alertSgMi,
-        bmDelay: farm.alertBmDelay,
-        euDelay: farm.alertEuDelay,
-        items: this.extractSubData(subs, 'ALERT_MD'),
+        count: week.ALERT_TOTAL || 0,
+        euMiCnt: week.ALERT_EU_MI || 0,
+        sgMiCnt: week.ALERT_SG_MI || 0,
+        bmDelayCnt: week.ALERT_BM_DELAY || 0,
+        euDelayCnt: week.ALERT_EU_DELAY || 0,
+        items: this.extractSubData(subs, 'ALERT').map((item) => ({
+          period: item.code1,
+          hubo: item.cnt1,
+          euMi: item.cnt2,
+          sgMi: item.cnt3,
+          bmDelay: item.cnt4,
+          euDelay: item.cnt5,
+        })),
       },
       lastWeek: {
         period: {
-          weekNum: farm.reportWeekNo,
-          from: this.formatDate(farm.dtFrom),
-          to: this.formatDate(farm.dtTo),
+          weekNum: week.REPORT_WEEK_NO,
+          from: this.formatDate(week.DT_FROM),
+          to: this.formatDate(week.DT_TO),
         },
         modon: {
-          regCnt: farm.modonRegCnt,
-          sangsiCnt: farm.modonSangsiCnt,
+          regCnt: week.MODON_REG_CNT,
+          sangsiCnt: week.MODON_SANGSI_CNT,
         },
         mating: {
-          cnt: farm.lastGbCnt,
-          sum: farm.lastGbSum,
+          cnt: week.LAST_GB_CNT,
+          sum: week.LAST_GB_SUM,
         },
         farrowing: {
-          cnt: farm.lastBmCnt,
-          total: farm.lastBmTotal,
-          live: farm.lastBmLive,
-          dead: farm.lastBmDead,
-          mummy: farm.lastBmMummy,
-          sumCnt: farm.lastBmSumCnt,
-          sumTotal: farm.lastBmSumTotal,
-          sumLive: farm.lastBmSumLive,
-          avgTotal: farm.lastBmAvgTotal,
-          avgLive: farm.lastBmAvgLive,
-          chgTotal: farm.lastBmChgTotal,
-          chgLive: farm.lastBmChgLive,
+          cnt: week.LAST_BM_CNT,
+          total: week.LAST_BM_TOTAL,
+          live: week.LAST_BM_LIVE,
+          dead: week.LAST_BM_DEAD,
+          mummy: week.LAST_BM_MUMMY,
+          sumCnt: week.LAST_BM_SUM_CNT,
+          sumTotal: week.LAST_BM_SUM_TOTAL,
+          sumLive: week.LAST_BM_SUM_LIVE,
+          avgTotal: week.LAST_BM_AVG_TOTAL,
+          avgLive: week.LAST_BM_AVG_LIVE,
+          chgTotal: week.LAST_BM_CHG_TOTAL,
+          chgLive: week.LAST_BM_CHG_LIVE,
         },
         weaning: {
-          cnt: farm.lastEuCnt,
-          jdCnt: farm.lastEuJdCnt,
-          avgKg: farm.lastEuAvgKg,
-          sumCnt: farm.lastEuSumCnt,
-          sumJd: farm.lastEuSumJd,
-          chgKg: farm.lastEuChgKg,
+          cnt: week.LAST_EU_CNT,
+          jdCnt: week.LAST_EU_JD_CNT,
+          avgKg: week.LAST_EU_AVG_KG,
+          sumCnt: week.LAST_EU_SUM_CNT,
+          sumJd: week.LAST_EU_SUM_JD,
+          chgKg: week.LAST_EU_CHG_KG,
         },
         accident: {
-          cnt: farm.lastSgCnt,
-          sum: farm.lastSgSum,
+          cnt: week.LAST_SG_CNT,
+          sum: week.LAST_SG_SUM,
         },
         culling: {
-          cnt: farm.lastClCnt,
-          sum: farm.lastClSum,
+          cnt: week.LAST_CL_CNT,
+          sum: week.LAST_CL_SUM,
         },
         shipment: {
-          cnt: farm.lastShCnt,
-          avgKg: farm.lastShAvgKg,
-          sum: farm.lastShSum,
-          avgSum: farm.lastShAvgSum,
+          cnt: week.LAST_SH_CNT,
+          avgKg: week.LAST_SH_AVG_KG,
+          sum: week.LAST_SH_SUM,
+          avgSum: week.LAST_SH_AVG_SUM,
         },
       },
       thisWeek: {
-        gbSum: farm.thisGbSum,
-        imsinSum: farm.thisImsinSum,
-        bmSum: farm.thisBmSum,
-        euSum: farm.thisEuSum,
-        vaccineSum: farm.thisVaccineSum,
-        shipSum: farm.thisShipSum,
+        gbSum: week.THIS_GB_SUM,
+        imsinSum: week.THIS_IMSIN_SUM,
+        bmSum: week.THIS_BM_SUM,
+        euSum: week.THIS_EU_SUM,
+        vaccineSum: week.THIS_VACCINE_SUM,
+        shipSum: week.THIS_SHIP_SUM,
         schedules: this.extractScheduleData(subs),
       },
       kpi: {
-        psy: farm.kpiPsy,
-        delayDay: farm.kpiDelayDay,
-        psyX: farm.psyX,
-        psyY: farm.psyY,
-        psyZone: farm.psyZone,
+        psy: week.KPI_PSY,
+        delayDay: week.KPI_DELAY_DAY,
+        psyX: week.PSY_X,
+        psyY: week.PSY_Y,
+        psyZone: week.PSY_ZONE,
       },
     };
   }
@@ -203,7 +340,7 @@ export class WeeklyService {
   /**
    * SUB 데이터에서 특정 GUBUN 추출
    */
-  private extractSubData(subs: TsInsFarmSub[], gubun: string) {
+  private extractSubData(subs: TsInsWeekSub[], gubun: string) {
     return subs
       .filter((s) => s.gubun === gubun)
       .map((s) => ({
@@ -212,18 +349,19 @@ export class WeeklyService {
         cnt1: s.cnt1,
         cnt2: s.cnt2,
         cnt3: s.cnt3,
+        cnt4: s.cnt4,
+        cnt5: s.cnt5,
         val1: s.val1,
         val2: s.val2,
         str1: s.str1,
         str2: s.str2,
-        wkDate: s.wkDate,
       }));
   }
 
   /**
    * 예정 작업 데이터 추출
    */
-  private extractScheduleData(subs: TsInsFarmSub[]) {
+  private extractScheduleData(subs: TsInsWeekSub[]) {
     const scheduleGubuns = [
       'SCHEDULE_GB',
       'SCHEDULE_IMSIN',
@@ -244,18 +382,15 @@ export class WeeklyService {
 
   /**
    * 날짜 포맷 (YYYY-MM-DD)
-   * Oracle에서 반환되는 날짜는 Date 객체 또는 문자열일 수 있음
    */
   private formatDate(date: Date | string): string {
     if (!date) return '';
     if (typeof date === 'string') {
-      // 이미 문자열인 경우
       return date.substring(0, 10);
     }
     if (date instanceof Date) {
       return date.toISOString().split('T')[0];
     }
-    // 기타 형식 (Oracle 날짜 객체 등)
     try {
       return new Date(date).toISOString().split('T')[0];
     } catch {
@@ -292,29 +427,26 @@ export class WeeklyService {
         return null;
       }
 
-      let subs: TsInsFarmSub[];
+      let results: any[];
 
       if (gubun.includes('%')) {
-        // LIKE 검색 (SCHEDULE_%)
-        subs = await this.farmSubRepository
-          .createQueryBuilder('s')
-          .where('s.masterSeq = :masterSeq', { masterSeq })
-          .andWhere('s.farmNo = :farmNo', { farmNo })
-          .andWhere('s.gubun LIKE :gubun', { gubun })
-          .orderBy('s.gubun', 'ASC')
-          .addOrderBy('s.sortNo', 'ASC')
-          .getMany();
+        results = await this.dataSource.query(WEEKLY_SQL.getPopupSubLike, params({
+          masterSeq,
+          farmNo,
+          gubun,
+        }));
       } else {
-        subs = await this.farmSubRepository.find({
-          where: { masterSeq, farmNo, gubun },
-          order: { sortNo: 'ASC' },
-        });
+        results = await this.dataSource.query(WEEKLY_SQL.getPopupSub, params({
+          masterSeq,
+          farmNo,
+          gubun,
+        }));
       }
 
+      const subs = results.map((row: any) => this.mapRowToWeekSub(row));
       return this.transformPopupData(type, subs);
     } catch (error) {
       this.logger.warn(`팝업 데이터 조회 실패: ${type}`, error.message);
-      // Mock fallback
       const popupDataMap: Record<string, any> = {
         alertMd: mockData.popupData.alertMd,
         modon: mockData.popupData.modon,
@@ -331,9 +463,35 @@ export class WeeklyService {
   }
 
   /**
+   * Raw SQL 결과 Row를 TsInsWeekSub 형식으로 매핑
+   */
+  private mapRowToWeekSub(row: any): TsInsWeekSub {
+    const sub = new TsInsWeekSub();
+    sub.masterSeq = row.MASTER_SEQ;
+    sub.farmNo = row.FARM_NO;
+    sub.gubun = row.GUBUN;
+    sub.sortNo = row.SORT_NO;
+    sub.code1 = row.CODE1;
+    sub.code2 = row.CODE2;
+    sub.cnt1 = row.CNT1;
+    sub.cnt2 = row.CNT2;
+    sub.cnt3 = row.CNT3;
+    sub.cnt4 = row.CNT4;
+    sub.cnt5 = row.CNT5;
+    sub.cnt6 = row.CNT6;
+    sub.val1 = row.VAL1;
+    sub.val2 = row.VAL2;
+    sub.val3 = row.VAL3;
+    sub.val4 = row.VAL4;
+    sub.str1 = row.STR1;
+    sub.str2 = row.STR2;
+    return sub;
+  }
+
+  /**
    * 팝업 데이터 변환
    */
-  private transformPopupData(type: string, subs: TsInsFarmSub[]) {
+  private transformPopupData(type: string, subs: TsInsWeekSub[]) {
     switch (type) {
       case 'alertMd':
         return this.transformAlertMdPopup(subs);
@@ -358,80 +516,79 @@ export class WeeklyService {
     }
   }
 
-  private transformAlertMdPopup(subs: TsInsFarmSub[]) {
+  private transformAlertMdPopup(subs: TsInsWeekSub[]) {
     return subs.map((s) => ({
-      category: s.code1, // 카테고리 (hubo, euMi, sgMi, bmDelay, euDelay)
-      modonNo: s.str1, // 모돈번호
-      status: s.str2, // 상태
-      days: s.cnt1, // 경과일수
-      parity: s.cnt2, // 산차
-      lastDate: this.formatDate(s.wkDate), // 마지막 작업일
+      category: s.code1,
+      modonNo: s.str1,
+      status: s.str2,
+      days: s.cnt1,
+      parity: s.cnt2,
     }));
   }
 
-  private transformParityDistPopup(subs: TsInsFarmSub[]) {
+  private transformParityDistPopup(subs: TsInsWeekSub[]) {
     return subs.map((s) => ({
-      parity: s.code1, // 산차 (0, 1, 2, ...)
-      count: s.cnt1, // 두수
-      ratio: s.val1, // 비율 (%)
+      parity: s.code1,
+      count: s.cnt1,
+      ratio: s.val1,
     }));
   }
 
-  private transformMatingPopup(subs: TsInsFarmSub[]) {
+  private transformMatingPopup(subs: TsInsWeekSub[]) {
     return subs.map((s) => ({
-      returnDay: s.code1, // 재귀일 구간
-      count: s.cnt1, // 두수
-      ratio: s.val1, // 비율 (%)
+      returnDay: s.code1,
+      count: s.cnt1,
+      ratio: s.val1,
     }));
   }
 
-  private transformFarrowingPopup(subs: TsInsFarmSub[]) {
+  private transformFarrowingPopup(subs: TsInsWeekSub[]) {
     return subs.map((s) => ({
-      parity: s.code1, // 산차
-      count: s.cnt1, // 두수
-      total: s.cnt2, // 총산자
-      live: s.cnt3, // 실산자
-      avgTotal: s.val1, // 평균 총산
-      avgLive: s.val2, // 평균 실산
+      parity: s.code1,
+      count: s.cnt1,
+      total: s.cnt2,
+      live: s.cnt3,
+      avgTotal: s.val1,
+      avgLive: s.val2,
     }));
   }
 
-  private transformWeaningPopup(subs: TsInsFarmSub[]) {
+  private transformWeaningPopup(subs: TsInsWeekSub[]) {
     return subs.map((s) => ({
-      parity: s.code1, // 산차
-      count: s.cnt1, // 복수
-      piglets: s.cnt2, // 이유두수
-      avgWeight: s.val1, // 평균체중
+      parity: s.code1,
+      count: s.cnt1,
+      piglets: s.cnt2,
+      avgWeight: s.val1,
     }));
   }
 
-  private transformAccidentPopup(subs: TsInsFarmSub[]) {
+  private transformAccidentPopup(subs: TsInsWeekSub[]) {
     return subs.map((s) => ({
-      type: s.code1, // 사고유형 (유산, 재발, 불임 등)
-      period: s.code2, // 임신기간 구간
-      count: s.cnt1, // 두수
-      ratio: s.val1, // 비율
+      type: s.code1,
+      period: s.code2,
+      count: s.cnt1,
+      ratio: s.val1,
     }));
   }
 
-  private transformCullingPopup(subs: TsInsFarmSub[]) {
+  private transformCullingPopup(subs: TsInsWeekSub[]) {
     return subs.map((s) => ({
-      reason: s.code1, // 도태사유
-      count: s.cnt1, // 두수
-      ratio: s.val1, // 비율
+      reason: s.code1,
+      count: s.cnt1,
+      ratio: s.val1,
     }));
   }
 
-  private transformShipmentPopup(subs: TsInsFarmSub[]) {
+  private transformShipmentPopup(subs: TsInsWeekSub[]) {
     return subs.map((s) => ({
-      date: this.formatDate(s.wkDate), // 출하일
-      count: s.cnt1, // 두수
-      avgWeight: s.val1, // 평균 도체중
-      avgBackfat: s.val2, // 평균 등지방
+      date: s.str1, // 일자는 str1에 저장
+      count: s.cnt1,
+      avgWeight: s.val1,
+      avgBackfat: s.val2,
     }));
   }
 
-  private transformSchedulePopup(subs: TsInsFarmSub[]) {
+  private transformSchedulePopup(subs: TsInsWeekSub[]) {
     const grouped: Record<string, any[]> = {};
 
     subs.forEach((s) => {
@@ -440,7 +597,6 @@ export class WeeklyService {
         grouped[type] = [];
       }
       grouped[type].push({
-        date: this.formatDate(s.wkDate),
         modonNo: s.str1,
         parity: s.cnt1,
         memo: s.str2,

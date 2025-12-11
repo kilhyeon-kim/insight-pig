@@ -59,6 +59,39 @@ export class AuthController {
   }
 
   /**
+   * 서비스 정보 조회
+   * GET /api/auth/service
+   */
+  @Get('service')
+  async getService(@Headers('authorization') authHeader: string) {
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      throw new UnauthorizedException('인증 토큰이 필요합니다.');
+    }
+
+    const token = authHeader.substring(7);
+    const payload = await this.authService.validateToken(token);
+
+    const service = await this.authService.getServiceByFarmNo(payload.farmNo);
+    if (!service) {
+      return {
+        success: true,
+        data: null,
+      };
+    }
+
+    return {
+      success: true,
+      data: {
+        farmNo: service.farmNo,
+        inspigYn: service.inspigYn,
+        inspigFromDt: service.inspigFromDt,
+        inspigToDt: service.inspigToDt,
+        useYn: service.useYn,
+      },
+    };
+  }
+
+  /**
    * 토큰 갱신
    * POST /api/auth/refresh
    */

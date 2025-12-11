@@ -69,6 +69,15 @@ WHERE JOB_NAME = 'JOB_INS_WEEKLY_REPORT';
 -- ============================================================
 
 /*
+-- 테스트 모드로 실행 (금주 데이터, 오늘 포함)
+EXEC SP_INS_WEEK_MAIN('WEEK', NULL, 4, 'Y');
+
+-- 특정 기준일로 테스트
+EXEC SP_INS_WEEK_MAIN('WEEK', SYSDATE, 4, 'Y');
+
+*/
+
+/*
 -- JOB 즉시 실행 (테스트용)
 BEGIN
     DBMS_SCHEDULER.RUN_JOB('JOB_INS_WEEKLY_REPORT');

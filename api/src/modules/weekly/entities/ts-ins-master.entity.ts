@@ -1,5 +1,5 @@
 import { Entity, Column, PrimaryColumn, OneToMany } from 'typeorm';
-import { TsInsFarm } from './ts-ins-farm.entity';
+import { TsInsWeek } from './ts-ins-week.entity';
 
 /**
  * TS_INS_MASTER: 리포트 생성 마스터 테이블
@@ -22,11 +22,11 @@ export class TsInsMaster {
   @Column({ name: 'REPORT_WEEK_NO', type: 'number', precision: 2 })
   reportWeekNo: number;
 
-  @Column({ name: 'DT_FROM', type: 'date' })
-  dtFrom: Date;
+  @Column({ name: 'DT_FROM', type: 'varchar2', length: 8 })
+  dtFrom: string; // YYYYMMDD
 
-  @Column({ name: 'DT_TO', type: 'date' })
-  dtTo: Date;
+  @Column({ name: 'DT_TO', type: 'varchar2', length: 8 })
+  dtTo: string; // YYYYMMDD
 
   @Column({ name: 'TARGET_CNT', type: 'number', default: 0 })
   targetCnt: number;
@@ -52,6 +52,6 @@ export class TsInsMaster {
   @Column({ name: 'LOG_INS_DT', type: 'date', default: () => 'SYSDATE' })
   logInsDt: Date;
 
-  @OneToMany(() => TsInsFarm, (farm) => farm.master)
-  farms: TsInsFarm[];
+  @OneToMany(() => TsInsWeek, (week) => week.master)
+  weeks: TsInsWeek[];
 }

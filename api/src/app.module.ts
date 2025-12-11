@@ -15,7 +15,7 @@ import configs from './config';
 import { CustomTypeOrmLogger } from './common';
 
 // Entities (모듈별로 분리되었지만 TypeORM에서 전역 등록용)
-import { TsInsMaster, TsInsFarm, TsInsFarmSub } from './modules/weekly/entities';
+import { TsInsMaster, TsInsWeek, TsInsWeekSub } from './modules/weekly/entities';
 import { TaMember, TaFarm, TsInsService } from './modules/auth/entities';
 
 @Module({
@@ -37,7 +37,7 @@ import { TaMember, TaFarm, TsInsService } from './modules/auth/entities';
         username: configService.get<string>('database.username'),
         password: configService.get<string>('database.password'),
         serviceName: configService.get<string>('database.serviceName'),
-        entities: [TsInsMaster, TsInsFarm, TsInsFarmSub, TaMember, TaFarm, TsInsService],
+        entities: [TsInsMaster, TsInsWeek, TsInsWeekSub, TaMember, TaFarm, TsInsService],
         synchronize: false,
         logging: configService.get<string>('app.nodeEnv') !== 'production',
         logger:

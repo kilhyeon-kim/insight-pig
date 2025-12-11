@@ -1,23 +1,22 @@
 "use client";
 
-import React, { useState } from 'react';
+import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faBars, faSearch } from '@fortawesome/free-solid-svg-icons';
-import DatePicker from 'react-datepicker';
-import "react-datepicker/dist/react-datepicker.css";
+import { faBars, faUser } from '@fortawesome/free-solid-svg-icons';
 import { ThemeToggle } from './ThemeToggle';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface HeaderProps {
     onMenuClick: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
-    const [startDate, setStartDate] = useState<Date | null>(new Date());
-    const [endDate, setEndDate] = useState<Date | null>(new Date());
+    const { user, logout } = useAuth();
 
     return (
         <header className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 sticky top-0 z-30">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+                {/* 왼쪽: 메뉴 버튼 + 타이틀 */}
                 <div className="flex items-center gap-4">
                     <button
                         onClick={onMenuClick}
@@ -26,46 +25,44 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
                         <FontAwesomeIcon icon={faBars} className="w-5 h-5" />
                     </button>
                     <h1 className="text-lg font-bold text-gray-900 dark:text-white hidden sm:block">
-                        주간 보고서
+                        INSPIG
                     </h1>
                 </div>
 
-                <div className="flex items-center gap-2 sm:gap-4 flex-1 justify-end max-w-2xl">
-                    <div className="flex items-center gap-2 bg-gray-50 dark:bg-gray-800 p-1 rounded-lg border border-gray-200 dark:border-gray-700">
-                        <div className="relative">
-                            <DatePicker
-                                selected={startDate}
-                                onChange={(date) => setStartDate(date)}
-                                selectsStart
-                                startDate={startDate}
-                                endDate={endDate}
-                                className="w-24 sm:w-32 bg-transparent text-sm text-center focus:outline-none text-gray-900 dark:text-white"
-                                dateFormat="yyyy.MM.dd"
-                            />
-                        </div>
-                        <span className="text-gray-400">~</span>
-                        <div className="relative">
-                            <DatePicker
-                                selected={endDate}
-                                onChange={(date) => setEndDate(date)}
-                                selectsEnd
-                                startDate={startDate}
-                                endDate={endDate}
-                                minDate={startDate ?? undefined}
-                                className="w-24 sm:w-32 bg-transparent text-sm text-center focus:outline-none text-gray-900 dark:text-white"
-                                dateFormat="yyyy.MM.dd"
-                            />
+                {/* 오른쪽: 사용자 정보 + 로그아웃 */}
+                <div className="flex items-center gap-2 sm:gap-4">
+                    {/* 사용자 정보 */}
+                    <div className="flex items-center gap-2">
+                        <FontAwesomeIcon icon={faUser} className="w-4 h-4 text-gray-400 dark:text-gray-500 hidden sm:block" />
+                        <div className="text-xs sm:text-sm">
+                            {/* 모바일: 세로 배치, PC: 가로 배치 */}
+                            <div className="flex flex-col sm:flex-row sm:items-center sm:gap-2">
+                                <span className="font-medium text-gray-900 dark:text-white">
+                                    {user?.name || '-'}
+                                </span>
+                                <span className="text-gray-500 dark:text-gray-400 text-[11px] sm:text-sm">
+                                    {user?.farmNm || user?.farmNo || '-'}
+                                </span>
+                            </div>
                         </div>
                     </div>
 
-                    <button className="bg-blue-600 hover:bg-blue-700 text-white p-2 rounded-lg transition-colors shadow-sm">
-                        <FontAwesomeIcon icon={faSearch} className="w-4 h-4" />
-                        <span className="sr-only">조회</span>
-                    </button>
+                    {/* 구분선 */}
+                    <div className="h-6 w-px bg-gray-200 dark:bg-gray-700" />
 
+                    {/* 테마 토글 */}
                     <div className="hidden sm:block">
                         <ThemeToggle />
                     </div>
+
+                    {/* 로그아웃 버튼 */}
+                    <button
+                        type="button"
+                        onClick={() => logout()}
+                        className="text-xs sm:text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors whitespace-nowrap"
+                    >
+                        로그아웃
+                    </button>
                 </div>
             </div>
         </header>

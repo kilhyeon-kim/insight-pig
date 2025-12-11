@@ -61,10 +61,10 @@ END;
 CREATE TABLE TS_INS_SERVICE (
     FARM_NO         INTEGER NOT NULL,                   -- 농장번호 (PK, FK)
     INSPIG_YN       VARCHAR2(1) DEFAULT 'N',            -- 서비스 신청여부
-    INSPIG_REG_DT   DATE,                               -- 서비스 신청일
-    INSPIG_FROM_DT  DATE,                               -- 서비스 시작일
-    INSPIG_TO_DT    DATE,                               -- 서비스 종료일
-    INSPIG_STOP_DT  DATE,                               -- 서비스 중단일
+    INSPIG_REG_DT   VARCHAR2(8),                        -- 서비스 신청일 (YYYYMMDD)
+    INSPIG_FROM_DT  VARCHAR2(8),                        -- 서비스 시작일 (YYYYMMDD)
+    INSPIG_TO_DT    VARCHAR2(8),                        -- 서비스 종료일 (YYYYMMDD)
+    INSPIG_STOP_DT  VARCHAR2(8),                        -- 서비스 중단일 (YYYYMMDD)
     WEB_PAY_YN      VARCHAR2(1) DEFAULT 'N',            -- 웹결재 여부
     USE_YN          VARCHAR2(1) DEFAULT 'Y',            -- 사용여부
     LOG_INS_DT      DATE DEFAULT SYSDATE,              -- 생성일 (UTC)
@@ -79,10 +79,10 @@ TABLESPACE PIGXE_DATA;
 COMMENT ON TABLE TS_INS_SERVICE IS '인사이트피그플랜 서비스 신청 테이블';
 COMMENT ON COLUMN TS_INS_SERVICE.FARM_NO IS '농장번호';
 COMMENT ON COLUMN TS_INS_SERVICE.INSPIG_YN IS '서비스 신청여부 (Y/N)';
-COMMENT ON COLUMN TS_INS_SERVICE.INSPIG_REG_DT IS '서비스 신청일';
-COMMENT ON COLUMN TS_INS_SERVICE.INSPIG_FROM_DT IS '서비스 시작일';
-COMMENT ON COLUMN TS_INS_SERVICE.INSPIG_TO_DT IS '서비스 종료일';
-COMMENT ON COLUMN TS_INS_SERVICE.INSPIG_STOP_DT IS '서비스 중단일';
+COMMENT ON COLUMN TS_INS_SERVICE.INSPIG_REG_DT IS '서비스 신청일 (YYYYMMDD)';
+COMMENT ON COLUMN TS_INS_SERVICE.INSPIG_FROM_DT IS '서비스 시작일 (YYYYMMDD)';
+COMMENT ON COLUMN TS_INS_SERVICE.INSPIG_TO_DT IS '서비스 종료일 (YYYYMMDD)';
+COMMENT ON COLUMN TS_INS_SERVICE.INSPIG_STOP_DT IS '서비스 중단일 (YYYYMMDD)';
 COMMENT ON COLUMN TS_INS_SERVICE.WEB_PAY_YN IS '웹결재 여부 (Y/N)';
 COMMENT ON COLUMN TS_INS_SERVICE.USE_YN IS '사용여부 (Y/N)';
 COMMENT ON COLUMN TS_INS_SERVICE.LOG_INS_DT IS '생성일';
@@ -106,8 +106,8 @@ CREATE TABLE TS_INS_MASTER (
     -- 기간 정보
     REPORT_YEAR     NUMBER(4) NOT NULL,                 -- 년도
     REPORT_WEEK_NO  NUMBER(2) NOT NULL,                 -- 주차 (1~53) / 월 (1~12)
-    DT_FROM         DATE NOT NULL,                      -- 리포트 시작일
-    DT_TO           DATE NOT NULL,                      -- 리포트 종료일
+    DT_FROM         VARCHAR2(8) NOT NULL,               -- 리포트 시작일 (YYYYMMDD)
+    DT_TO           VARCHAR2(8) NOT NULL,               -- 리포트 종료일 (YYYYMMDD)
 
     -- 대상 및 실행 현황
     TARGET_CNT      INTEGER DEFAULT 0,                  -- 대상 농장수
@@ -138,8 +138,8 @@ COMMENT ON COLUMN TS_INS_MASTER.DAY_GB IS '기간구분 (WEEK:주간, MON:월간
 COMMENT ON COLUMN TS_INS_MASTER.INS_DT IS '생성기준일 (YYYYMMDD)';
 COMMENT ON COLUMN TS_INS_MASTER.REPORT_YEAR IS '년도';
 COMMENT ON COLUMN TS_INS_MASTER.REPORT_WEEK_NO IS '주차 (1~53) 또는 월 (1~12)';
-COMMENT ON COLUMN TS_INS_MASTER.DT_FROM IS '리포트 시작일';
-COMMENT ON COLUMN TS_INS_MASTER.DT_TO IS '리포트 종료일';
+COMMENT ON COLUMN TS_INS_MASTER.DT_FROM IS '리포트 시작일 (YYYYMMDD)';
+COMMENT ON COLUMN TS_INS_MASTER.DT_TO IS '리포트 종료일 (YYYYMMDD)';
 COMMENT ON COLUMN TS_INS_MASTER.TARGET_CNT IS '대상 농장수';
 COMMENT ON COLUMN TS_INS_MASTER.COMPLETE_CNT IS '실행완료 농장수';
 COMMENT ON COLUMN TS_INS_MASTER.ERROR_CNT IS '오류 농장수';
@@ -214,24 +214,25 @@ COMMENT ON COLUMN TS_INS_JOB_LOG.ERROR_CD IS '오류 코드';
 COMMENT ON COLUMN TS_INS_JOB_LOG.ERROR_MSG IS '오류 메시지';
 
 -- ============================================================
--- 5. TS_INS_FARM: 농장별 리포트 테이블
+-- 5. TS_INS_WEEK: 주간 리포트 테이블
+--    - 주간 리포트 전용 (월간: TS_INS_MON, 분기: TS_INS_QT 별도)
 -- ============================================================
 BEGIN
-    EXECUTE IMMEDIATE 'DROP TABLE TS_INS_FARM CASCADE CONSTRAINTS';
+    EXECUTE IMMEDIATE 'DROP TABLE TS_INS_WEEK CASCADE CONSTRAINTS';
 EXCEPTION
     WHEN OTHERS THEN NULL;
 END;
 /
 
-CREATE TABLE TS_INS_FARM (
+CREATE TABLE TS_INS_WEEK (
     MASTER_SEQ      NUMBER NOT NULL,                    -- FK → TS_INS_MASTER.SEQ
     FARM_NO         INTEGER NOT NULL,                   -- FK → TS_INS_SERVICE.FARM_NO
 
     -- 기간 정보
     REPORT_YEAR     NUMBER(4),                          -- 년도
     REPORT_WEEK_NO  NUMBER(2),                          -- 주차 (1~53) / 월 (1~12)
-    DT_FROM         DATE,                               -- 시작일
-    DT_TO           DATE,                               -- 종료일
+    DT_FROM         VARCHAR2(8),                        -- 시작일 (YYYYMMDD)
+    DT_TO           VARCHAR2(8),                        -- 종료일 (YYYYMMDD)
 
     -- 헤더 정보
     FARM_NM         VARCHAR2(100),                      -- 농장명
@@ -312,37 +313,44 @@ CREATE TABLE TS_INS_FARM (
     -- 생성 상태
     STATUS_CD       VARCHAR2(10) DEFAULT 'READY',       -- READY, RUNNING, COMPLETE, ERROR
 
+    -- 공유 토큰 (외부 URL 공유용)
+    SHARE_TOKEN     VARCHAR2(64),                       -- SHA256 해시 토큰 (64자)
+    TOKEN_EXPIRE_DT VARCHAR2(8),                        -- 토큰 만료일 (YYYYMMDD, 생성일 + 7일)
+
     -- 관리 컬럼
     LOG_INS_DT      DATE DEFAULT SYSDATE,              -- 생성일 (UTC)
 
-    CONSTRAINT PK_TS_INS_FARM PRIMARY KEY (MASTER_SEQ, FARM_NO),
-    CONSTRAINT FK_TS_INS_FARM_MASTER FOREIGN KEY (MASTER_SEQ)
+    CONSTRAINT PK_TS_INS_WEEK PRIMARY KEY (MASTER_SEQ, FARM_NO),
+    CONSTRAINT FK_TS_INS_WEEK_MASTER FOREIGN KEY (MASTER_SEQ)
         REFERENCES TS_INS_MASTER(SEQ) ON DELETE CASCADE,
-    CONSTRAINT FK_TS_INS_FARM_SERVICE FOREIGN KEY (FARM_NO)
+    CONSTRAINT FK_TS_INS_WEEK_SERVICE FOREIGN KEY (FARM_NO)
         REFERENCES TS_INS_SERVICE(FARM_NO)
 )
 TABLESPACE PIGXE_DATA;
 
 -- 인덱스
-CREATE INDEX IDX_TS_INS_FARM_01 ON TS_INS_FARM(FARM_NO, MASTER_SEQ) TABLESPACE PIGXE_IDX;
-CREATE INDEX IDX_TS_INS_FARM_02 ON TS_INS_FARM(FARM_NO, REPORT_YEAR, REPORT_WEEK_NO) TABLESPACE PIGXE_IDX;
+CREATE INDEX IDX_TS_INS_WEEK_01 ON TS_INS_WEEK(FARM_NO, MASTER_SEQ) TABLESPACE PIGXE_IDX;
+CREATE INDEX IDX_TS_INS_WEEK_02 ON TS_INS_WEEK(FARM_NO, REPORT_YEAR, REPORT_WEEK_NO) TABLESPACE PIGXE_IDX;
+CREATE UNIQUE INDEX UK_TS_INS_WEEK_TOKEN ON TS_INS_WEEK(SHARE_TOKEN) TABLESPACE PIGXE_IDX;
 
-COMMENT ON TABLE TS_INS_FARM IS '농장별 리포트 테이블';
-COMMENT ON COLUMN TS_INS_FARM.MASTER_SEQ IS '마스터 일련번호 (FK → TS_INS_MASTER)';
-COMMENT ON COLUMN TS_INS_FARM.FARM_NO IS '농장번호 (FK → TS_INS_SERVICE)';
-COMMENT ON COLUMN TS_INS_FARM.STATUS_CD IS '상태 (READY:대기, RUNNING:실행중, COMPLETE:완료, ERROR:오류)';
+COMMENT ON TABLE TS_INS_WEEK IS '주간 리포트 테이블';
+COMMENT ON COLUMN TS_INS_WEEK.MASTER_SEQ IS '마스터 일련번호 (FK → TS_INS_MASTER)';
+COMMENT ON COLUMN TS_INS_WEEK.FARM_NO IS '농장번호 (FK → TS_INS_SERVICE)';
+COMMENT ON COLUMN TS_INS_WEEK.STATUS_CD IS '상태 (READY:대기, RUNNING:실행중, COMPLETE:완료, ERROR:오류)';
+COMMENT ON COLUMN TS_INS_WEEK.SHARE_TOKEN IS '공유용 토큰 (SHA256 해시, 64자)';
+COMMENT ON COLUMN TS_INS_WEEK.TOKEN_EXPIRE_DT IS '토큰 만료일 (YYYYMMDD, 생성일 + 7일)';
 
 -- ============================================================
--- 6. TS_INS_FARM_SUB: 리포트 상세 테이블 (팝업 데이터)
+-- 6. TS_INS_WEEK_SUB: 리포트 상세 테이블 (팝업 데이터)
 -- ============================================================
 BEGIN
-    EXECUTE IMMEDIATE 'DROP TABLE TS_INS_FARM_SUB CASCADE CONSTRAINTS';
+    EXECUTE IMMEDIATE 'DROP TABLE TS_INS_WEEK_SUB CASCADE CONSTRAINTS';
 EXCEPTION
     WHEN OTHERS THEN NULL;
 END;
 /
 
-CREATE TABLE TS_INS_FARM_SUB (
+CREATE TABLE TS_INS_WEEK_SUB (
     MASTER_SEQ      NUMBER NOT NULL,                    -- FK → TS_INS_MASTER.SEQ
     FARM_NO         INTEGER NOT NULL,                   -- 농장번호
     GUBUN           VARCHAR2(20) NOT NULL,              -- 데이터 구분
@@ -370,28 +378,25 @@ CREATE TABLE TS_INS_FARM_SUB (
     STR_1           VARCHAR2(100),                      -- 문자열1 (명칭, 색상 등)
     STR_2           VARCHAR2(100),                      -- 문자열2
 
-    -- 일자 데이터
-    WK_DATE         DATE,                               -- 작업일/예정일
-
     -- 관리 컬럼
     LOG_INS_DT      DATE DEFAULT SYSDATE,              -- 생성일 (UTC)
 
-    CONSTRAINT PK_TS_INS_FARM_SUB PRIMARY KEY (MASTER_SEQ, FARM_NO, GUBUN, SORT_NO),
-    CONSTRAINT FK_TS_INS_FARM_SUB FOREIGN KEY (MASTER_SEQ, FARM_NO)
-        REFERENCES TS_INS_FARM(MASTER_SEQ, FARM_NO) ON DELETE CASCADE
+    CONSTRAINT PK_TS_INS_WEEK_SUB PRIMARY KEY (MASTER_SEQ, FARM_NO, GUBUN, SORT_NO),
+    CONSTRAINT FK_TS_INS_WEEK_SUB FOREIGN KEY (MASTER_SEQ, FARM_NO)
+        REFERENCES TS_INS_WEEK(MASTER_SEQ, FARM_NO) ON DELETE CASCADE
 )
 TABLESPACE PIGXE_DATA;
 
 -- 인덱스
-CREATE INDEX IDX_TS_INS_FARM_SUB_01 ON TS_INS_FARM_SUB(MASTER_SEQ, FARM_NO, GUBUN) TABLESPACE PIGXE_IDX;
+CREATE INDEX IDX_TS_INS_WEEK_SUB_01 ON TS_INS_WEEK_SUB(MASTER_SEQ, FARM_NO, GUBUN) TABLESPACE PIGXE_IDX;
 
-COMMENT ON TABLE TS_INS_FARM_SUB IS '리포트 상세 테이블 (팝업 데이터)';
-COMMENT ON COLUMN TS_INS_FARM_SUB.MASTER_SEQ IS '마스터 일련번호 (FK)';
-COMMENT ON COLUMN TS_INS_FARM_SUB.FARM_NO IS '농장번호';
-COMMENT ON COLUMN TS_INS_FARM_SUB.GUBUN IS '데이터 구분코드';
-COMMENT ON COLUMN TS_INS_FARM_SUB.SORT_NO IS '정렬순서';
-COMMENT ON COLUMN TS_INS_FARM_SUB.CODE_1 IS '1차 구분코드';
-COMMENT ON COLUMN TS_INS_FARM_SUB.CODE_2 IS '2차 구분코드';
+COMMENT ON TABLE TS_INS_WEEK_SUB IS '리포트 상세 테이블 (팝업 데이터)';
+COMMENT ON COLUMN TS_INS_WEEK_SUB.MASTER_SEQ IS '마스터 일련번호 (FK)';
+COMMENT ON COLUMN TS_INS_WEEK_SUB.FARM_NO IS '농장번호';
+COMMENT ON COLUMN TS_INS_WEEK_SUB.GUBUN IS '데이터 구분코드';
+COMMENT ON COLUMN TS_INS_WEEK_SUB.SORT_NO IS '정렬순서';
+COMMENT ON COLUMN TS_INS_WEEK_SUB.CODE_1 IS '1차 구분코드';
+COMMENT ON COLUMN TS_INS_WEEK_SUB.CODE_2 IS '2차 구분코드';
 
 -- ============================================================
 -- 7. TS_PSY_DELAY_HEATMAP: PSY 히트맵 테이블
@@ -436,7 +441,7 @@ END;
 
 CREATE TABLE TM_WEATHER (
     SEQ             NUMBER NOT NULL,                    -- 일련번호 (PK)
-    WK_DATE         DATE NOT NULL,                      -- 날짜
+    WK_DATE         VARCHAR2(8) NOT NULL,               -- 날짜 (YYYYMMDD)
 
     -- 지역 정보
     SIGUNGU_CD      VARCHAR2(10) NOT NULL,              -- 시군구코드 (행정표준코드)
@@ -466,7 +471,7 @@ CREATE INDEX IDX_TM_WEATHER_02 ON TM_WEATHER(NX, NY, WK_DATE) TABLESPACE PIGXE_I
 
 COMMENT ON TABLE TM_WEATHER IS '기상청 날씨 정보 테이블';
 COMMENT ON COLUMN TM_WEATHER.SEQ IS '일련번호';
-COMMENT ON COLUMN TM_WEATHER.WK_DATE IS '날짜';
+COMMENT ON COLUMN TM_WEATHER.WK_DATE IS '날짜 (YYYYMMDD)';
 COMMENT ON COLUMN TM_WEATHER.SIGUNGU_CD IS '시군구코드 (행정표준코드)';
 COMMENT ON COLUMN TM_WEATHER.SIGUNGU_NM IS '시군구명';
 COMMENT ON COLUMN TM_WEATHER.NX IS '기상청 격자 X좌표';
@@ -513,6 +518,110 @@ COMMENT ON COLUMN TS_INS_MGMT.CONTENT IS '내용';
 COMMENT ON COLUMN TS_INS_MGMT.LINK_URL IS '링크 URL';
 
 -- ============================================================
+-- 10. TS_INS_ACCESS_LOG: 접속 로그 테이블
+--     - 로그인, 메뉴, 보고서 접속 로그 통합 관리
+--     - 보관기간: 1년 (파티션 권장)
+-- ============================================================
+BEGIN
+    EXECUTE IMMEDIATE 'DROP TABLE TS_INS_ACCESS_LOG CASCADE CONSTRAINTS';
+EXCEPTION
+    WHEN OTHERS THEN NULL;
+END;
+/
+
+CREATE TABLE TS_INS_ACCESS_LOG (
+    SEQ             NUMBER NOT NULL,                    -- 일련번호 (PK)
+
+    -- 사용자 정보 (필수)
+    MEMBER_ID       VARCHAR2(40) NOT NULL,              -- 회원ID
+    FARM_NO         INTEGER NOT NULL,                   -- 농장번호
+
+    -- 접속 유형 구분
+    LOG_TYPE        VARCHAR2(20) NOT NULL,              -- 로그유형: LOGIN, LOGOUT, MENU, REPORT
+
+    -- LOG_TYPE 코드:
+    --   - LOGIN: 로그인
+    --   - LOGOUT: 로그아웃
+    --   - MENU: 메뉴 접속 (MENU_CD 사용)
+    --   - REPORT: 보고서 접속 (REPORT_GB, REPORT_SEQ, ACCESS_GB 사용)
+
+    -- 메뉴 코드 (MENU_CD) - 8자리 체계:
+    --   1-2자리: 메뉴구분 (WY:주간, MY:월간, QY:분기, ST:설정)
+    --   3-4자리: 1차 메뉴 (01~99)
+    --   5-6자리: 2차 메뉴 (01~99)
+    --   7-8자리: 3차 메뉴 (01~99)
+    --   예: WY000000(주간메인), WY010000(1차), WY010100(2차), ST000000(설정메인)
+
+    -- 상세 정보
+    MENU_CD         VARCHAR2(50),                       -- 메뉴코드: 8자리 (WY000000, MY000000, QY000000, ST000000)
+    REPORT_GB       VARCHAR2(10),                       -- 보고서구분: WEEK, MON, QT
+    REPORT_SEQ      NUMBER,                             -- 보고서 일련번호
+    ACCESS_GB       VARCHAR2(10),                       -- 접속경로: LIST, LINK, DIRECT
+
+    -- 접속 환경 정보
+    IP_ADDRESS      VARCHAR2(45),                       -- IP 주소 (IPv6 지원)
+    USER_AGENT      VARCHAR2(500),                      -- User Agent
+    DEVICE_TYPE     VARCHAR2(20),                       -- 디바이스: PC, MOBILE, TABLET
+    BROWSER         VARCHAR2(50),                       -- 브라우저
+    OS              VARCHAR2(50),                       -- 운영체제
+    REFERER         VARCHAR2(500),                      -- 이전 페이지 URL
+
+    -- 시간 정보
+    ACCESS_DT       TIMESTAMP DEFAULT SYSTIMESTAMP,     -- 접속일시
+    YEAR            VARCHAR2(4) AS (TO_CHAR(ACCESS_DT, 'YYYY')) VIRTUAL,  -- 년도 (가상컬럼)
+    MONTH           VARCHAR2(2) AS (TO_CHAR(ACCESS_DT, 'MM')) VIRTUAL,    -- 월 (가상컬럼)
+
+    -- 관리 컬럼
+    LOG_INS_DT      DATE DEFAULT SYSDATE,              -- 생성일 (UTC)
+
+    CONSTRAINT PK_TS_INS_ACCESS_LOG PRIMARY KEY (SEQ)
+)
+TABLESPACE PIGXE_DATA;
+
+-- 인덱스
+CREATE INDEX IDX_TS_INS_ACCESS_LOG_01 ON TS_INS_ACCESS_LOG(MEMBER_ID, ACCESS_DT) TABLESPACE PIGXE_IDX;
+CREATE INDEX IDX_TS_INS_ACCESS_LOG_02 ON TS_INS_ACCESS_LOG(FARM_NO, ACCESS_DT) TABLESPACE PIGXE_IDX;
+CREATE INDEX IDX_TS_INS_ACCESS_LOG_03 ON TS_INS_ACCESS_LOG(LOG_TYPE, ACCESS_DT) TABLESPACE PIGXE_IDX;
+CREATE INDEX IDX_TS_INS_ACCESS_LOG_04 ON TS_INS_ACCESS_LOG(YEAR, MONTH) TABLESPACE PIGXE_IDX;
+CREATE INDEX IDX_TS_INS_ACCESS_LOG_05 ON TS_INS_ACCESS_LOG(REPORT_GB, REPORT_SEQ) TABLESPACE PIGXE_IDX;
+CREATE INDEX IDX_TS_INS_ACCESS_LOG_06 ON TS_INS_ACCESS_LOG(ACCESS_DT) TABLESPACE PIGXE_IDX;
+
+COMMENT ON TABLE TS_INS_ACCESS_LOG IS '인사이트피그플랜 접속 로그 테이블 (1년 보관)';
+COMMENT ON COLUMN TS_INS_ACCESS_LOG.SEQ IS '일련번호';
+COMMENT ON COLUMN TS_INS_ACCESS_LOG.MEMBER_ID IS '회원ID';
+COMMENT ON COLUMN TS_INS_ACCESS_LOG.FARM_NO IS '농장번호';
+COMMENT ON COLUMN TS_INS_ACCESS_LOG.LOG_TYPE IS '로그유형 (LOGIN:로그인, LOGOUT:로그아웃, MENU:메뉴, REPORT:보고서)';
+COMMENT ON COLUMN TS_INS_ACCESS_LOG.MENU_CD IS '메뉴코드 8자리 (WY:주간, MY:월간, QY:분기, ST:설정)';
+COMMENT ON COLUMN TS_INS_ACCESS_LOG.REPORT_GB IS '보고서구분 (WEEK:주간, MON:월간, QT:분기)';
+COMMENT ON COLUMN TS_INS_ACCESS_LOG.REPORT_SEQ IS '보고서 일련번호 (TS_INS_MASTER.SEQ)';
+COMMENT ON COLUMN TS_INS_ACCESS_LOG.ACCESS_GB IS '접속경로 (LIST:리스트, LINK:링크, DIRECT:직접URL)';
+COMMENT ON COLUMN TS_INS_ACCESS_LOG.IP_ADDRESS IS 'IP 주소 (IPv6 지원)';
+COMMENT ON COLUMN TS_INS_ACCESS_LOG.USER_AGENT IS 'User Agent';
+COMMENT ON COLUMN TS_INS_ACCESS_LOG.DEVICE_TYPE IS '디바이스 유형 (PC, MOBILE, TABLET)';
+COMMENT ON COLUMN TS_INS_ACCESS_LOG.BROWSER IS '브라우저';
+COMMENT ON COLUMN TS_INS_ACCESS_LOG.OS IS '운영체제';
+COMMENT ON COLUMN TS_INS_ACCESS_LOG.REFERER IS '이전 페이지 URL';
+COMMENT ON COLUMN TS_INS_ACCESS_LOG.ACCESS_DT IS '접속일시';
+COMMENT ON COLUMN TS_INS_ACCESS_LOG.YEAR IS '년도 (가상컬럼)';
+COMMENT ON COLUMN TS_INS_ACCESS_LOG.MONTH IS '월 (가상컬럼)';
+
+-- ============================================================
+-- 시퀀스: TS_INS_ACCESS_LOG용
+-- ============================================================
+BEGIN
+    EXECUTE IMMEDIATE 'DROP SEQUENCE SQ_TS_INS_ACCESS_LOG';
+EXCEPTION
+    WHEN OTHERS THEN NULL;
+END;
+/
+
+CREATE SEQUENCE SQ_TS_INS_ACCESS_LOG
+    START WITH 1
+    INCREMENT BY 1
+    NOCACHE
+    NOCYCLE;
+
+-- ============================================================
 -- 테이블 생성 확인
 -- ============================================================
 SELECT TABLE_NAME, NUM_ROWS, LAST_ANALYZED
@@ -522,10 +631,11 @@ WHERE TABLE_NAME IN (
     'TS_INS_SERVICE',
     'TS_INS_MASTER',
     'TS_INS_JOB_LOG',
-    'TS_INS_FARM',
-    'TS_INS_FARM_SUB',
+    'TS_INS_WEEK',
+    'TS_INS_WEEK_SUB',
     'TS_PSY_DELAY_HEATMAP',
     'TM_WEATHER',
-    'TS_INS_MGMT'
+    'TS_INS_MGMT',
+    'TS_INS_ACCESS_LOG'
 )
 ORDER BY TABLE_NAME;

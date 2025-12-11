@@ -10,14 +10,15 @@ export interface WeeklyReportData {
 
 export interface WeeklyHeader {
   farmName: string;
-  period: string;
+  period: string | { from: string; to: string };
   owner: string;
   weekNum: number;
 }
 
 export interface AlertMdData {
   count: number;
-  list: AlertMdItem[];
+  items: any[];
+  list?: AlertMdItem[];
   euMiCnt?: number;      // 이유후 미교배
   sgMiCnt?: number;      // 사고후 미교배
   bmDelayCnt?: number;   // 교배후 분만지연
@@ -175,22 +176,22 @@ export interface AlertMdPopupData {
  * @see data.js _pop.modon
  */
 export interface ModonPopupData {
-    table: ModonTableRow[];
-    chart: {
-        xAxis: string[];
-        data: number[];
-    };
+  table: ModonTableRow[];
+  chart: {
+    xAxis: string[];
+    data: number[];
+  };
 }
 
 export interface ModonTableRow {
-    parity: string;
-    hubo: number;
-    imsin: number;
-    poyu: number;
-    eumo: number;
-    sago: number;
-    change: number;
-    group: 'hubo' | 'current';
+  parity: string;
+  hubo: number;
+  imsin: number;
+  poyu: number;
+  eumo: number;
+  sago: number;
+  change: number;
+  group: 'hubo' | 'current';
 }
 
 /**
@@ -198,19 +199,19 @@ export interface ModonTableRow {
  * @see data.js _pop.mating
  */
 export interface MatingPopupData {
-    table: MatingTableRow[];
-    total: { planned: number; actual: number; rate: string };
-    chart: {
-        xAxis: string[];
-        data: number[];
-    };
+  table: MatingTableRow[];
+  total: { planned: number; actual: number; rate: string };
+  chart: {
+    xAxis: string[];
+    data: number[];
+  };
 }
 
 export interface MatingTableRow {
-    type: string;
-    planned: number;
-    actual: number;
-    rate: string;
+  type: string;
+  planned: number;
+  actual: number;
+  rate: string;
 }
 
 /**
@@ -218,17 +219,17 @@ export interface MatingTableRow {
  * @see data.js _pop.farrowing
  */
 export interface FarrowingPopupData {
-    planned: number;
-    actual: number;
-    rate: string;
-    stats: {
-        totalBorn: { sum: number; avg: number };
-        bornAlive: { sum: number; avg: number; rate: string };
-        stillborn: { sum: number; avg: number; rate: string };
-        mummy: { sum: number; avg: number; rate: string };
-        culling: { sum: number; avg: number; rate: string };
-        nursingStart: { sum: number; avg: number; rate: string };
-    };
+  planned: number;
+  actual: number;
+  rate: string;
+  stats: {
+    totalBorn: { sum: number; avg: number };
+    bornAlive: { sum: number; avg: number; rate: string };
+    stillborn: { sum: number; avg: number; rate: string };
+    mummy: { sum: number; avg: number; rate: string };
+    culling: { sum: number; avg: number; rate: string };
+    nursingStart: { sum: number; avg: number; rate: string };
+  };
 }
 
 /**
@@ -236,15 +237,15 @@ export interface FarrowingPopupData {
  * @see data.js _pop.weaning
  */
 export interface WeaningPopupData {
-    planned: number;
-    actual: number;
-    rate: string;
-    stats: {
-        weanPigs: { sum: number; avg: number };
-        partialWean: { sum: number; avg: number };
-        avgWeight: { avg: number };
-        survivalRate: { rate: string };
-    };
+  planned: number;
+  actual: number;
+  rate: string;
+  stats: {
+    weanPigs: { sum: number; avg: number };
+    partialWean: { sum: number; avg: number };
+    avgWeight: { avg: number };
+    survivalRate: { rate: string };
+  };
 }
 
 /**
@@ -252,17 +253,17 @@ export interface WeaningPopupData {
  * @see data.js _pop.accident
  */
 export interface AccidentPopupData {
-    table: AccidentTableRow[];
-    chart: {
-        xAxis: string[];
-        data: number[];
-    };
+  table: AccidentTableRow[];
+  chart: {
+    xAxis: string[];
+    data: number[];
+  };
 }
 
 export interface AccidentTableRow {
-    type: string;
-    lastWeek: number;
-    lastMonth: number;
+  type: string;
+  lastWeek: number;
+  lastMonth: number;
 }
 
 /**
@@ -270,19 +271,19 @@ export interface AccidentTableRow {
  * @see data.js _pop.culling
  */
 export interface CullingPopupData {
-    stats: {
-        dotae: number;
-        dead: number;
-        transfer: number;
-        sale: number;
-    };
-    table: CullingTableRow[];
+  stats: {
+    dotae: number;
+    dead: number;
+    transfer: number;
+    sale: number;
+  };
+  table: CullingTableRow[];
 }
 
 export interface CullingTableRow {
-    reason: string;
-    lastWeek: number;
-    lastMonth: number;
+  reason: string;
+  lastWeek: number;
+  lastMonth: number;
 }
 
 /**
@@ -290,50 +291,50 @@ export interface CullingTableRow {
  * @see data.js _pop.shipment
  */
 export interface ShipmentPopupData {
-    metrics: {
-        totalCount: number;
-        compareLastWeek: string;
-        grade1Rate: number;
-        avgCarcass: number;
-        avgBackfat: number;
-        farmPrice: number;
-        nationalPrice: number;
-    };
-    gradeDistribution: { grade: string; count: number; rate: number }[];
-    dailyTable: ShipmentDailyRow[];
-    analysisChart: {
-        dates: string[];
-        shipCount: number[];
-        avgWeight: number[];
-        avgBackfat: number[];
-    };
-    carcassChart: {
-        data: { weight: number; backfat: number }[];
-    };
+  metrics: {
+    totalCount: number;
+    compareLastWeek: string;
+    grade1Rate: number;
+    avgCarcass: number;
+    avgBackfat: number;
+    farmPrice: number;
+    nationalPrice: number;
+  };
+  gradeDistribution: { grade: string; count: number; rate: number }[];
+  dailyTable: ShipmentDailyRow[];
+  analysisChart: {
+    dates: string[];
+    shipCount: number[];
+    avgWeight: number[];
+    avgBackfat: number[];
+  };
+  carcassChart: {
+    data: { weight: number; backfat: number }[];
+  };
 }
 
 export interface ShipmentDailyRow {
-    date: string;
-    count: number;
-    avgWeight: number;
-    avgBackfat: number;
-    grade1Rate: number;
+  date: string;
+  count: number;
+  avgWeight: number;
+  avgBackfat: number;
+  grade1Rate: number;
 }
 
 export interface SchedulePopupData {
-    date: string;
-    events: CalendarEvent[];
+  date: string;
+  events: CalendarEvent[];
 }
 
 /**
  * 예정작업 상세 팝업 데이터 (교배/분만/이유/백신)
  */
 export interface ScheduleDetailItem {
-    taskNm: string;
-    baseTask: string;
-    targetGroup: string;
-    elapsedDays: string;
-    count: number;
+  taskNm: string;
+  baseTask: string;
+  targetGroup: string;
+  elapsedDays: string;
+  count: number;
 }
 
 /**
@@ -341,8 +342,8 @@ export interface ScheduleDetailItem {
  * @see data.js _pop.psytrend
  */
 export interface PsyTrendPopupData {
-    heatmapData: [number, number, number, string][];  // [x, y, value, zoneName]
-    myFarmPosition: [number, number];
+  heatmapData: [number, number, number, string][];  // [x, y, value, zoneName]
+  myFarmPosition: [number, number];
 }
 
 /**
@@ -350,13 +351,13 @@ export interface PsyTrendPopupData {
  * @see data.js _pop.auction
  */
 export interface AuctionPopupData {
-    xData: string[];
-    grade1Plus: number[];
-    grade1: number[];
-    grade2: number[];
-    gradeOut: number[];
-    excludeOut: number[];
-    average: number[];
+  xData: string[];
+  grade1Plus: number[];
+  grade1: number[];
+  grade2: number[];
+  gradeOut: number[];
+  excludeOut: number[];
+  average: number[];
 }
 
 /**
@@ -364,9 +365,9 @@ export interface AuctionPopupData {
  * @see data.js _pop.weather
  */
 export interface WeatherPopupData {
-    xData: string[];
-    maxTemp: number[];
-    minTemp: number[];
-    weatherCode: string[];
-    rainProb: number[];
+  xData: string[];
+  maxTemp: number[];
+  minTemp: number[];
+  weatherCode: string[];
+  rainProb: number[];
 }

@@ -2,10 +2,14 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { WeeklyController } from './weekly.controller';
 import { WeeklyService } from './weekly.service';
-import { TsInsMaster, TsInsFarm, TsInsFarmSub } from './entities';
+import { TsInsMaster, TsInsWeek, TsInsWeekSub } from './entities';
+import { AuthModule } from '../auth/auth.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([TsInsMaster, TsInsFarm, TsInsFarmSub])],
+  imports: [
+    TypeOrmModule.forFeature([TsInsMaster, TsInsWeek, TsInsWeekSub]),
+    AuthModule, // JwtModule 사용을 위해 import
+  ],
   controllers: [WeeklyController],
   providers: [WeeklyService],
   exports: [WeeklyService],
