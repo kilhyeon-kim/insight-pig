@@ -17,25 +17,40 @@ export class WeeklyController {
 
   /**
    * 주간 보고서 목록
-   * GET /api/weekly/list?from=2023-10-01&to=2023-10-31
+   * GET /api/weekly/list?farmNo=1001&from=20231001&to=20231031
    */
   @Get('list')
-  getList(@Query('from') from?: string, @Query('to') to?: string) {
+  async getList(
+    @Query('farmNo') farmNo: string,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+  ) {
+    const farmNoNum = parseInt(farmNo, 10);
+    if (!farmNoNum) {
+      throw new NotFoundException('farmNo is required');
+    }
     return {
       success: true,
-      data: this.weeklyService.getReportList(from, to),
+      data: await this.weeklyService.getReportList(farmNoNum, from, to),
     };
   }
 
   /**
    * 주간 보고서 상세
-   * GET /api/weekly/detail/:id
+   * GET /api/weekly/detail/:masterSeq/:farmNo
    */
-  @Get('detail/:id')
-  getDetail(@Param('id') id: string) {
-    const data = this.weeklyService.getReportDetail(id);
+  @Get('detail/:masterSeq/:farmNo')
+  async getDetail(
+    @Param('masterSeq') masterSeq: string,
+    @Param('farmNo') farmNo: string,
+  ) {
+    const masterSeqNum = parseInt(masterSeq, 10);
+    const farmNoNum = parseInt(farmNo, 10);
+    const data = await this.weeklyService.getReportDetail(masterSeqNum, farmNoNum);
     if (!data) {
-      throw new NotFoundException(`Report with id '${id}' not found`);
+      throw new NotFoundException(
+        `Report with masterSeq '${masterSeq}' and farmNo '${farmNo}' not found`,
+      );
     }
     return {
       success: true,
@@ -45,11 +60,17 @@ export class WeeklyController {
 
   /**
    * 팝업 데이터
-   * GET /api/weekly/popup/:type/:id
+   * GET /api/weekly/popup/:type/:masterSeq/:farmNo
    */
-  @Get('popup/:type/:id')
-  getPopupData(@Param('type') type: string, @Param('id') id: string) {
-    const data = this.weeklyService.getPopupData(type, id);
+  @Get('popup/:type/:masterSeq/:farmNo')
+  async getPopupData(
+    @Param('type') type: string,
+    @Param('masterSeq') masterSeq: string,
+    @Param('farmNo') farmNo: string,
+  ) {
+    const masterSeqNum = parseInt(masterSeq, 10);
+    const farmNoNum = parseInt(farmNo, 10);
+    const data = await this.weeklyService.getPopupData(type, masterSeqNum, farmNoNum);
     if (!data) {
       throw new NotFoundException(`Popup data for type '${type}' not found`);
     }

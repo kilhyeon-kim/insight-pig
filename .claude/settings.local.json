@@ -8,7 +8,18 @@
       "Bash(git push:*)",
       "Bash(del \"c:\\Projects\\inspig\\web\\src\\css\\fix_comments.ps1\")",
       "Bash(cd:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(del \"c:\\Projects\\inspig\\docs\\weekly-report-design.md\")",
+      "Bash(ls:*)",
+      "Bash(ren:*)",
+      "Bash(cat:*)",
+      "Bash(curl:*)",
+      "Bash(npm run start:dev:*)",
+      "Bash(npm install:*)",
+      "Bash(netstat:*)",
+      "Bash(tasklist /FI 'IMAGENAME eq node.exe' /FO CSV)",
+      "Bash(taskkill:*)",
+      "Bash(findstr:*)"
     ],
     "deny": [],
     "ask": []

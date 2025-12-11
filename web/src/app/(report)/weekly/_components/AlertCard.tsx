@@ -17,7 +17,7 @@ export const AlertCard: React.FC<AlertCardProps> = ({ data, onClick }) => {
             </div>
             <div className="alert-card-info">
                 <div className="alert-card-title">관리대상모돈</div>
-                <div className="alert-card-subtitle">이유후/사고후 미교배 중점 관리</div>
+                <div className="alert-card-subtitle">(피그플랜)농장기본값 설정 기준</div>
                 <button className="alert-card-btn" onClick={onClick}>
                     <FontAwesomeIcon icon={faTable} /> 더보기
                 </button>

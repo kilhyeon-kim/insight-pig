@@ -34,7 +34,7 @@
    - 팝업 배경: #1a1d24
    - 테이블 래퍼: #232830
    - 데이터 행: #2d3340
-   - 헤더 텍스트: #8b9dc3
+   - 헤더 텍스트: #b8c9e8
    - 강조 색상: #6ea8fe
 
    ============================================ */
@@ -46,7 +46,7 @@
     --popup-bg: #1a1d24;
     --popup-table-wrap-bg: #232830;
     --popup-row-bg: #2d3340;
-    --popup-header-color: #8b9dc3;
+    --popup-header-color: #b8c9e8;  /* 더 밝은 블루 그레이 */
     --popup-accent: #6ea8fe;
 }
 
