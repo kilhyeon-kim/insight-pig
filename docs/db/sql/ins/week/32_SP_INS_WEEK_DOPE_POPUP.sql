@@ -78,6 +78,7 @@ BEGIN
     -- 2. 유형별 통계 INSERT (GUBUN='DOPE')
     --    SORT_NO=1: 지난주 (P_DT_FROM ~ P_DT_TO)
     --    SORT_NO=2: 최근1개월 (V_MONTH_FROM ~ P_DT_TO) + 당해년도 누계(CNT_5)
+    --    ★ 데이터 없어도 0으로 INSERT (DUAL 기준 LEFT JOIN)
     -- ================================================
     INSERT INTO TS_INS_WEEK_SUB (
         MASTER_SEQ, FARM_NO, GUBUN, SORT_NO,
@@ -85,39 +86,42 @@ BEGIN
         VAL_1, VAL_2, VAL_3, VAL_4
     )
     SELECT
-        P_MASTER_SEQ, P_FARM_NO, 'DOPE', SORT_NO,
-        CNT_1, CNT_2, CNT_3, CNT_4,
-        CASE WHEN SORT_NO = 2 THEN V_YEAR_TOTAL ELSE NULL END AS CNT_5,
-        CASE WHEN TOTAL_CNT > 0 THEN ROUND(CNT_1 / TOTAL_CNT * 100, 1) ELSE 0 END,
-        CASE WHEN TOTAL_CNT > 0 THEN ROUND(CNT_2 / TOTAL_CNT * 100, 1) ELSE 0 END,
-        CASE WHEN TOTAL_CNT > 0 THEN ROUND(CNT_3 / TOTAL_CNT * 100, 1) ELSE 0 END,
-        CASE WHEN TOTAL_CNT > 0 THEN ROUND(CNT_4 / TOTAL_CNT * 100, 1) ELSE 0 END
-    FROM (
-        SELECT
-            SORT_NO,
-            NVL(SUM(CASE WHEN OUT_GUBUN_CD = '080001' THEN 1 ELSE 0 END), 0) AS CNT_1,
-            NVL(SUM(CASE WHEN OUT_GUBUN_CD = '080002' THEN 1 ELSE 0 END), 0) AS CNT_2,
-            NVL(SUM(CASE WHEN OUT_GUBUN_CD = '080003' THEN 1 ELSE 0 END), 0) AS CNT_3,
-            NVL(SUM(CASE WHEN OUT_GUBUN_CD = '080004' THEN 1 ELSE 0 END), 0) AS CNT_4,
-            NVL(COUNT(*), 0) AS TOTAL_CNT
-        FROM (
-            SELECT MD.OUT_GUBUN_CD,
-                   CASE
-                       WHEN MD.OUT_DT >= TO_DATE(P_DT_FROM, 'YYYYMMDD') THEN 1  -- 지난주
-                       ELSE 0
-                   END AS IS_LAST_WEEK
-            FROM TB_MODON MD
-            WHERE MD.FARM_NO = P_FARM_NO
-              AND MD.USE_YN = 'Y'
-              AND MD.OUT_DT >= TO_DATE(V_MONTH_FROM, 'YYYYMMDD')
-              AND MD.OUT_DT < TO_DATE(P_DT_TO, 'YYYYMMDD') + 1
-              AND MD.OUT_GUBUN_CD IS NOT NULL
-        ) A
-        CROSS JOIN (SELECT 1 AS SORT_NO FROM DUAL UNION ALL SELECT 2 AS SORT_NO FROM DUAL) B
-        WHERE (B.SORT_NO = 1 AND A.IS_LAST_WEEK = 1)  -- 지난주 데이터만
-           OR (B.SORT_NO = 2)                         -- 최근1개월 데이터 (전체)
-        GROUP BY SORT_NO
-    );
+        P_MASTER_SEQ, P_FARM_NO, 'DOPE', B.SORT_NO,
+        NVL(D.CNT_1, 0), NVL(D.CNT_2, 0), NVL(D.CNT_3, 0), NVL(D.CNT_4, 0),
+        CASE WHEN B.SORT_NO = 2 THEN V_YEAR_TOTAL ELSE NULL END AS CNT_5,
+        CASE WHEN NVL(D.TOTAL_CNT, 0) > 0 THEN ROUND(NVL(D.CNT_1, 0) / D.TOTAL_CNT * 100, 1) ELSE 0 END,
+        CASE WHEN NVL(D.TOTAL_CNT, 0) > 0 THEN ROUND(NVL(D.CNT_2, 0) / D.TOTAL_CNT * 100, 1) ELSE 0 END,
+        CASE WHEN NVL(D.TOTAL_CNT, 0) > 0 THEN ROUND(NVL(D.CNT_3, 0) / D.TOTAL_CNT * 100, 1) ELSE 0 END,
+        CASE WHEN NVL(D.TOTAL_CNT, 0) > 0 THEN ROUND(NVL(D.CNT_4, 0) / D.TOTAL_CNT * 100, 1) ELSE 0 END
+    FROM (SELECT 1 AS SORT_NO FROM DUAL UNION ALL SELECT 2 AS SORT_NO FROM DUAL) B
+    LEFT JOIN (
+        -- SORT_NO=1: 지난주만, SORT_NO=2: 최근1개월 전체
+        SELECT 1 AS SORT_NO,
+               SUM(CASE WHEN OUT_GUBUN_CD = '080001' THEN 1 ELSE 0 END) AS CNT_1,
+               SUM(CASE WHEN OUT_GUBUN_CD = '080002' THEN 1 ELSE 0 END) AS CNT_2,
+               SUM(CASE WHEN OUT_GUBUN_CD = '080003' THEN 1 ELSE 0 END) AS CNT_3,
+               SUM(CASE WHEN OUT_GUBUN_CD = '080004' THEN 1 ELSE 0 END) AS CNT_4,
+               COUNT(*) AS TOTAL_CNT
+        FROM TB_MODON MD
+        WHERE MD.FARM_NO = P_FARM_NO
+          AND MD.USE_YN = 'Y'
+          AND MD.OUT_DT >= TO_DATE(P_DT_FROM, 'YYYYMMDD')
+          AND MD.OUT_DT < TO_DATE(P_DT_TO, 'YYYYMMDD') + 1
+          AND MD.OUT_GUBUN_CD IS NOT NULL
+        UNION ALL
+        SELECT 2 AS SORT_NO,
+               SUM(CASE WHEN OUT_GUBUN_CD = '080001' THEN 1 ELSE 0 END) AS CNT_1,
+               SUM(CASE WHEN OUT_GUBUN_CD = '080002' THEN 1 ELSE 0 END) AS CNT_2,
+               SUM(CASE WHEN OUT_GUBUN_CD = '080003' THEN 1 ELSE 0 END) AS CNT_3,
+               SUM(CASE WHEN OUT_GUBUN_CD = '080004' THEN 1 ELSE 0 END) AS CNT_4,
+               COUNT(*) AS TOTAL_CNT
+        FROM TB_MODON MD
+        WHERE MD.FARM_NO = P_FARM_NO
+          AND MD.USE_YN = 'Y'
+          AND MD.OUT_DT >= TO_DATE(V_MONTH_FROM, 'YYYYMMDD')
+          AND MD.OUT_DT < TO_DATE(P_DT_TO, 'YYYYMMDD') + 1
+          AND MD.OUT_GUBUN_CD IS NOT NULL
+    ) D ON B.SORT_NO = D.SORT_NO;
     V_PROC_CNT := V_PROC_CNT + SQL%ROWCOUNT;
 
     -- ================================================
@@ -216,9 +220,9 @@ BEGIN
 
     -- ================================================
     -- 5. 상태별 차트 INSERT (GUBUN='DOPE_CHART')
-    --    STATUS_CODE (PCODE='01') 기준 - 값이 없어도 모두 표시
+    --    STATUS_CODE (PCODE='01') 기준 - 값이 없어도 0으로 표시
     --    지난주 기간 (P_DT_FROM ~ P_DT_TO)
-    --    인라인 쿼리 + SF_GET_MODONGB_STATUS 함수 사용
+    --    ★ 데이터 없어도 0으로 INSERT (DUAL 기준 LEFT JOIN)
     -- ================================================
     INSERT INTO TS_INS_WEEK_SUB (
         MASTER_SEQ, FARM_NO, GUBUN, SORT_NO,
@@ -226,51 +230,57 @@ BEGIN
     )
     SELECT
         P_MASTER_SEQ, P_FARM_NO, 'DOPE_CHART', 1,
-        NVL(SUM(CASE WHEN STATUS_CD = '010001' THEN 1 ELSE 0 END), 0),  -- 후보돈
-        NVL(SUM(CASE WHEN STATUS_CD = '010002' THEN 1 ELSE 0 END), 0),  -- 이유모돈
-        NVL(SUM(CASE WHEN STATUS_CD = '010003' THEN 1 ELSE 0 END), 0),  -- 임신돈
-        NVL(SUM(CASE WHEN STATUS_CD = '010004' THEN 1 ELSE 0 END), 0),  -- 포유돈
-        NVL(SUM(CASE WHEN STATUS_CD = '010005' THEN 1 ELSE 0 END), 0),  -- 사고돈
-        NVL(SUM(CASE WHEN STATUS_CD = '010006' THEN 1 ELSE 0 END), 0)   -- 비생산돈
-    FROM (
+        NVL(D.CNT_1, 0), NVL(D.CNT_2, 0), NVL(D.CNT_3, 0),
+        NVL(D.CNT_4, 0), NVL(D.CNT_5, 0), NVL(D.CNT_6, 0)
+    FROM DUAL
+    LEFT JOIN (
         SELECT
-            CASE
-                WHEN WK.PIG_NO IS NULL THEN
-                    -- 작업이력 없는 모돈: TB_MODON.STATUS_CD 사용
-                    CASE
-                        WHEN TM.IN_SANCHA = 0 AND TM.IN_GYOBAE_CNT = 1 AND TM.STATUS_CD = '010003'
-                        THEN '010001'  -- 임신돈이지만 산차=0, 교배차수=1이면 후보돈
-                        ELSE NVL(TM.STATUS_CD, '010001')
-                    END
-                ELSE
-                    -- 작업이력 있는 모돈: SF_GET_MODONGB_STATUS 함수로 상태 결정
-                    SF_GET_MODONGB_STATUS('CD', WK.WK_GUBUN, WK.SAGO_GUBUN_CD,
-                        NULL, TM.STATUS_CD, WK.DAERI_YN, '')
-            END AS STATUS_CD
-        FROM TB_MODON TM
-        LEFT OUTER JOIN (
-            -- 마지막 작업정보 추출 (도폐사 작업 제외)
-            SELECT WK.FARM_NO, WK.PIG_NO, WK.WK_GUBUN, WK.SAGO_GUBUN_CD, WK.DAERI_YN
-            FROM (
-                SELECT FARM_NO, PIG_NO, MAX(SEQ) AS MAX_SEQ
-                FROM TB_MODON_WK
-                WHERE FARM_NO = P_FARM_NO
-                  AND USE_YN = 'Y'
-                  AND WK_GUBUN <> 'Z'
-                GROUP BY FARM_NO, PIG_NO
-            ) MK
-            INNER JOIN TB_MODON_WK WK
-                ON WK.FARM_NO = MK.FARM_NO
-               AND WK.PIG_NO = MK.PIG_NO
-               AND WK.SEQ = MK.MAX_SEQ
-               AND WK.USE_YN = 'Y'
-        ) WK ON WK.FARM_NO = TM.FARM_NO AND WK.PIG_NO = TM.PIG_NO
-        WHERE TM.FARM_NO = P_FARM_NO
-          AND TM.USE_YN = 'Y'
-          AND TM.OUT_DT >= TO_DATE(P_DT_FROM, 'YYYYMMDD')
-          AND TM.OUT_DT < TO_DATE(P_DT_TO, 'YYYYMMDD') + 1
-          AND TM.OUT_GUBUN_CD IS NOT NULL
-    );
+            SUM(CASE WHEN STATUS_CD = '010001' THEN 1 ELSE 0 END) AS CNT_1,  -- 후보돈
+            SUM(CASE WHEN STATUS_CD = '010002' THEN 1 ELSE 0 END) AS CNT_2,  -- 이유모돈
+            SUM(CASE WHEN STATUS_CD = '010003' THEN 1 ELSE 0 END) AS CNT_3,  -- 임신돈
+            SUM(CASE WHEN STATUS_CD = '010004' THEN 1 ELSE 0 END) AS CNT_4,  -- 포유돈
+            SUM(CASE WHEN STATUS_CD = '010005' THEN 1 ELSE 0 END) AS CNT_5,  -- 사고돈
+            SUM(CASE WHEN STATUS_CD = '010006' THEN 1 ELSE 0 END) AS CNT_6   -- 비생산돈
+        FROM (
+            SELECT
+                CASE
+                    WHEN WK.PIG_NO IS NULL THEN
+                        -- 작업이력 없는 모돈: TB_MODON.STATUS_CD 사용
+                        CASE
+                            WHEN TM.IN_SANCHA = 0 AND TM.IN_GYOBAE_CNT = 0
+                            THEN '010001'    -- 산차=0, 교배차수=0이면 후보돈
+                            ELSE NVL(TM.STATUS_CD, '010001')
+                        END
+                    ELSE
+                        -- 작업이력 있는 모돈: SF_GET_MODONGB_STATUS 함수로 상태 결정
+                        SF_GET_MODONGB_STATUS('CD', WK.WK_GUBUN, WK.SAGO_GUBUN_CD,
+                            TO_DATE('99991231', 'YYYYMMDD'), TM.STATUS_CD, WK.DAERI_YN, '')
+                END AS STATUS_CD
+            FROM TB_MODON TM
+            LEFT OUTER JOIN (
+                -- 마지막 작업정보 추출 (도폐사 작업 제외)
+                SELECT WK.FARM_NO, WK.PIG_NO, WK.WK_GUBUN, WK.SAGO_GUBUN_CD, WK.DAERI_YN
+                FROM (
+                    SELECT FARM_NO, PIG_NO, MAX(SEQ) AS MAX_SEQ
+                    FROM TB_MODON_WK
+                    WHERE FARM_NO = P_FARM_NO
+                      AND USE_YN = 'Y'
+                      AND WK_GUBUN <> 'Z'
+                    GROUP BY FARM_NO, PIG_NO
+                ) MK
+                INNER JOIN TB_MODON_WK WK
+                    ON WK.FARM_NO = MK.FARM_NO
+                   AND WK.PIG_NO = MK.PIG_NO
+                   AND WK.SEQ = MK.MAX_SEQ
+                   AND WK.USE_YN = 'Y'
+            ) WK ON WK.FARM_NO = TM.FARM_NO AND WK.PIG_NO = TM.PIG_NO
+            WHERE TM.FARM_NO = P_FARM_NO
+              AND TM.USE_YN = 'Y'
+              AND TM.OUT_DT >= TO_DATE(P_DT_FROM, 'YYYYMMDD')
+              AND TM.OUT_DT < TO_DATE(P_DT_TO, 'YYYYMMDD') + 1
+              AND TM.OUT_GUBUN_CD IS NOT NULL
+        )
+    ) D ON 1=1;
     V_PROC_CNT := V_PROC_CNT + 1;
 
     -- ================================================
