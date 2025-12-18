@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { ThisWeekData } from '@/types/weekly';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
@@ -10,7 +10,9 @@ import {
     faPersonBreastfeeding,
     faSyringe,
     faTruck,
-    faCircleInfo
+    faCircleInfo,
+    faXmark,
+    faChevronDown
 } from '@fortawesome/free-solid-svg-icons';
 
 interface ThisWeekSectionProps {
@@ -20,9 +22,28 @@ interface ThisWeekSectionProps {
 
 export const ThisWeekSection: React.FC<ThisWeekSectionProps> = ({ data, onPopupOpen }) => {
     const weekDays = ['월', '화', '수', '목', '금', '토', '일'];
+    const [showHelpTooltip, setShowHelpTooltip] = useState(false);
+    const tooltipRef = useRef<HTMLDivElement>(null);
 
     // calendarGrid 데이터 사용 (프로토타입 _cal 구조)
     const grid = data.calendarGrid;
+
+    // 툴팁 외부 클릭 감지
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (tooltipRef.current && !tooltipRef.current.contains(event.target as Node)) {
+                setShowHelpTooltip(false);
+            }
+        };
+
+        if (showHelpTooltip) {
+            document.addEventListener('mousedown', handleClickOutside);
+        }
+
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [showHelpTooltip]);
 
     // 요약 카드 데이터
     const summaryData = {
@@ -47,11 +68,57 @@ export const ThisWeekSection: React.FC<ThisWeekSectionProps> = ({ data, onPopupO
                     </div>
                 </div>
                 <div className="legend">
+                    <div className="info-note-wrap" ref={tooltipRef} style={{ marginRight: 'auto' }}>
+                        <div id="btn-schedule-help" className="info-note clickable" onClick={() => setShowHelpTooltip(!showHelpTooltip)}>
+                            <FontAwesomeIcon icon={faCircleInfo} /> 산출기준 <FontAwesomeIcon icon={faChevronDown} style={{ fontSize: '10px', marginLeft: '2px', opacity: 0.7 }} />
+                        </div>
+                        {showHelpTooltip && (
+                            <div className="help-tooltip">
+                                <div className="help-tooltip-header">
+                                    <span>작업별 산출기준(pigplan.io)</span>
+                                    <button className="close-btn" onClick={() => setShowHelpTooltip(false)}>
+                                        <FontAwesomeIcon icon={faXmark} />
+                                    </button>
+                                </div>
+                                <div className="help-tooltip-note">
+                                    [교배,분만,이유,모돈백신]&nbsp;:&nbsp;농장정보&gt;모돈 작업설정(피그플랜)
+                                    <br />
+                                    [출하]&nbsp;:&nbsp;농장정보&gt;농장 기본값설정(피그플랜)
+                                </div>
+                                <div className="help-tooltip-body">
+                                    <div className="help-item">
+                                        <span className="help-label">교배</span>
+                                        <span className="help-desc">{grid?.help?.mating || '설정된 예정작업정보 없음'}</span>
+                                    </div>
+                                    <div className="help-item">
+                                        <span className="help-label">재발확인</span>
+                                        <span className="help-desc">{grid?.help?.checking || '교배일+21일/28일'}</span>
+                                    </div>
+                                    <div className="help-item">
+                                        <span className="help-label">분만</span>
+                                        <span className="help-desc">{grid?.help?.farrowing || '설정된 예정작업정보 없음'}</span>
+                                    </div>
+                                    <div className="help-item">
+                                        <span className="help-label">이유</span>
+                                        <span className="help-desc">{grid?.help?.weaning || '설정된 예정작업정보 없음'}</span>
+                                    </div>
+                                    <div className="help-item">
+                                        <span className="help-label">모돈백신</span>
+                                        <span className="help-desc">{grid?.help?.vaccine || '설정된 예정작업정보 없음'}</span>
+                                    </div>
+                                    <div className="help-item">
+                                        <span className="help-label">출하</span>
+                                        <span className="help-desc">{grid?.help?.shipment || '-'}</span>
+                                    </div>
+                                </div>
+                                <div className="help-tooltip-footer">
+                                    ※ 작업정보 및 설정값 변경은 pigplan.io에 접속하셔서 변경하십시요.
+                                </div>
+                            </div>
+                        )}
+                    </div>
                     <div className="legend-item"><FontAwesomeIcon icon={faArrowUpRightFromSquare} /> 더보기</div>
                     <span className="section-desc">단위: 복</span>
-                </div>
-                <div className="info-note">
-                    <FontAwesomeIcon icon={faCircleInfo} />산출기준: (피그플랜)농장정보 모돈 예정작업 , [재발확인] 3,4주 고정
                 </div>
             </div>
             <div className="card-body">
@@ -133,7 +200,7 @@ export const ThisWeekSection: React.FC<ThisWeekSectionProps> = ({ data, onPopupO
 
                         {/* 재발확인 - row-span-4로 4행 차지 */}
                         <div className="calendar-section row-span-4">
-                            <span className="section-label">재발<br/>확인</span>
+                            <span className="section-label">재발<br />확인</span>
                         </div>
                         {/* 3주 라벨 - span 7 */}
                         <div className="calendar-row-label">3주</div>
@@ -173,7 +240,7 @@ export const ThisWeekSection: React.FC<ThisWeekSectionProps> = ({ data, onPopupO
 
                         {/* 모돈백신 */}
                         <div className="calendar-section">
-                            <span className="section-label">모돈<br/>백신</span>
+                            <span className="section-label">모돈<br />백신</span>
                         </div>
                         {weekDays.map((_, i) => {
                             const count = grid?.vaccine?.[i];

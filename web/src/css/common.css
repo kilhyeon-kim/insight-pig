@@ -57,7 +57,8 @@
     .report-header {
         background: var(--rp-bg-header);
         color: var(--rp-text-inverse);
-        padding: 16px 14px; /* 모바일 */
+        padding: 16px 14px;
+        /* 모바일 */
         margin: 0;
         box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
         border-radius: 0;
@@ -1316,7 +1317,7 @@
         color: var(--rp-text-secondary);
         margin-top: 8px;
         flex-wrap: nowrap;
-        overflow-x: auto;
+        overflow: visible;
     }
 
     .legend-item {
@@ -1394,6 +1395,173 @@
 
     .info-note i {
         color: var(--rp-accent-secondary);
+    }
+
+    .info-note.clickable {
+        cursor: pointer;
+        padding: 4px 8px;
+        border-radius: 6px;
+        transition: all 0.2s;
+    }
+
+    .info-note.clickable:hover {
+        background: var(--rp-bg-hover);
+        color: var(--rp-accent-primary);
+    }
+
+    /* info-note wrapper (for tooltip positioning) */
+    .info-note-wrap {
+        position: relative;
+        display: inline-block;
+        width: auto;
+    }
+
+    /* ============================================
+       도움말 툴팁 (.help-tooltip)
+       ============================================ */
+    .help-tooltip {
+        position: absolute;
+        top: calc(100% + 8px);
+        left: 0;
+        width: 90vw;
+        max-width: 400px;
+        background: #fff;
+        border: 1px solid var(--rp-border-secondary);
+        border-radius: 8px;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+        z-index: 1001;
+        overflow: hidden;
+        animation: tooltipFadeIn 0.2s ease-out;
+    }
+
+    .dark .help-tooltip {
+        background: #1e2530;
+        border-color: #3a4556;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+    }
+
+    @keyframes tooltipFadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(-4px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .help-tooltip-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 12px;
+        background: var(--rp-bg-cell-alt);
+        border-bottom: 1px solid var(--rp-border-secondary);
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--rp-text-primary);
+    }
+
+    .help-tooltip-header .close-btn {
+        background: none;
+        border: none;
+        padding: 4px 6px;
+        cursor: pointer;
+        color: var(--rp-text-tertiary);
+        font-size: 14px;
+        line-height: 1;
+        border-radius: 4px;
+        transition: all 0.15s;
+    }
+
+    .help-tooltip-header .close-btn:hover {
+        background: var(--rp-bg-hover);
+        color: var(--rp-text-primary);
+    }
+
+    .help-tooltip-note {
+        padding: 8px 12px;
+        background: #f0f7ff;
+        border-bottom: 1px solid var(--rp-border-secondary);
+        font-size: 11px;
+        color: #1e40af;
+    }
+
+    .help-tooltip-body {
+        padding: 8px 0;
+    }
+
+    .help-item {
+        display: flex;
+        padding: 6px 12px;
+        gap: 12px;
+        font-size: 12px;
+        line-height: 1.4;
+    }
+
+    .help-item:hover {
+        background: var(--rp-bg-hover);
+    }
+
+    .help-label {
+        min-width: 60px;
+        font-weight: 600;
+        color: var(--rp-accent-primary);
+    }
+
+    .help-desc {
+        flex: 1;
+        color: var(--rp-text-secondary);
+    }
+
+    .help-tooltip-footer {
+        padding: 8px 12px;
+        background: var(--rp-bg-cell-alt);
+        border-top: 1px solid var(--rp-border-secondary);
+        font-size: 11px;
+        color: var(--rp-text-tertiary);
+    }
+
+    /* 도움말 툴팁 다크모드 */
+    .dark .help-tooltip-header {
+        background: #2a3544;
+        border-color: #3a4556;
+        color: #e5e7eb;
+    }
+
+    .dark .help-tooltip-header .close-btn {
+        color: #9ca3af;
+    }
+
+    .dark .help-tooltip-header .close-btn:hover {
+        background: #3a4556;
+        color: #e5e7eb;
+    }
+
+    .dark .help-tooltip-note {
+        background: #1e3a5f;
+        border-color: #3a4556;
+        color: #60a5fa;
+    }
+
+    .dark .help-item:hover {
+        background: #2a3544;
+    }
+
+    .dark .help-label {
+        color: #60a5fa;
+    }
+
+    .dark .help-desc {
+        color: #9ca3af;
+    }
+
+    .dark .help-tooltip-footer {
+        background: #2a3544;
+        border-color: #3a4556;
+        color: #6b7280;
     }
 
     /* ============================================
@@ -1764,6 +1932,7 @@
     .desktop-only {
         display: none;
     }
+
     .mobile-only {
         display: inline;
     }
@@ -1777,7 +1946,8 @@
         }
 
         .report-header {
-            padding: 16px 18px; /* 태블릿 */
+            padding: 16px 18px;
+            /* 태블릿 */
         }
 
         .report-card {
@@ -2198,7 +2368,8 @@
         }
 
         .report-header {
-            padding: 18px 24px; /* 데스크탑 */
+            padding: 18px 24px;
+            /* 데스크탑 */
         }
 
         .report-card {
@@ -2299,7 +2470,8 @@
         .alert-card-values {
             width: auto;
             order: 0;
-            overflow: visible;  /* 모바일의 overflow:hidden 해제 */
+            overflow: visible;
+            /* 모바일의 overflow:hidden 해제 */
         }
 
         .alert-card-total {
@@ -2630,6 +2802,7 @@
         .desktop-only {
             display: inline;
         }
+
         .mobile-only {
             display: none;
         }
