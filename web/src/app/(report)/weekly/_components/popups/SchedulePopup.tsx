@@ -10,8 +10,8 @@ interface SchedulePopupProps {
 }
 
 export const SchedulePopup: React.FC<SchedulePopupProps> = ({ isOpen, onClose, data, title }) => {
-    // 합계 계산
-    const totalCount = data.events.reduce((sum, event) => sum + event.count, 0);
+    // 합계 계산 (count가 undefined일 수 있음)
+    const totalCount = data.events.reduce((sum, event) => sum + (event.count || 0), 0);
 
     return (
         <PopupContainer isOpen={isOpen} onClose={onClose} title={title} subtitle={`${data.date} 기준`}>

@@ -1,8 +1,8 @@
 -- ============================================================
--- inspig 통계 테이블 DDL 스크립트
+-- INS 통계 테이블 DDL 스크립트
 -- 인사이트피그플랜(inspig) 주간/월간/분기 리포트용 테이블
 --
--- 실행 순서: 00_SEQUENCE.sql 실행 후 실행
+-- 실행 순서: 01_SEQUENCE.sql 실행 후 실행
 -- 대상 Oracle: 19c
 --
 -- 시간 저장 원칙:
@@ -10,7 +10,6 @@
 --   - 계산/비교: SF_GET_LOCALE_VW_DATE_2022(LOCALE, SYSDATE) - 다국가 로케일
 --     * KOR: 한국 +09:00
 --     * VNM: 베트남 +07:00
---   - 조회: 필요 시 로케일 변환
 -- ============================================================
 
 -- ============================================================
@@ -194,7 +193,7 @@ CREATE INDEX IDX_TS_INS_JOB_LOG_01 ON TS_INS_JOB_LOG(MASTER_SEQ) TABLESPACE PIGX
 CREATE INDEX IDX_TS_INS_JOB_LOG_02 ON TS_INS_JOB_LOG(JOB_NM, START_DT) TABLESPACE PIGXE_IDX;
 CREATE INDEX IDX_TS_INS_JOB_LOG_03 ON TS_INS_JOB_LOG(STATUS_CD, START_DT) TABLESPACE PIGXE_IDX;
 CREATE INDEX IDX_TS_INS_JOB_LOG_04 ON TS_INS_JOB_LOG(MASTER_SEQ, FARM_NO, STATUS_CD) TABLESPACE PIGXE_IDX;
-CREATE INDEX IDX_TS_INS_JOB_LOG_05 ON TS_INS_JOB_LOG(DAY_GB, REPORT_YEAR, REPORT_WEEK_NO) TABLESPACE PIGXE_IDX;  -- 대시보드 모니터링용
+CREATE INDEX IDX_TS_INS_JOB_LOG_05 ON TS_INS_JOB_LOG(DAY_GB, REPORT_YEAR, REPORT_WEEK_NO) TABLESPACE PIGXE_IDX;
 
 COMMENT ON TABLE TS_INS_JOB_LOG IS '스케줄러 실행 로그 테이블 (6개월 보관)';
 COMMENT ON COLUMN TS_INS_JOB_LOG.SEQ IS '일련번호';
@@ -243,7 +242,9 @@ CREATE TABLE TS_INS_WEEK (
 
     -- 모돈 현황 (lastWeek.modon)
     MODON_REG_CNT   INTEGER DEFAULT 0,                  -- 현재모돈(등록모돈수)
+    MODON_REG_CHG   INTEGER DEFAULT 0,                  -- 현재모돈 증감 (전주 대비)
     MODON_SANGSI_CNT INTEGER DEFAULT 0,                 -- 상시모돈수
+    MODON_SANGSI_CHG INTEGER DEFAULT 0,                 -- 상시모돈 증감 (전주 대비)
 
     -- 관리대상 모돈 요약 (alertMd)
     ALERT_TOTAL     INTEGER DEFAULT 0,                  -- 관리대상 합계
@@ -266,22 +267,29 @@ CREATE TABLE TS_INS_WEEK (
     LAST_BM_SUM_CNT INTEGER DEFAULT 0,                  -- 분만 누계 복수
     LAST_BM_SUM_TOTAL INTEGER DEFAULT 0,                -- 총산 누계
     LAST_BM_SUM_LIVE INTEGER DEFAULT 0,                 -- 실산 누계
-    LAST_BM_AVG_TOTAL NUMBER(5,1) DEFAULT 0,            -- 총산 평균
-    LAST_BM_AVG_LIVE NUMBER(5,1) DEFAULT 0,             -- 실산 평균
+    LAST_BM_AVG_TOTAL NUMBER(5,1) DEFAULT 0,            -- 총산 평균 (지난주)
+    LAST_BM_AVG_LIVE NUMBER(5,1) DEFAULT 0,             -- 실산 평균 (지난주)
+    LAST_BM_SUM_AVG_TOTAL NUMBER(5,1) DEFAULT 0,        -- 총산 평균 (누계)
+    LAST_BM_SUM_AVG_LIVE NUMBER(5,1) DEFAULT 0,         -- 실산 평균 (누계)
     LAST_BM_CHG_TOTAL NUMBER(5,1) DEFAULT 0,            -- 총산 증감 (1년평균 대비)
     LAST_BM_CHG_LIVE NUMBER(5,1) DEFAULT 0,             -- 실산 증감
 
     -- 지난주 이유 실적 (lastWeek.weaning)
     LAST_EU_CNT     INTEGER DEFAULT 0,                  -- 이유 복수
     LAST_EU_JD_CNT  INTEGER DEFAULT 0,                  -- 이유자돈수
+    LAST_EU_AVG_JD  NUMBER(5,1) DEFAULT 0,              -- 평균 이유두수 (지난주)
     LAST_EU_AVG_KG  NUMBER(5,1) DEFAULT 0,              -- 평균체중
     LAST_EU_SUM_CNT INTEGER DEFAULT 0,                  -- 이유 누계 복수
     LAST_EU_SUM_JD  INTEGER DEFAULT 0,                  -- 이유자돈 누계
+    LAST_EU_SUM_AVG_JD NUMBER(5,1) DEFAULT 0,           -- 누계 평균 이유두수
+    LAST_EU_CHG_JD  NUMBER(5,1) DEFAULT 0,              -- 평균 이유두수 증감 (1년평균 대비)
     LAST_EU_CHG_KG  NUMBER(5,1) DEFAULT 0,              -- 평균체중 증감
 
     -- 지난주 임신사고 (lastWeek.accident)
     LAST_SG_CNT     INTEGER DEFAULT 0,                  -- 사고 두수
+    LAST_SG_AVG_GYUNGIL NUMBER(5,1) DEFAULT 0,          -- 지난주 평균 경과일
     LAST_SG_SUM     INTEGER DEFAULT 0,                  -- 사고 누계
+    LAST_SG_SUM_AVG_GYUNGIL NUMBER(5,1) DEFAULT 0,      -- 당해년도 평균 경과일
 
     -- 지난주 도태폐사 (lastWeek.culling)
     LAST_CL_CNT     INTEGER DEFAULT 0,                  -- 도폐 두수
@@ -336,6 +344,10 @@ CREATE UNIQUE INDEX UK_TS_INS_WEEK_TOKEN ON TS_INS_WEEK(SHARE_TOKEN) TABLESPACE 
 COMMENT ON TABLE TS_INS_WEEK IS '주간 리포트 테이블';
 COMMENT ON COLUMN TS_INS_WEEK.MASTER_SEQ IS '마스터 일련번호 (FK → TS_INS_MASTER)';
 COMMENT ON COLUMN TS_INS_WEEK.FARM_NO IS '농장번호 (FK → TS_INS_SERVICE)';
+COMMENT ON COLUMN TS_INS_WEEK.MODON_REG_CNT IS '현재모돈(등록모돈수)';
+COMMENT ON COLUMN TS_INS_WEEK.MODON_REG_CHG IS '현재모돈 증감 (전주 대비)';
+COMMENT ON COLUMN TS_INS_WEEK.MODON_SANGSI_CNT IS '상시모돈수';
+COMMENT ON COLUMN TS_INS_WEEK.MODON_SANGSI_CHG IS '상시모돈 증감 (전주 대비)';
 COMMENT ON COLUMN TS_INS_WEEK.STATUS_CD IS '상태 (READY:대기, RUNNING:실행중, COMPLETE:완료, ERROR:오류)';
 COMMENT ON COLUMN TS_INS_WEEK.SHARE_TOKEN IS '공유용 토큰 (SHA256 해시, 64자)';
 COMMENT ON COLUMN TS_INS_WEEK.TOKEN_EXPIRE_DT IS '토큰 만료일 (YYYYMMDD, 생성일 + 7일)';
@@ -353,35 +365,69 @@ END;
 CREATE TABLE TS_INS_WEEK_SUB (
     MASTER_SEQ      NUMBER NOT NULL,                    -- FK → TS_INS_MASTER.SEQ
     FARM_NO         INTEGER NOT NULL,                   -- 농장번호
-    GUBUN           VARCHAR2(20) NOT NULL,              -- 데이터 구분
+    GUBUN           VARCHAR2(20) NOT NULL,              -- 데이터 구분 (팝업/섹션 식별)
+    SUB_GUBUN       VARCHAR2(20) DEFAULT '-' NOT NULL,  -- 세부 구분 (같은 GUBUN 내 데이터 유형 구분)
     SORT_NO         INTEGER DEFAULT 0,                  -- 정렬순서
 
     -- 공통 코드 컬럼 (용도에 따라 다르게 사용)
     CODE_1          VARCHAR2(30),                       -- 1차 구분코드 (산차, 기간, 유형 등)
     CODE_2          VARCHAR2(30),                       -- 2차 구분코드 (그룹, 상세유형 등)
 
-    -- 숫자형 데이터 (용도에 따라 다르게 사용)
-    CNT_1           INTEGER DEFAULT 0,                  -- 카운트1 (두수, 합계 등)
-    CNT_2           INTEGER DEFAULT 0,                  -- 카운트2
-    CNT_3           INTEGER DEFAULT 0,                  -- 카운트3
-    CNT_4           INTEGER DEFAULT 0,                  -- 카운트4
-    CNT_5           INTEGER DEFAULT 0,                  -- 카운트5
-    CNT_6           INTEGER DEFAULT 0,                  -- 카운트6
+    -- 숫자형 데이터 (용도에 따라 다르게 사용) - NUMBER(10,2): 평균값 등 소숫점 지원
+    CNT_1           NUMBER(10,2) DEFAULT 0,             -- 카운트1 (두수, 합계, 평균 등)
+    CNT_2           NUMBER(10,2) DEFAULT 0,             -- 카운트2
+    CNT_3           NUMBER(10,2) DEFAULT 0,             -- 카운트3
+    CNT_4           NUMBER(10,2) DEFAULT 0,             -- 카운트4
+    CNT_5           NUMBER(10,2) DEFAULT 0,             -- 카운트5
+    CNT_6           NUMBER(10,2) DEFAULT 0,             -- 카운트6
+    CNT_7           NUMBER(10,2) DEFAULT 0,             -- 카운트7
+    CNT_8           NUMBER(10,2) DEFAULT 0,             -- 카운트8
+    CNT_9           NUMBER(10,2) DEFAULT 0,             -- 카운트9
+    CNT_10          NUMBER(10,2) DEFAULT 0,             -- 카운트10
+    CNT_11          NUMBER(10,2) DEFAULT 0,             -- 카운트11
+    CNT_12          NUMBER(10,2) DEFAULT 0,             -- 카운트12
+    CNT_13          NUMBER(10,2) DEFAULT 0,             -- 카운트13
+    CNT_14          NUMBER(10,2) DEFAULT 0,             -- 카운트14
+    CNT_15          NUMBER(10,2) DEFAULT 0,             -- 카운트15
 
     -- 수치형 데이터
     VAL_1           NUMBER(10,2) DEFAULT 0,             -- 값1 (평균, 비율 등)
     VAL_2           NUMBER(10,2) DEFAULT 0,             -- 값2
     VAL_3           NUMBER(10,2) DEFAULT 0,             -- 값3
     VAL_4           NUMBER(10,2) DEFAULT 0,             -- 값4
+    VAL_5           NUMBER(10,2) DEFAULT 0,             -- 값5
+    VAL_6           NUMBER(10,2) DEFAULT 0,             -- 값6
+    VAL_7           NUMBER(10,2) DEFAULT 0,             -- 값6
+    VAL_8           NUMBER(10,2) DEFAULT 0,             -- 값6
+    VAL_9           NUMBER(10,2) DEFAULT 0,             -- 값6
+    VAL_10           NUMBER(10,2) DEFAULT 0,             -- 값6
+    VAL_11           NUMBER(10,2) DEFAULT 0,             -- 값6
+    VAL_12           NUMBER(10,2) DEFAULT 0,             -- 값6
+    VAL_13           NUMBER(10,2) DEFAULT 0,             -- 값6
+    VAL_14           NUMBER(10,2) DEFAULT 0,             -- 값6
+    VAL_15           NUMBER(10,2) DEFAULT 0,             -- 값6
 
-    -- 문자형 데이터
-    STR_1           VARCHAR2(100),                      -- 문자열1 (명칭, 색상 등)
+    -- 문자형 데이터 (라벨, 명칭 등 - 최대 15개)
+    STR_1           VARCHAR2(100),                      -- 문자열1
     STR_2           VARCHAR2(100),                      -- 문자열2
+    STR_3           VARCHAR2(100),                      -- 문자열3
+    STR_4           VARCHAR2(100),                      -- 문자열4
+    STR_5           VARCHAR2(100),                      -- 문자열5
+    STR_6           VARCHAR2(100),                      -- 문자열6
+    STR_7           VARCHAR2(100),                      -- 문자열7
+    STR_8           VARCHAR2(100),                      -- 문자열8
+    STR_9           VARCHAR2(100),                      -- 문자열9
+    STR_10          VARCHAR2(100),                      -- 문자열10
+    STR_11          VARCHAR2(100),                      -- 문자열11
+    STR_12          VARCHAR2(100),                      -- 문자열12
+    STR_13          VARCHAR2(100),                      -- 문자열13
+    STR_14          VARCHAR2(100),                      -- 문자열14
+    STR_15          VARCHAR2(100),                      -- 문자열15
 
     -- 관리 컬럼
     LOG_INS_DT      DATE DEFAULT SYSDATE,              -- 생성일 (UTC)
 
-    CONSTRAINT PK_TS_INS_WEEK_SUB PRIMARY KEY (MASTER_SEQ, FARM_NO, GUBUN, SORT_NO),
+    CONSTRAINT PK_TS_INS_WEEK_SUB PRIMARY KEY (MASTER_SEQ, FARM_NO, GUBUN, SUB_GUBUN, SORT_NO),
     CONSTRAINT FK_TS_INS_WEEK_SUB FOREIGN KEY (MASTER_SEQ, FARM_NO)
         REFERENCES TS_INS_WEEK(MASTER_SEQ, FARM_NO) ON DELETE CASCADE
 )
@@ -389,102 +435,19 @@ TABLESPACE PIGXE_DATA;
 
 -- 인덱스
 CREATE INDEX IDX_TS_INS_WEEK_SUB_01 ON TS_INS_WEEK_SUB(MASTER_SEQ, FARM_NO, GUBUN) TABLESPACE PIGXE_IDX;
+CREATE INDEX IDX_TS_INS_WEEK_SUB_02 ON TS_INS_WEEK_SUB(MASTER_SEQ, FARM_NO, GUBUN, SUB_GUBUN) TABLESPACE PIGXE_IDX;
 
 COMMENT ON TABLE TS_INS_WEEK_SUB IS '리포트 상세 테이블 (팝업 데이터)';
 COMMENT ON COLUMN TS_INS_WEEK_SUB.MASTER_SEQ IS '마스터 일련번호 (FK)';
 COMMENT ON COLUMN TS_INS_WEEK_SUB.FARM_NO IS '농장번호';
-COMMENT ON COLUMN TS_INS_WEEK_SUB.GUBUN IS '데이터 구분코드';
+COMMENT ON COLUMN TS_INS_WEEK_SUB.GUBUN IS '데이터 구분코드 (팝업/섹션 식별: MODON, GB, BM, EU, SG, DOPE, SHIP, SCHEDULE)';
+COMMENT ON COLUMN TS_INS_WEEK_SUB.SUB_GUBUN IS '세부 구분코드 (STAT:요약, LIST:목록, CHART:차트, ROW:행데이터)';
 COMMENT ON COLUMN TS_INS_WEEK_SUB.SORT_NO IS '정렬순서';
 COMMENT ON COLUMN TS_INS_WEEK_SUB.CODE_1 IS '1차 구분코드';
 COMMENT ON COLUMN TS_INS_WEEK_SUB.CODE_2 IS '2차 구분코드';
 
 -- ============================================================
--- 7. TS_PSY_DELAY_HEATMAP: PSY 히트맵 테이블
--- ============================================================
-BEGIN
-    EXECUTE IMMEDIATE 'DROP TABLE TS_PSY_DELAY_HEATMAP CASCADE CONSTRAINTS';
-EXCEPTION
-    WHEN OTHERS THEN NULL;
-END;
-/
-
-CREATE TABLE TS_PSY_DELAY_HEATMAP (
-    MASTER_SEQ      NUMBER NOT NULL,                    -- FK → TS_INS_MASTER.SEQ
-    X_POS           INTEGER NOT NULL,                   -- X좌표 (0~3: 입력지연일 구간)
-    Y_POS           INTEGER NOT NULL,                   -- Y좌표 (0~3: PSY 구간)
-    ZONE_CD         VARCHAR2(10),                       -- 구간코드 (1A~4D)
-    FARM_CNT        INTEGER DEFAULT 0,                  -- 해당 구간 농장수
-    LOG_INS_DT      DATE DEFAULT SYSDATE,              -- 생성일 (UTC)
-
-    CONSTRAINT PK_TS_PSY_DELAY_HEATMAP PRIMARY KEY (MASTER_SEQ, X_POS, Y_POS),
-    CONSTRAINT FK_TS_PSY_DELAY_HEATMAP FOREIGN KEY (MASTER_SEQ)
-        REFERENCES TS_INS_MASTER(SEQ) ON DELETE CASCADE
-)
-TABLESPACE PIGXE_DATA;
-
-COMMENT ON TABLE TS_PSY_DELAY_HEATMAP IS 'PSY 히트맵 테이블';
-COMMENT ON COLUMN TS_PSY_DELAY_HEATMAP.MASTER_SEQ IS '마스터 일련번호 (FK)';
-COMMENT ON COLUMN TS_PSY_DELAY_HEATMAP.X_POS IS 'X좌표 (0~3: 입력지연일 구간)';
-COMMENT ON COLUMN TS_PSY_DELAY_HEATMAP.Y_POS IS 'Y좌표 (0~3: PSY 구간)';
-COMMENT ON COLUMN TS_PSY_DELAY_HEATMAP.ZONE_CD IS '구간코드 (1A~4D)';
-COMMENT ON COLUMN TS_PSY_DELAY_HEATMAP.FARM_CNT IS '해당 구간 농장수';
-
--- ============================================================
--- 8. TM_WEATHER: 날씨 테이블
--- ============================================================
-BEGIN
-    EXECUTE IMMEDIATE 'DROP TABLE TM_WEATHER CASCADE CONSTRAINTS';
-EXCEPTION
-    WHEN OTHERS THEN NULL;
-END;
-/
-
-CREATE TABLE TM_WEATHER (
-    SEQ             NUMBER NOT NULL,                    -- 일련번호 (PK)
-    WK_DATE         VARCHAR2(8) NOT NULL,               -- 날짜 (YYYYMMDD)
-
-    -- 지역 정보
-    SIGUNGU_CD      VARCHAR2(10) NOT NULL,              -- 시군구코드 (행정표준코드)
-    SIGUNGU_NM      VARCHAR2(100),                      -- 시군구명
-    NX              INTEGER NOT NULL,                   -- 기상청 격자 X좌표
-    NY              INTEGER NOT NULL,                   -- 기상청 격자 Y좌표
-
-    -- 날씨 데이터
-    WEATHER_CD      VARCHAR2(20),                       -- 날씨코드 (sunny, cloudy, rainy, snow 등)
-    TEMP_HIGH       NUMBER(4,1),                        -- 최고기온(℃)
-    TEMP_LOW        NUMBER(4,1),                        -- 최저기온(℃)
-    RAIN_PROB       INTEGER DEFAULT 0,                  -- 강수확률(%)
-    HUMIDITY        INTEGER,                            -- 습도(%)
-    WIND_SPEED      NUMBER(4,1),                        -- 풍속(m/s)
-
-    -- 관리 컬럼
-    LOG_INS_DT      DATE DEFAULT SYSDATE,              -- 생성일 (UTC)
-
-    CONSTRAINT PK_TM_WEATHER PRIMARY KEY (SEQ)
-)
-TABLESPACE PIGXE_DATA;
-
--- 인덱스 (시군구코드 + 날짜 기준 조회)
-CREATE UNIQUE INDEX UK_TM_WEATHER_01 ON TM_WEATHER(SIGUNGU_CD, WK_DATE) TABLESPACE PIGXE_IDX;
-CREATE INDEX IDX_TM_WEATHER_01 ON TM_WEATHER(WK_DATE) TABLESPACE PIGXE_IDX;
-CREATE INDEX IDX_TM_WEATHER_02 ON TM_WEATHER(NX, NY, WK_DATE) TABLESPACE PIGXE_IDX;
-
-COMMENT ON TABLE TM_WEATHER IS '기상청 날씨 정보 테이블';
-COMMENT ON COLUMN TM_WEATHER.SEQ IS '일련번호';
-COMMENT ON COLUMN TM_WEATHER.WK_DATE IS '날짜 (YYYYMMDD)';
-COMMENT ON COLUMN TM_WEATHER.SIGUNGU_CD IS '시군구코드 (행정표준코드)';
-COMMENT ON COLUMN TM_WEATHER.SIGUNGU_NM IS '시군구명';
-COMMENT ON COLUMN TM_WEATHER.NX IS '기상청 격자 X좌표';
-COMMENT ON COLUMN TM_WEATHER.NY IS '기상청 격자 Y좌표';
-COMMENT ON COLUMN TM_WEATHER.WEATHER_CD IS '날씨코드 (sunny, cloudy, rainy, snow)';
-COMMENT ON COLUMN TM_WEATHER.TEMP_HIGH IS '최고기온(℃)';
-COMMENT ON COLUMN TM_WEATHER.TEMP_LOW IS '최저기온(℃)';
-COMMENT ON COLUMN TM_WEATHER.RAIN_PROB IS '강수확률(%)';
-COMMENT ON COLUMN TM_WEATHER.HUMIDITY IS '습도(%)';
-COMMENT ON COLUMN TM_WEATHER.WIND_SPEED IS '풍속(m/s)';
-
--- ============================================================
--- 9. TS_INS_MGMT: 관리포인트 테이블
+-- 7. TS_INS_MGMT: 관리포인트 테이블
 -- ============================================================
 BEGIN
     EXECUTE IMMEDIATE 'DROP TABLE TS_INS_MGMT CASCADE CONSTRAINTS';
@@ -518,7 +481,7 @@ COMMENT ON COLUMN TS_INS_MGMT.CONTENT IS '내용';
 COMMENT ON COLUMN TS_INS_MGMT.LINK_URL IS '링크 URL';
 
 -- ============================================================
--- 10. TS_INS_ACCESS_LOG: 접속 로그 테이블
+-- 8. TS_INS_ACCESS_LOG: 접속 로그 테이블
 --     - 로그인, 메뉴, 보고서 접속 로그 통합 관리
 --     - 보관기간: 1년 (파티션 권장)
 -- ============================================================
@@ -538,19 +501,6 @@ CREATE TABLE TS_INS_ACCESS_LOG (
 
     -- 접속 유형 구분
     LOG_TYPE        VARCHAR2(20) NOT NULL,              -- 로그유형: LOGIN, LOGOUT, MENU, REPORT
-
-    -- LOG_TYPE 코드:
-    --   - LOGIN: 로그인
-    --   - LOGOUT: 로그아웃
-    --   - MENU: 메뉴 접속 (MENU_CD 사용)
-    --   - REPORT: 보고서 접속 (REPORT_GB, REPORT_SEQ, ACCESS_GB 사용)
-
-    -- 메뉴 코드 (MENU_CD) - 8자리 체계:
-    --   1-2자리: 메뉴구분 (WY:주간, MY:월간, QY:분기, ST:설정)
-    --   3-4자리: 1차 메뉴 (01~99)
-    --   5-6자리: 2차 메뉴 (01~99)
-    --   7-8자리: 3차 메뉴 (01~99)
-    --   예: WY000000(주간메인), WY010000(1차), WY010100(2차), ST000000(설정메인)
 
     -- 상세 정보
     MENU_CD         VARCHAR2(50),                       -- 메뉴코드: 8자리 (WY000000, MY000000, QY000000, ST000000)
@@ -606,22 +556,6 @@ COMMENT ON COLUMN TS_INS_ACCESS_LOG.YEAR IS '년도 (가상컬럼)';
 COMMENT ON COLUMN TS_INS_ACCESS_LOG.MONTH IS '월 (가상컬럼)';
 
 -- ============================================================
--- 시퀀스: TS_INS_ACCESS_LOG용
--- ============================================================
-BEGIN
-    EXECUTE IMMEDIATE 'DROP SEQUENCE SQ_TS_INS_ACCESS_LOG';
-EXCEPTION
-    WHEN OTHERS THEN NULL;
-END;
-/
-
-CREATE SEQUENCE SQ_TS_INS_ACCESS_LOG
-    START WITH 1
-    INCREMENT BY 1
-    NOCACHE
-    NOCYCLE;
-
--- ============================================================
 -- 테이블 생성 확인
 -- ============================================================
 SELECT TABLE_NAME, NUM_ROWS, LAST_ANALYZED
@@ -633,8 +567,6 @@ WHERE TABLE_NAME IN (
     'TS_INS_JOB_LOG',
     'TS_INS_WEEK',
     'TS_INS_WEEK_SUB',
-    'TS_PSY_DELAY_HEATMAP',
-    'TM_WEATHER',
     'TS_INS_MGMT',
     'TS_INS_ACCESS_LOG'
 )

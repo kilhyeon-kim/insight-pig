@@ -80,23 +80,51 @@ SELECT NVL(COUNTRY_CODE, 'KOR') AS LOCALE FROM TA_FARM WHERE FARM_NO = :farm_no;
 
 > **중요**: API에서 사용하는 SQL 작성 시 아래 날짜 변환 규칙을 반드시 준수해야 합니다.
 
-#### SELECT 절 (조회)
+#### 컬럼 타입별 처리 규칙
+
+| 구분 | 컬럼 타입 | 처리 방법 | 포맷 |
+|------|----------|----------|------|
+| **SELECT** | DATE | `SF_GET_LOCALE_VW_DATE_2022` | `'YYYY.MM.DD'` |
+| **SELECT** | VARCHAR(8) YYYYMMDD | `TO_CHAR(TO_DATE(...), ...)` | `'YY.MM.DD'` |
+| **WHERE** | DATE | `SF_GET_LOCALE_DATE_2020` | `'YYYYMMDD'` |
+| **WHERE** | VARCHAR(8) YYYYMMDD | 직접 비교 | `'YYYYMMDD'` |
+
+#### SELECT 절 - DATE 컬럼 (조회)
 *   **함수**: `SF_GET_LOCALE_VW_DATE_2022(LOCALE, DATE_COL)` + `TO_CHAR(..., 'FORMAT')`
 *   **포맷**: `'YYYY.MM.DD'` (기본 표출용)
 *   **예시**:
     ```sql
-    -- 기본 날짜 표출
+    -- DATE 컬럼 표출 (예: LOG_INS_DT, START_DT, END_DT)
     TO_CHAR(SF_GET_LOCALE_VW_DATE_2022('KOR', M.LOG_INS_DT), 'YYYY.MM.DD') AS LOG_INS_DT
     ```
 
-#### WHERE 절 (조건)
+#### SELECT 절 - VARCHAR(8) YYYYMMDD 컬럼 (조회)
+*   **함수**: `TO_CHAR(TO_DATE(COL, 'YYYYMMDD'), 'FORMAT')`
+*   **포맷**: `'YY.MM.DD'` (간결한 표출용)
+*   **예시**:
+    ```sql
+    -- VARCHAR(8) YYYYMMDD 컬럼 표출 (예: DT_FROM, DT_TO, TOKEN_EXPIRE_DT)
+    TO_CHAR(TO_DATE(M.DT_FROM, 'YYYYMMDD'), 'YY.MM.DD') AS DT_FROM,
+    TO_CHAR(TO_DATE(M.DT_TO, 'YYYYMMDD'), 'YY.MM.DD') AS DT_TO
+    ```
+
+#### WHERE 절 - DATE 컬럼 (조건)
 *   **함수**: `SF_GET_LOCALE_DATE_2020(LOCALE, DATE_COL)` + `TO_CHAR(..., 'FORMAT')`
 *   **비교**: 입력받은 파라미터(YYYYMMDD 문자열)와 비교 시 `TO_CHAR`로 변환하여 비교
 *   **예시**:
     ```sql
-    -- 날짜 조건 비교
+    -- DATE 컬럼 조건 비교
     WHERE TO_CHAR(SF_GET_LOCALE_DATE_2020('KOR', M.INS_DT), 'YYYYMMDD') >= :from
       AND TO_CHAR(SF_GET_LOCALE_DATE_2020('KOR', M.INS_DT), 'YYYYMMDD') <= :to
+    ```
+
+#### WHERE 절 - VARCHAR(8) YYYYMMDD 컬럼 (조건)
+*   **비교**: YYYYMMDD 문자열 직접 비교
+*   **예시**:
+    ```sql
+    -- VARCHAR(8) YYYYMMDD 컬럼 조건 비교
+    WHERE M.DT_FROM >= :dtFrom
+      AND M.DT_TO <= :dtTo
     ```
 
 #### 기간 계산 예시
@@ -201,37 +229,71 @@ WHERE WK.WK_GUBUN = 'E'
 
 ## 3. 모돈 상태 코드 (STATUS_CD)
 
-### 3.1 TB_MODON.STATUS_CD
+### 3.1 TB_MODON.STATUS_CD (상위코드: 01)
 
-| 코드 | 명칭 | 설명 |
-|------|------|------|
-| `010001` | 후보돈 | 미교배 상태 , SANCHA=0, GYOBAE_CNT=0 |
-| `010002` | 교배돈 | 교배 완료, 임신확인 전  |
-| `010003` | 임신돈 | 임신확인 완료 |
-| `010004` | 포유돈 | 분만 완료, 이유 전 |
-| `010005` | 이유돈 | 이유 완료, 재교배 대기 |
-| `010006` | 재발돈 | 임신사고 (재발정) |
-| `010007` | 공태돈 | 임신사고 (공태) |
-| `010008` | 도폐사돈 | 죽거나 타농장으로 전출/판매 (TB_MODON테이블 OUT_DT <> 9999/12/31 ) |
+| 코드 | 항목명 | 설명 |
+|------|--------|------|
+| `010001` | 후보돈 | 미교배 상태 (SANCHA=0, 작업이력 없음) |
+| `010002` | 임신돈 | 임신확인 완료 |
+| `010003` | 포유돈 | 분만 완료, 이유 전 |
+| `010004` | 대리모돈 | 대리모 역할 수행 중 |
+| `010005` | 이유모돈 | 이유 완료, 재교배 대기 |
+| `010006` | 재발돈(사고) | 임신사고 - 재발정 |
+| `010007` | 유산돈(사고) | 임신사고 - 유산/공태 |
+| `010008` | 도폐사돈 | 도태/폐사 (OUT_DT ≠ 9999/12/31) |
+| `019999` | 전체 모돈 | 시스템용 (숨김, 삭제 금지) |
 
 ### 3.2 상태별 조회 조건
 
 ```sql
 -- 미교배 후보돈
-WHERE STATUS_CD = '010001'
+WHERE STATUS_CD = '010001' 
 
--- 이유후 미교배
+-- 임신돈
+WHERE STATUS_CD = '010002'
+
+-- 포유돈 (포유돈 + 대리모돈)
+WHERE STATUS_CD IN ('010003', '010004')
+
+-- 이유모돈 (이유후 미교배)
 WHERE STATUS_CD = '010005'
 
--- 사고후 미교배 (재발 + 공태)
+-- 사고돈 (재발 + 유산)
 WHERE STATUS_CD IN ('010006', '010007')
 
--- 분만지연 (임신돈)
-WHERE STATUS_CD = '010003'
-
--- 이유지연 (포유돈)
-WHERE STATUS_CD = '010004'
+-- 도폐사돈
+WHERE STATUS_CD = '010008'
 ```
+
+### 3.3 예정작업 기준작업 코드 (TB_PLAN_MODON.MODON_STATUS_CD)
+
+예정작업 설정 시 기준이 되는 작업 코드 (상위코드: 02)
+
+| 코드 | 항목명 | 설명 |
+|------|--------|------|
+| `020001` | 출생 | 출생 기준 예정 |
+| `020002` | 전입 | 전입 기준 예정 |
+| `020003` | 교배 | 교배 기준 예정 |
+| `020004` | 분만 | 분만 기준 예정 |
+| `020005` | 이유 | 이유 기준 예정 |
+| `020006` | 대리포유 | 대리포유 기준 예정 |
+| `020007` | 재발붙임 | 재발붙임 기준 예정 |
+| `020008` | 유산 | 유산 기준 예정 |
+| `020097` | 재교배 | 재교배 기준 예정 |
+| `020098` | 도폐사/판매 | 도폐사/판매 기준 예정 |
+| `020099` | 사고 | 사고 기준 예정 |
+| `029999` | 전체 | 시스템용 (숨김) |
+
+### 3.4 예정작업 구분 코드 (TB_PLAN_MODON.JOB_GUBUN_CD)
+
+| 코드 | 항목명 | 대상 모돈 상태 |
+|------|--------|----------------|
+| `150001` | 임신진단 예정 | 임신돈 (010002) |
+| `150002` | 분만 예정 | 임신돈 (010002) |
+| `150003` | 이유 예정 | 포유돈 (010003), 대리모돈 (010004) |
+| `150004` | 백신 예정 | 전체 모돈 |
+| `150005` | 교배 예정 | 후보돈 (010001), 이유모돈 (010005), 재발돈 (010006), 유산돈 (010007) |
+| `150007` | 백신 예정2 | 전체 모돈 |
 
 ---
 
@@ -342,6 +404,243 @@ WHERE WK_GUBUN='E' AND WK.DAERI_YN = 'N'  -- 이유가 끝난 모돈(교배대�
 > - 주간: 전주 일요일
 > - 월간: 전월 마지막일 (기말)
 
+### 7.1 후보돈 판별 기준
+
+> **중요**: 후보돈은 작업이력(TB_MODON_WK)이 **없는** 상태에서만 판별합니다.
+
+| 조건 | STATUS_CD | 추가 조건 | 설명 |
+|------|-----------|----------|------|
+| 조건1 | `010001` (후보돈) | - | 일반 미교배 후보돈 |
+| 조건2 | `010002` (임신돈) | IN_SANCHA=0, IN_GYOBAE_CNT=1 | 전입 임신돈 (초교배) |
+
+#### 후보돈 조회 SQL
+
+```sql
+-- 후보돈 추출 (기준일 시점에 작업이력 없는 경우만)
+SELECT MD.*
+FROM TB_MODON MD
+WHERE MD.FARM_NO = :farm_no
+  AND MD.OUT_DT = TO_DATE('9999-12-31', 'YYYY-MM-DD')
+  AND MD.USE_YN = 'Y'
+  AND MD.IN_SANCHA = 0  
+  AND MD.IN_GYOBAE_CNT = 0   
+  AND NOT EXISTS (
+      SELECT 1 FROM TB_MODON_WK WK
+      WHERE WK.FARM_NO = :farm_no
+        AND WK.PIG_NO = MD.PIG_NO
+        AND WK.WK_DT < :기준일
+        AND WK.USE_YN = 'Y'
+  );
+```
+
+#### 전입 임신돈 (초교배) 설명
+
+- `IN_SANCHA = 0`: 전입 시 산차가 0 (초산)
+- `IN_GYOBAE_CNT = 1`: 전입 시 교배차수가 1 (첫 교배)
+- 전입 시점에 이미 교배된 상태이지만, 작업이력이 없으면 후보돈으로 취급
+
+### 7.2 관리대상 유형별 추출 조건
+
+| 유형 | 설명 | 기준작업 | 지연일 계산 |
+|------|------|----------|-------------|
+| **미교배 후보돈** | 후보돈 (7.1 기준) | 출생일 | 기준일 - 출생일 - 후보돈초교배일령 |
+| **이유후 미교배** | 이유완료 후 재교배 대기 | 이유일 | 기준일 - 이유일 - 평균재귀일 |
+| **사고후 미교배** | 임신사고 후 재교배 대기 | 사고일 | 기준일 - 사고일 |
+| **분만지연** | 임신돈, 분만 예정일 경과 | 교배일 | 기준일 - 교배일 - 평균임신기간 |
+| **이유지연** | 포유돈, 이유 예정일 경과 | 분만일 | 기준일 - 분만일 - 평균포유기간 |
+
+### 7.3 지연일 구간
+
+| 구간 | 범위 | 설명 |
+|------|------|------|
+| ~3일 | 0 ~ 3일 | 경미한 지연 |
+| 4~7일 | 4 ~ 7일 | 주의 필요 |
+| 8~14일 | 8 ~ 14일 | 관리 필요 |
+| 14일~ | 15일 이상 | 즉시 조치 필요 |
+
+### 7.4 농장 설정값 참조
+
+관리대상 계산에 사용하는 기준일수:
+
+| CODE | 명칭 | 기본값 | 사용처 |
+|------|------|--------|--------|
+| `140007` | 후보돈초교배일령 | 240 | 미교배 후보돈 |
+| `140008` | 평균재귀일 | 7 | 이유후 미교배 |
+| `140002` | 평균임신기간 | 115 | 분만지연 |
+| `140003` | 평균포유기간 | 21 | 이유지연 |
+
+---
+
+## 8. 예정돈 조회 패턴 (심플 SQL)
+
+> 레거시 FN_MD_SCHEDULE_BSE_2020 함수를 테이블 직접 조회로 단순화
+
+### 8.0 FN_MD_SCHEDULE_BSE_2020 함수 (레거시)
+
+예정작업 대상 모돈을 조회하는 파이프라인 테이블 함수
+
+#### 반환 타입 정의
+
+```sql
+CREATE OR REPLACE TYPE PKSU.TBL_MD_SCHEDULE_BSE AS OBJECT
+(
+  FARM_NO         NUMBER,
+  PIG_NO          NUMBER,
+  FARM_PIG_NO     VARCHAR2(40),
+  IGAK_NO         VARCHAR2(40),
+  WK_NM           VARCHAR2(100),   -- 예정작업명
+  AUTO_GRP        VARCHAR2(40),
+  LOC_NM          VARCHAR2(100),
+  SANCHA          VARCHAR2(100),
+  GYOBAE_CNT      VARCHAR2(100),
+  LAST_WK_DT      VARCHAR2(10),    -- 마지막 작업일자
+  PASS_DAY        NUMBER,          -- 경과일
+  PASS_DT         VARCHAR2(10),    -- 작업 예정일
+  LAST_WK_NM      VARCHAR2(100),   -- 마지막 작업명
+  LAST_WK_GUBUN   VARCHAR2(1),
+  LAST_WK_GUBUN_CD VARCHAR2(6),
+  ARTICLE_NM      VARCHAR2(200),   -- 백신명
+  HCODE           INTEGER,         -- 백신코드
+  DAERI_YN        VARCHAR2(1)
+);
+/
+```
+
+#### 함수 시그니처
+
+```sql
+FN_MD_SCHEDULE_BSE_2020(
+    P_FARM_NO       INTEGER,      -- 농장번호
+    P_REPORT_GB     VARCHAR2,     -- 리포트구분 ('JOB-DAJANG')
+    P_JOB_GUBUN_CD  VARCHAR2,     -- 예정작업구분 (150002/150003/150004/150005)
+    P_STATUS_CD     VARCHAR2,     -- 모돈상태코드 (NULL=전체)
+    P_SDT           VARCHAR2,     -- 시작일 (yyyy-MM-dd)
+    P_EDT           VARCHAR2,     -- 종료일 (yyyy-MM-dd)
+    P_GRP           VARCHAR2,     -- 모돈그룹 (NULL=전체)
+    P_LANG          VARCHAR2,     -- 언어 ('ko')
+    P_DATE_FORMAT   VARCHAR2,     -- 날짜포맷 ('yyyy-MM-dd')
+    P_SEQ           VARCHAR2,     -- SEQ ('-1'=전체)
+    P_SANCHA        VARCHAR2      -- 산차범위 (NULL=전체)
+) RETURN TBL_TBL_MD_SCHEDULE_BSE PIPELINED
+```
+
+#### 사용 예시
+
+```sql
+-- 교배예정 조회 (150005)
+SELECT WK_NM, LAST_WK_NM, PASS_DAY, COUNT(*) CNT
+FROM TABLE(FN_MD_SCHEDULE_BSE_2020(
+    1456, 'JOB-DAJANG', '150005', NULL,
+    '2025-12-15', '2025-12-21', NULL, 'ko', 'yyyy-MM-dd', '-1', NULL
+))
+GROUP BY WK_NM, LAST_WK_NM, PASS_DAY
+ORDER BY WK_NM, PASS_DAY;
+
+-- 백신예정 조회 (150004) - ARTICLE_NM 포함
+SELECT WK_NM, ARTICLE_NM, PASS_DAY, COUNT(*) CNT
+FROM TABLE(FN_MD_SCHEDULE_BSE_2020(
+    1456, 'JOB-DAJANG', '150004', NULL,
+    '2025-12-15', '2025-12-21', NULL, 'ko', 'yyyy-MM-dd', '-1', NULL
+))
+GROUP BY WK_NM, ARTICLE_NM, PASS_DAY;
+```
+
+### 8.1 기본 구조
+
+```sql
+-- 예정돈 = 재적모돈 + 마지막작업 + 예정작업설정
+SELECT M.FARM_NO, M.PIG_NO, M.FARM_PIG_NO,
+       M.STATUS_CD,
+       W.WK_GUBUN, W.WK_DATE, W.SANCHA,
+       P.WK_NM, P.PASS_DAY,
+       W.WK_DATE + P.PASS_DAY AS EXPECTED_DT  -- 예정일
+FROM TB_MODON M
+-- 마지막 작업 조회
+LEFT JOIN (
+    SELECT FARM_NO, PIG_NO, WK_GUBUN, WK_DATE, SANCHA, DAERI_YN,
+           ROW_NUMBER() OVER (PARTITION BY FARM_NO, PIG_NO
+                              ORDER BY WK_DATE DESC, SEQ DESC) RN
+    FROM TB_MODON_WK
+    WHERE FARM_NO = :P_FARM_NO AND USE_YN = 'Y'
+) W ON M.FARM_NO = W.FARM_NO AND M.PIG_NO = W.PIG_NO AND W.RN = 1
+-- 예정작업 설정
+INNER JOIN TB_PLAN_MODON P
+    ON P.FARM_NO = M.FARM_NO
+   AND P.JOB_GUBUN_CD = :P_JOB_GUBUN_CD  -- 예정작업구분
+   AND (P.MODON_STATUS_CD = M.STATUS_CD OR P.MODON_STATUS_CD = '019999')
+   AND P.USE_YN = 'Y'
+WHERE M.FARM_NO = :P_FARM_NO
+  AND M.OUT_DT = TO_DATE('9999-12-31', 'YYYY-MM-DD')  -- 재적
+  AND W.WK_DATE + P.PASS_DAY BETWEEN :P_SDT AND :P_EDT;  -- 예정일 범위
+```
+
+### 8.2 예정작업별 대상 모돈
+
+| 예정작업 (JOB_GUBUN_CD) | 대상 STATUS_CD |
+|-------------------------|----------------|
+| 150005 (교배예정) | 010001, 010005, 010006, 010007 |
+| 150002 (분만예정) | 010002 |
+| 150003 (이유예정) | 010003, 010004 |
+| 150001 (임신진단) | 010002 |
+| 150004 (백신) | 전체 (019999) |
+
+### 8.3 기준작업별 예정일 계산
+
+| 기준작업 (STD_CD) | 예정일 계산 |
+|-------------------|-------------|
+| 020001 (출생) | BIRTH_DT + PASS_DAY |
+| 020002 (전입) | IN_DT + PASS_DAY |
+| 020003 (교배) | 마지막교배일 + PASS_DAY |
+| 020005 (이유) | 마지막이유일 + PASS_DAY |
+| 029999 (전체) | 마지막작업일 + PASS_DAY |
+
+### 8.4 분만예정돈 조회 예제
+
+```sql
+-- 분만예정돈: 임신돈 중 교배일 + 114일이 조회범위 내
+SELECT M.FARM_NO, M.PIG_NO, M.FARM_PIG_NO,
+       G.WK_DATE AS GYOBAE_DT,
+       G.SANCHA,
+       G.WK_DATE + 114 AS EXPECTED_BUNMAN_DT
+FROM TB_MODON M
+INNER JOIN (
+    SELECT FARM_NO, PIG_NO, WK_DATE, SANCHA,
+           ROW_NUMBER() OVER (PARTITION BY FARM_NO, PIG_NO
+                              ORDER BY WK_DATE DESC, SEQ DESC) RN
+    FROM TB_MODON_WK
+    WHERE FARM_NO = :P_FARM_NO
+      AND WK_GUBUN = 'G'  -- 교배
+      AND USE_YN = 'Y'
+) G ON M.FARM_NO = G.FARM_NO AND M.PIG_NO = G.PIG_NO AND G.RN = 1
+WHERE M.FARM_NO = :P_FARM_NO
+  AND M.STATUS_CD = '010002'  -- 임신돈
+  AND M.OUT_DT = TO_DATE('9999-12-31', 'YYYY-MM-DD')
+  AND G.WK_DATE + 114 BETWEEN :P_SDT AND :P_EDT;
+```
+
+### 8.5 이유예정돈 조회 예제
+
+```sql
+-- 이유예정돈: 포유돈 중 분만일 + 21일이 조회범위 내
+SELECT M.FARM_NO, M.PIG_NO, M.FARM_PIG_NO,
+       B.WK_DATE AS BUNMAN_DT,
+       B.SANCHA,
+       B.WK_DATE + 21 AS EXPECTED_EU_DT
+FROM TB_MODON M
+INNER JOIN (
+    SELECT FARM_NO, PIG_NO, WK_DATE, SANCHA,
+           ROW_NUMBER() OVER (PARTITION BY FARM_NO, PIG_NO
+                              ORDER BY WK_DATE DESC, SEQ DESC) RN
+    FROM TB_MODON_WK
+    WHERE FARM_NO = :P_FARM_NO
+      AND WK_GUBUN = 'B'  -- 분만
+      AND USE_YN = 'Y'
+) B ON M.FARM_NO = B.FARM_NO AND M.PIG_NO = B.PIG_NO AND B.RN = 1
+WHERE M.FARM_NO = :P_FARM_NO
+  AND M.STATUS_CD IN ('010003', '010004')  -- 포유돈, 대리모돈
+  AND M.OUT_DT = TO_DATE('9999-12-31', 'YYYY-MM-DD')
+  AND B.WK_DATE + 21 BETWEEN :P_SDT AND :P_EDT;
+```
 
 ---
 
@@ -349,23 +648,54 @@ WHERE WK_GUBUN='E' AND WK.DAERI_YN = 'N'  -- 이유가 끝난 모돈(교배대�
 
 ### 9.1 파일 번호 체계
 
-| 그룹 | 번호 | 설명 |
-|------|------|------|
-| **기초** | 01~10 | 시퀀스, 테이블 |
-| **공통** | 11~20 | 공통 함수, 프로시저 |
-| **주간 리포트** | 21~30 | SP_INS_WEEK_* 프로시저 |
-| **스케줄러** | 31~40 | DBMS_SCHEDULER JOB |
+### ins/ 공통
+
+| 번호 | 용도 |
+|------|------|
+| 01~09 | 시퀀스, 테이블 등 기본 객체 |
+| 11~19 | 공통 프로시저 |
+
+### ins/week/ 주간 리포트
+
+| 번호 | 용도 |
+|------|------|
+| 01~09 | 메인/핵심 프로시저 |
+| 11~89 | 팝업 프로시저 (계속 추가) |
+| 99 | 스케줄러 JOB |
 
 ### 9.2 현재 파일 목록
 
-| 순번 | 파일명 | 설명 |
-|------|--------|------|
-| 01 | 01_SEQUENCE.sql | 시퀀스 생성 |
-| 02 | 02_TABLE.sql | 테이블 DDL |
-| 11 | 11_SP_INS_COM_LOG.sql | 공통 함수/프로시저 |
-| 21 | 21_SP_INS_WEEK_MAIN.sql | 메인 프로시저 |
-| 22 | 22_SP_INS_WEEK_MANAGE_SOW.sql | 관리대상 모돈 |
-| 31 | 31_JOB_INS_WEEKLY.sql | 스케줄러 JOB |
+**sql/ref/** (참조용 - DB 적용 불필요)
+
+| 파일명 | 설명 |
+|--------|------|
+| 01_TABLE.sql | 운영 테이블 DDL |
+| 02_VIEW.sql | VW_MODON_DATE_2020_MAX_WK |
+| 03_FUNCTION.sql | SF_GET_MODONGB_STATUS |
+
+**sql/ins/** (신규 - DB 적용 대상)
+
+| 파일명 | 설명 |
+|--------|------|
+| 01_SEQUENCE.sql | 시퀀스 생성 |
+| 02_ALTER_TABLE.sql | 테이블 컬럼 추가 |
+| 11_SP_INS_COM_LOG.sql | 공통 로그 프로시저 |
+
+**sql/ins/week/** (주간 리포트)
+
+| 파일명 | 설명 |
+|--------|------|
+| 01_SP_INS_WEEK_MAIN.sql | 메인 프로시저 |
+| 11_SP_INS_WEEK_MODON_POPUP.sql | 모돈현황 팝업 |
+| 12_SP_INS_WEEK_ALERT_POPUP.sql | 관리대상 모돈 |
+| 21_SP_INS_WEEK_GB_POPUP.sql | 교배 팝업 |
+| 22_SP_INS_WEEK_BM_POPUP.sql | 분만 팝업 |
+| 23_SP_INS_WEEK_EU_POPUP.sql | 이유 팝업 |
+| 31_SP_INS_WEEK_SG_POPUP.sql | 임신사고 팝업 |
+| 32_SP_INS_WEEK_DOPE_POPUP.sql | 도태폐사 팝업 |
+| 41_SP_INS_WEEK_SHIP_POPUP.sql | 출하 팝업 |
+| 51_SP_INS_WEEK_SCHEDULE_POPUP.sql | 금주 작업예정 팝업 |
+| 99_JOB_INS_WEEKLY.sql | 스케줄러 JOB |
 
 ---
 
@@ -392,7 +722,40 @@ TS_INS_MASTER (리포트 마스터)
 | `MATING_T` | 교배 유형별 | 계획,실적 |
 | `FARROWING` | 분만 성적 | 항목별 |
 | `WEANING` | 이유 성적 | 항목별 |
-| `SCHEDULE` | 작업예정 | 유형별 두수 |
+| `SCHEDULE` | 작업예정 요약 | 교배,재발확인,분만,이유,백신,출하 |
+| `SCHEDULE_CAL` | 작업예정 캘린더 | 요일별 예정복수 |
+
+### 10.3 SCHEDULE / SCHEDULE_CAL 상세 매핑
+
+#### GUBUN='SCHEDULE' (요약, SORT_NO=1)
+
+| 컬럼 | 용도 | 비고 |
+|------|------|------|
+| CNT_1 | 교배예정 합계 | FN_MD_SCHEDULE_BSE_2020 (150005) |
+| CNT_2 | 재발확인 합계 | 3주 + 4주 |
+| CNT_3 | 분만예정 합계 | FN_MD_SCHEDULE_BSE_2020 (150002) |
+| CNT_4 | 이유예정 합계 | FN_MD_SCHEDULE_BSE_2020 (150003) |
+| CNT_5 | 백신예정 합계 | FN_MD_SCHEDULE_BSE_2020 (150004) |
+| CNT_6 | 출하예정 합계 | 미구현 |
+| CNT_7 | 주차 | ISO 주차 |
+| STR_1 | 시작일 | MM.DD |
+| STR_2 | 종료일 | MM.DD |
+
+#### GUBUN='SCHEDULE_CAL' (캘린더, SORT_NO=1~6)
+
+| SORT_NO | CODE_1 | 용도 |
+|---------|--------|------|
+| 1 | GB | 교배예정 |
+| 2 | BM | 분만예정 |
+| 3 | IMSIN_3W | 재발확인 3주 (18~24일) |
+| 4 | IMSIN_4W | 재발확인 4주 (25~31일) |
+| 5 | EU | 이유예정 |
+| 6 | VACCINE | 백신예정 |
+
+| 컬럼 | 용도 |
+|------|------|
+| STR_1~STR_7 | 요일별 날짜 (DD) |
+| CNT_1~CNT_7 | 월~일 예정 복수 |
 
 ---
 
@@ -451,19 +814,24 @@ EXCEPTION
 
 ## 13. 운영 데이터 규모
 
-### 13.1 주요 테이블 건수 (2025년 기준)
+### 13.1 주요 테이블 건수 (2025.12 기준)
 
 | 테이블 | 건수 | 비고 |
 |--------|------|------|
-| `TB_MODON_WK` | **~41,000,000** | 모돈 작업 이력 (최대) |
-| `TB_GYOBAE` | ~15,000,000 | 교배 |
-| `TB_EU` | ~12,000,000 | 이유 |
-| `TB_BUNMAN` | ~12,000,000 | 분만 |
-| `TB_MODON_JADON_TRANS` | ~10,000,000 | 자돈 전입 |
-| `TB_MODON` | **~3,500,000** | 모돈 마스터 |
-| `TB_SAGO` | ~3,000,000 | 임신사고 |
-| `TB_MD_LOC_TRANS` | ~1,000,000 | 위치이동 |
-| `TB_WT_BCS` | ~900,000 | 체중/BCS |
+| `TB_MODON_WK` | **40,465,033** | 모돈 작업 이력 (최대) |
+| `TB_GYOBAE` | 14,881,595 | 교배 |
+| `TB_BUNMAN` | 11,485,759 | 분만 |
+| `TB_EU` | 11,383,819 | 이유 |
+| `TB_MODON_JADON_TRANS` | 10,000,368 | 자돈 전입 |
+| `TB_MODON` | **3,317,247** | 모돈 마스터 |
+| `TB_SAGO` | 2,713,315 | 임신사고 |
+| `TB_WT_BCS` | 893,954 | 체중/BCS |
+| `TC_FARM_CONFIG` | 597,935 | 농가설정 |
+| `TB_PLAN_MODON` | 27,948 | 예정작업 |
+| `TC_CODE_FARM` | 16,277 | 농장코드 |
+| `TA_MEMBER` | 3,163 | 회원 |
+| `TA_FARM` | 3,135 | 농장 |
+| `TC_CODE_SYS` | 2,588 | 시스템코드 |
 
 ### 13.2 성능 고려사항
 
@@ -573,8 +941,39 @@ WHERE WK.FARM_NO = :farm_no;
 
 ---
 
+## 14. 자돈 두수 관리 (TB_MODON_JADON_TRANS)
+
+> 포유 기간 중 발생하는 자돈 증감 내역(폐사, 부분이유, 양자전입/전출)을 기록
+>
+> **테이블 상세**: [docs/db/ref/01.table.md](../../ref/01.table.md)
+
+### 14.1 GUBUN_CD 코드 정의
+
+| GUBUN_CD | 명칭 | 두수 영향 |
+|----------|------|----------|
+| `160001` | 포유자돈폐사 | 감소 (-) |
+| `160002` | 부분이유 | 감소 (-) |
+| `160003` | 양자전입 | 증가 (+) |
+| `160004` | 양자전출 | 감소 (-) |
+
+### 14.2 이유 실적 집계 시 두수 계산
+
+| 항목 | 계산 방법 | 비고 |
+|------|----------|------|
+| 이유두수 | TB_EU.DUSU + TB_EU.DUSU_SU | 이유 시점 실제 두수 |
+| 실산 | TB_BUNMAN.SILSAN | 분만 시 총산 |
+| 포유기간 | 이유일 - 분만일 | TB_MODON_WK 날짜 차이 |
+| 이유육성율 | 이유두수 / 실산 * 100 | 포유 기간 생존율 |
+
+> **참고**: TB_MODON_JADON_TRANS는 포유 기간 중 세부 증감 내역 추적용이며,
+> 이유 실적 집계 시에는 TB_EU의 최종 두수(DUSU + DUSU_SU)를 사용합니다.
+
+---
+
 ## 변경 이력
 
 | 버전 | 일자 | 작성자 | 내용 |
 |------|------|--------|------|
 | 1.0 | 2025-12-09 | - | 최초 작성 |
+| 1.1 | 2025-12-15 | - | 7. 관리대상 모돈 추출 로직 상세화 (후보돈 판별 기준 추가) |
+| 1.2 | 2025-12-16 | - | 14. TB_MODON_JADON_TRANS 자돈 두수 관리 테이블 정의 추가 |

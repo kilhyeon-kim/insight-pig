@@ -3,6 +3,7 @@ import { AlertMdPopupData } from '@/types/weekly';
 import { PopupContainer } from './PopupContainer';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faFire } from '@fortawesome/free-solid-svg-icons';
+import { formatNumber } from '@/utils/format';
 
 interface AlertMdPopupProps {
     isOpen: boolean;
@@ -59,22 +60,22 @@ export const AlertMdPopup: React.FC<AlertMdPopupProps> = ({ isOpen, onClose, dat
                         {data.map((row, index) => (
                             <tr key={index}>
                                 <td className="label">{row.period}</td>
-                                <td>{row.hubo || '-'}</td>
-                                <td className="highlight">{row.euMi || '-'}</td>
-                                <td className="highlight">{row.sgMi || '-'}</td>
-                                <td>{row.bmDelay || '-'}</td>
-                                <td>{row.euDelay || '-'}</td>
-                                <td className="total">{getRowTotal(row) || '-'}</td>
+                                <td>{formatNumber(row.hubo || 0)}</td>
+                                <td className="highlight">{formatNumber(row.euMi || 0)}</td>
+                                <td className="highlight">{formatNumber(row.sgMi || 0)}</td>
+                                <td>{formatNumber(row.bmDelay || 0)}</td>
+                                <td>{formatNumber(row.euDelay || 0)}</td>
+                                <td className="total">{formatNumber(getRowTotal(row))}</td>
                             </tr>
                         ))}
                         <tr className="sum-row">
                             <td className="label">합계</td>
-                            <td>{totals.hubo || '-'}</td>
-                            <td className="highlight">{totals.euMi || '-'}</td>
-                            <td className="highlight">{totals.sgMi || '-'}</td>
-                            <td>{totals.bmDelay || '-'}</td>
-                            <td>{totals.euDelay || '-'}</td>
-                            <td className="total grand">{grandTotal}</td>
+                            <td>{formatNumber(totals.hubo)}</td>
+                            <td className="highlight">{formatNumber(totals.euMi)}</td>
+                            <td className="highlight">{formatNumber(totals.sgMi)}</td>
+                            <td>{formatNumber(totals.bmDelay)}</td>
+                            <td>{formatNumber(totals.euDelay)}</td>
+                            <td className="total grand">{formatNumber(grandTotal)}</td>
                         </tr>
                     </tbody>
                 </table>

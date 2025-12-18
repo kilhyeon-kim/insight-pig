@@ -74,15 +74,13 @@ export default function Header({ onMenuToggle }: HeaderProps) {
     setShowPopup(!showPopup);
   };
 
-  // 날짜 포맷팅
+  // 날짜 포맷팅 (YYYYMMDD VARCHAR(8) -> YY.MM.DD)
   const formatDate = (dateStr: string | null) => {
-    if (!dateStr) return '-';
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('ko-KR', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-    });
+    if (!dateStr || dateStr.length !== 8) return '-';
+    const year = dateStr.substring(2, 4);  // YY
+    const month = dateStr.substring(4, 6); // MM
+    const day = dateStr.substring(6, 8);   // DD
+    return `${year}.${month}.${day}`;
   };
 
   return (
@@ -124,16 +122,20 @@ export default function Header({ onMenuToggle }: HeaderProps) {
 
           {/* 사용자 아이콘 버튼 */}
           <button
+            id="btn-user-menu"
             onClick={handleUserIconClick}
-            className="p-1.5 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            className="w-8 h-8 flex items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors"
             aria-label="사용자 정보"
           >
-            <Icon name="user" className="text-lg" />
+            <Icon name="user" className="text-sm" />
           </button>
 
           {/* 사용자 정보 팝업 */}
           {showPopup && (
-            <div className="absolute top-full right-0 mt-2 w-64 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50">
+            <div
+              id="pop-user-menu"
+              className="absolute top-full right-0 mt-2 w-64 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50"
+            >
               <div className="p-4">
                 <h3 className="font-semibold text-gray-900 dark:text-white mb-3 text-sm border-b border-gray-200 dark:border-gray-700 pb-2">
                   회원 정보
@@ -141,16 +143,8 @@ export default function Header({ onMenuToggle }: HeaderProps) {
 
                 <div className="space-y-2 text-xs">
                   <div className="flex justify-between">
-                    <span className="text-gray-500 dark:text-gray-400">회원ID</span>
-                    <span className="text-gray-900 dark:text-white font-medium">{user?.memberId || '-'}</span>
-                  </div>
-                  <div className="flex justify-between">
                     <span className="text-gray-500 dark:text-gray-400">성명</span>
                     <span className="text-gray-900 dark:text-white font-medium">{user?.name || '-'}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-500 dark:text-gray-400">농장코드</span>
-                    <span className="text-gray-900 dark:text-white font-medium">{user?.farmNo || '-'}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-500 dark:text-gray-400">농장명</span>

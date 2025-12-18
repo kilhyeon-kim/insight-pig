@@ -8,6 +8,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTable, faChartSimple, faCaretUp, faCaretDown } from '@fortawesome/free-solid-svg-icons';
 import { useChartResponsive } from './useChartResponsive';
 import { useTheme } from '@/contexts/ThemeContext';
+import { formatNumber } from '@/utils/format';
 
 interface ModonPopupProps {
     isOpen: boolean;
@@ -32,32 +33,57 @@ export const ModonPopup: React.FC<ModonPopupProps> = ({ isOpen, onClose, data })
     const splitLineColor = isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.08)';
     const dataLabelColor = isDark ? '#ffd700' : '#333';  // 다크모드: 골드 (확 뜨는 색상)
 
-    // 행 합계 계산
+    // null이면 '-', 숫자면 formatNumber 적용
+    const formatCell = (value: number | null) => value === null ? '-' : formatNumber(value);
+
+    // 행에 데이터가 있는지 확인 (모두 null이면 데이터 없음)
+    const hasData = (row: typeof data.table[0]) =>
+        row.hubo !== null || row.imsin !== null || row.poyu !== null || row.eumo !== null || row.sago !== null;
+
+    // 행 합계 계산 (null은 0으로 처리)
     const calculateRowTotal = (row: typeof data.table[0]) =>
-        row.hubo + row.imsin + row.poyu + row.eumo + row.sago;
+        (row.hubo || 0) + (row.imsin || 0) + (row.poyu || 0) + (row.eumo || 0) + (row.sago || 0);
 
     // 후보돈/현재모돈 분리
     const huboRows = data.table.filter(r => r.group === 'hubo');
     const currentRows = data.table.filter(r => r.group === 'current');
 
-    // 열별 합계 계산 (현재모돈만 - 후보돈 제외)
+    // 열별 합계 계산 (현재모돈만 - 후보돈 제외, null은 0으로 처리)
     const columnTotals = currentRows.reduce(
         (acc, row) => ({
-            hubo: acc.hubo + row.hubo,
-            imsin: acc.imsin + row.imsin,
-            poyu: acc.poyu + row.poyu,
-            eumo: acc.eumo + row.eumo,
-            sago: acc.sago + row.sago,
-            change: acc.change + row.change
+            hubo: acc.hubo + (row.hubo || 0),
+            imsin: acc.imsin + (row.imsin || 0),
+            poyu: acc.poyu + (row.poyu || 0),
+            eumo: acc.eumo + (row.eumo || 0),
+            sago: acc.sago + (row.sago || 0),
+            change: acc.change + (row.change || 0)
         }),
         { hubo: 0, imsin: 0, poyu: 0, eumo: 0, sago: 0, change: 0 }
     );
 
     const grandTotal = columnTotals.hubo + columnTotals.imsin + columnTotals.poyu + columnTotals.eumo + columnTotals.sago;
 
-    // 전체 합계 (비율 계산용 - 후보돈 포함)
-    const allTotal = data.table.reduce((acc, row) =>
-        acc + row.hubo + row.imsin + row.poyu + row.eumo + row.sago, 0);
+    // 전체 상태별 합계 (후보돈 포함, 비율행용)
+    const allStatusTotals = data.table.reduce(
+        (acc, row) => ({
+            hubo: acc.hubo + (row.hubo || 0),
+            imsin: acc.imsin + (row.imsin || 0),
+            poyu: acc.poyu + (row.poyu || 0),
+            eumo: acc.eumo + (row.eumo || 0),
+            sago: acc.sago + (row.sago || 0),
+        }),
+        { hubo: 0, imsin: 0, poyu: 0, eumo: 0, sago: 0 }
+    );
+    const allStatusTotal = allStatusTotals.hubo + allStatusTotals.imsin + allStatusTotals.poyu + allStatusTotals.eumo + allStatusTotals.sago;
+
+    // 상태별 비율 계산 (후보돈 포함, 전체 기준)
+    const statusRates = allStatusTotal > 0 ? {
+        hubo: ((allStatusTotals.hubo / allStatusTotal) * 100).toFixed(1) + '%',
+        imsin: ((allStatusTotals.imsin / allStatusTotal) * 100).toFixed(1) + '%',
+        poyu: ((allStatusTotals.poyu / allStatusTotal) * 100).toFixed(1) + '%',
+        eumo: ((allStatusTotals.eumo / allStatusTotal) * 100).toFixed(1) + '%',
+        sago: ((allStatusTotals.sago / allStatusTotal) * 100).toFixed(1) + '%',
+    } : { hubo: '-', imsin: '-', poyu: '-', eumo: '-', sago: '-' };
 
     // 산차별 색상 (프로토타입 PARITY_COLORS)
     const PARITY_COLORS = [
@@ -173,29 +199,40 @@ export const ModonPopup: React.FC<ModonPopupProps> = ({ isOpen, onClose, data })
                                     <th>합계</th>
                                     <th>비율</th>
                                 </tr>
+                                {/* 상태별 비율 행 (현재모돈 기준, 후보돈 제외) */}
+                                <tr className="rate-row">
+                                    <th>비율</th>
+                                    <th>{statusRates.hubo}</th>
+                                    <th>{statusRates.imsin}</th>
+                                    <th>{statusRates.poyu}</th>
+                                    <th>{statusRates.eumo}</th>
+                                    <th>{statusRates.sago}</th>
+                                    <th>100%</th>
+                                    <th>-</th>
+                                </tr>
                             </thead>
                             <tbody>
                                 {/* 후보돈(미교배돈) 섹션 헤더 */}
                                 <tr className="section-header">
                                     <td colSpan={8}>▸ 후보돈(미교배돈)</td>
                                 </tr>
-                                {/* 후보돈 행 */}
+                                {/* 후보돈 행 - 비율은 '-' (현재모돈 범위 아님) */}
                                 {huboRows.map((row, index) => {
                                     const rowTotal = calculateRowTotal(row);
-                                    const rate = allTotal > 0 ? ((rowTotal / allTotal) * 100).toFixed(1) : '0.0';
+                                    const noData = !hasData(row);
                                     return (
                                         <tr key={`hubo-${index}`}>
                                             <td className="label">{row.parity}</td>
-                                            <td>{row.hubo || '-'}</td>
-                                            <td>{row.imsin || '-'}</td>
-                                            <td>{row.poyu || '-'}</td>
-                                            <td>{row.eumo || '-'}</td>
-                                            <td>{row.sago || '-'}</td>
+                                            <td>{formatCell(row.hubo)}</td>
+                                            <td>{formatCell(row.imsin)}</td>
+                                            <td>{formatCell(row.poyu)}</td>
+                                            <td>{formatCell(row.eumo)}</td>
+                                            <td>{formatCell(row.sago)}</td>
                                             <td className="total">
-                                                {rowTotal}
-                                                <ChangeIndicator value={row.change} />
+                                                {noData ? '-' : formatNumber(rowTotal)}
+                                                {!noData && <ChangeIndicator value={row.change || 0} />}
                                             </td>
-                                            <td>{rate}%</td>
+                                            <td>-</td>
                                         </tr>
                                     );
                                 })}
@@ -204,23 +241,24 @@ export const ModonPopup: React.FC<ModonPopupProps> = ({ isOpen, onClose, data })
                                 <tr className="section-header">
                                     <td colSpan={8}>▸ 현재모돈 (0산 이상)</td>
                                 </tr>
-                                {/* 현재모돈 행들 */}
+                                {/* 현재모돈 행들 - 비율은 현재모돈(grandTotal) 기준 */}
                                 {currentRows.map((row, index) => {
                                     const rowTotal = calculateRowTotal(row);
-                                    const rate = allTotal > 0 ? ((rowTotal / allTotal) * 100).toFixed(1) : '0.0';
+                                    const noData = !hasData(row);
+                                    const rate = noData ? '-' : (grandTotal > 0 ? ((rowTotal / grandTotal) * 100).toFixed(1) + '%' : '0.0%');
                                     return (
                                         <tr key={`current-${index}`}>
                                             <td className="label">{row.parity}</td>
-                                            <td>{row.hubo || '-'}</td>
-                                            <td>{row.imsin || '-'}</td>
-                                            <td>{row.poyu || '-'}</td>
-                                            <td>{row.eumo || '-'}</td>
-                                            <td>{row.sago || '-'}</td>
+                                            <td>{formatCell(row.hubo)}</td>
+                                            <td>{formatCell(row.imsin)}</td>
+                                            <td>{formatCell(row.poyu)}</td>
+                                            <td>{formatCell(row.eumo)}</td>
+                                            <td>{formatCell(row.sago)}</td>
                                             <td className="total">
-                                                {rowTotal}
-                                                <ChangeIndicator value={row.change} />
+                                                {noData ? '-' : formatNumber(rowTotal)}
+                                                {!noData && <ChangeIndicator value={row.change || 0} />}
                                             </td>
-                                            <td>{rate}%</td>
+                                            <td>{rate}</td>
                                         </tr>
                                     );
                                 })}
@@ -228,16 +266,16 @@ export const ModonPopup: React.FC<ModonPopupProps> = ({ isOpen, onClose, data })
                                 {/* 현재모돈 합계 (후보돈 제외) */}
                                 <tr className="total-row">
                                     <td className="label">합계</td>
-                                    <td>{columnTotals.hubo}</td>
-                                    <td>{columnTotals.imsin}</td>
-                                    <td>{columnTotals.poyu}</td>
-                                    <td>{columnTotals.eumo}</td>
-                                    <td>{columnTotals.sago}</td>
+                                    <td>{formatNumber(columnTotals.hubo)}</td>
+                                    <td>{formatNumber(columnTotals.imsin)}</td>
+                                    <td>{formatNumber(columnTotals.poyu)}</td>
+                                    <td>{formatNumber(columnTotals.eumo)}</td>
+                                    <td>{formatNumber(columnTotals.sago)}</td>
                                     <td className="total grand">
-                                        {grandTotal.toLocaleString()}
+                                        {formatNumber(grandTotal)}
                                         <ChangeIndicator value={columnTotals.change} />
                                     </td>
-                                    <td>{allTotal > 0 ? ((grandTotal / allTotal) * 100).toFixed(1) : '0.0'}%</td>
+                                    <td>100%</td>
                                 </tr>
                             </tbody>
                         </table>

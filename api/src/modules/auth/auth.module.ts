@@ -4,9 +4,11 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { ShareTokenService } from './share-token.service';
+import { ComModule } from '../com/com.module';
 
 @Module({
   imports: [
+    ComModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],

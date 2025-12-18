@@ -167,8 +167,8 @@
     font-size: 14px; /* 모바일 */
     font-weight: 600;
     color: var(--rp-text-primary);
-    margin-bottom: 8px; /* 모바일 */
-    padding-bottom: 5px; /* 모바일 */
+    margin-bottom: 4px; /* 모바일 - 테이블과 간격 축소 */
+    padding-bottom: 2px; /* 모바일 */
 }
 
 .popup-section-desc {
@@ -497,6 +497,42 @@
 }
 
 /* ============================================
+   비율 행 스타일 (.rate-row)
+   - 헤더 바로 아래 상태별 비율 표시 행
+   - tbl-modon-parity 테이블에서 사용
+   ============================================ */
+.popup-table-02 thead tr.rate-row th {
+    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+    color: #0369a1;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 6px 3px;
+    border-top: 1px dashed rgba(3, 105, 161, 0.3);
+}
+
+.dark .popup-table-02 thead tr.rate-row th {
+    background: linear-gradient(135deg, rgba(14, 165, 233, 0.15) 0%, rgba(56, 189, 248, 0.1) 100%);
+    color: #7dd3fc;
+    border-top-color: rgba(125, 211, 252, 0.3);
+}
+
+/* 태블릿 (481px~) */
+@media (min-width: 481px) {
+    .popup-table-02 thead tr.rate-row th {
+        font-size: 12px;
+        padding: 7px 4px;
+    }
+}
+
+/* 데스크탑 (769px~) */
+@media (min-width: 769px) {
+    .popup-table-02 thead tr.rate-row th {
+        font-size: 13px;
+        padding: 8px 6px;
+    }
+}
+
+/* ============================================
    관리대상모돈 테이블 (#tbl-alert-status)
    - 첫번째 열(초과일수) 좁게, 나머지 열 균등
    - 가로스크롤 방지
@@ -522,6 +558,78 @@
 #tbl-alert-status th:last-child,
 #tbl-alert-status td:last-child {
     width: 13%;
+}
+
+/* ============================================
+   관리대상모돈 - 중요 열 강조 (이유후미교배돈, 사고후미교배돈)
+   - 세로 구분선으로 강조 영역 표시
+   - 연한 빨간색 배경
+   - 헤더: .highlight, 셀: .highlight
+   ============================================ */
+
+/* 헤더 강조 - 빨간색 텍스트 + 상단 라인 */
+#tbl-alert-status thead th.highlight {
+    color: #dc2626;
+    font-weight: 700;
+    position: relative;
+}
+
+#tbl-alert-status thead th.highlight::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #ef4444, #f87171);
+    border-radius: 3px 3px 0 0;
+}
+
+/* 셀 강조 - 연한 빨간 배경 + 세로 구분선 */
+#tbl-alert-status tbody td.highlight {
+    background: linear-gradient(180deg, #fef2f2 0%, #fee2e2 100%);
+    color: #dc2626;
+    font-weight: 600;
+    position: relative;
+}
+
+/* 첫 번째 강조 열 - 왼쪽 구분선 */
+#tbl-alert-status tbody td.highlight:first-of-type,
+#tbl-alert-status tbody td:nth-child(3) {
+    /* border-left: 2px solid rgba(239, 68, 68, 0.3); */
+}
+
+/* 마지막 강조 열 - 오른쪽 구분선 */
+#tbl-alert-status tbody td:nth-child(4) {
+    /* border-right: 2px solid rgba(239, 68, 68, 0.3); */
+}
+
+/* 합계행 강조 열 - 더 진한 배경 */
+#tbl-alert-status tbody tr.sum-row td.highlight {
+    background: linear-gradient(180deg, #fee2e2 0%, #fecaca 100%);
+    color: #b91c1c;
+    font-weight: 700;
+}
+
+/* 다크모드 - 헤더 강조 */
+.dark #tbl-alert-status thead th.highlight {
+    color: #fca5a5;
+}
+
+.dark #tbl-alert-status thead th.highlight::before {
+    background: linear-gradient(90deg, #f87171, #fb923c);
+}
+
+/* 다크모드 - 셀 강조 */
+.dark #tbl-alert-status tbody td.highlight {
+    background: linear-gradient(180deg, rgba(239, 68, 68, 0.2) 0%, rgba(239, 68, 68, 0.12) 100%);
+    color: #fca5a5;
+}
+
+/* 다크모드 - 합계행 강조 열 */
+.dark #tbl-alert-status tbody tr.sum-row td.highlight {
+    background: linear-gradient(180deg, rgba(239, 68, 68, 0.25) 0%, rgba(239, 68, 68, 0.18) 100%);
+    color: #fca5a5;
 }
 
 /* ============================================
@@ -777,8 +885,8 @@
     /* 팝업 섹션 라벨 태블릿 */
     .popup-section-label {
         font-size: 14px;
-        margin-bottom: 9px;
-        padding-bottom: 5px;
+        margin-bottom: 5px;
+        padding-bottom: 3px;
     }
 
     .popup-section-desc {
@@ -901,8 +1009,8 @@
     /* 팝업 섹션 라벨 데스크탑 */
     .popup-section-label {
         font-size: 15px;
-        margin-bottom: 10px;
-        padding-bottom: 6px;
+        margin-bottom: 6px;
+        padding-bottom: 4px;
     }
 
     .popup-section-desc {
@@ -1015,13 +1123,851 @@
     margin-left: 2px;
 }
 
-/* 4번째 metric-item (내농장가) - 노란색 계통 */
-#tab-shipment-summary .metrics-2x2 .metric-item:nth-child(4) .metric-value {
-    color: #f59e0b !important;  /* 앰버/노란색 */
+/* 가격 비교 바 다크모드 */
+.dark .price-compare-bar {
+    background: linear-gradient(90deg, rgba(40, 167, 69, 0.15) 0%, rgba(0, 122, 255, 0.15) 100%);
+    border-color: rgba(255, 255, 255, 0.1);
 }
 
-.dark #tab-shipment-summary .metrics-2x2 .metric-item:nth-child(4) .metric-value {
-    color: #fbbf24 !important;  /* 다크모드: 더 밝은 앰버 */
+.dark .price-compare-bar .price-item .metric-label {
+    color: var(--rp-text-tertiary);
 }
 
+/* ============================================
+   교배 팝업 요약 리스트 (.mating-summary-list)
+   - 리스트형 + 프로그레스 바 혼합
+   ============================================ */
+.mating-summary-list {
+    background: var(--rp-card-wrap-bg);
+    border-radius: 10px;
+    padding: 12px;
+    margin-bottom: 16px;
+}
 
+/* 요약 행 기본 */
+.summary-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--rp-border-light);
+}
+
+.summary-row:last-child {
+    border-bottom: none;
+}
+
+.summary-row-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.summary-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--rp-accent-primary);
+}
+
+.summary-label {
+    font-size: 13px;
+    color: var(--rp-text-secondary);
+    font-weight: 500;
+}
+
+.summary-value {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--rp-text-primary);
+}
+
+/* 하이라이트 행 (합계) */
+.summary-row.highlight {
+    background: linear-gradient(135deg, #f0f4ff 0%, #e8ecff 100%);
+    border-radius: 8px;
+    margin-bottom: 8px;
+    border-bottom: none;
+}
+
+.summary-row.highlight .summary-dot {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    width: 10px;
+    height: 10px;
+}
+
+.summary-row.highlight .summary-label {
+    font-weight: 600;
+    color: var(--rp-text-primary);
+}
+
+.summary-row.highlight .summary-value {
+    font-size: 20px;
+    color: #667eea;
+}
+
+/* 프로그레스 바 행 */
+.summary-row.with-bar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+    padding: 8px 12px;
+}
+
+.summary-row-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.summary-bar {
+    height: 6px;
+    background: var(--rp-bg-cell-alt, #e5e7eb);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.summary-bar-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.3s ease;
+}
+
+.summary-bar-fill.primary {
+    background: linear-gradient(90deg, #667eea, #764ba2);
+}
+
+.summary-bar-fill.success {
+    background: linear-gradient(90deg, #10b981, #34d399);
+}
+
+.summary-bar-fill.warning {
+    background: linear-gradient(90deg, #f59e0b, #fbbf24);
+}
+
+.summary-bar-fill.danger {
+    background: linear-gradient(90deg, #ef4444, #f87171);
+}
+
+.summary-bar-fill.info {
+    background: linear-gradient(90deg, #3b82f6, #60a5fa);
+}
+
+/* 2열 그룹 (기타 정보) */
+.summary-row-group {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1px;
+    background: var(--rp-border-light);
+    border-radius: 8px;
+    overflow: hidden;
+    margin-top: 8px;
+}
+
+.summary-row.compact {
+    padding: 8px 12px;
+    background: var(--rp-card-row-bg);
+    border-bottom: none;
+}
+
+.summary-row.compact .summary-label {
+    font-size: 11px;
+}
+
+.summary-row.compact .summary-value {
+    font-size: 13px;
+}
+
+/* 다크모드 */
+.dark .mating-summary-list {
+    background: var(--popup-table-wrap-bg, #232830);
+}
+
+.dark .summary-row {
+    border-bottom-color: rgba(255, 255, 255, 0.1);
+}
+
+.dark .summary-row.highlight {
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.2) 0%, rgba(118, 75, 162, 0.15) 100%);
+}
+
+.dark .summary-row.highlight .summary-value {
+    color: #a5b4fc;
+}
+
+.dark .summary-bar {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.dark .summary-row-group {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.dark .summary-row.compact {
+    background: var(--popup-row-bg, #2d3340);
+}
+
+/* 실산 강조 스타일 (with-bar.accent) */
+.summary-row.with-bar.accent {
+    background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%);
+    border-radius: 8px;
+    margin-bottom: 4px;
+    border-bottom: none;
+}
+
+.summary-row.with-bar.accent .summary-label {
+    font-weight: 600;
+    color: var(--rp-text-primary);
+}
+
+.summary-row.with-bar.accent .summary-value {
+    font-size: 16px;
+    color: #667eea;
+}
+
+.dark .summary-row.with-bar.accent {
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.2) 0%, rgba(99, 102, 241, 0.15) 100%);
+}
+
+.dark .summary-row.with-bar.accent .summary-value {
+    color: #a5b4fc;
+}
+
+/* ============================================
+   유형 2 스타일: 프로그레스바 + 예정/실적
+   ============================================ */
+.summary-row-right {
+    text-align: right;
+}
+
+.summary-sub {
+    font-size: 11px;
+    color: #666;
+    margin-top: 2px;
+}
+
+.dark .summary-sub {
+    color: #a5b4fc;  /* 밝은 라벤더 블루 */
+}
+
+/* 달성률 뱃지 */
+.rate-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.rate-badge.good {
+    background: #d4edda;
+    color: #155724;
+}
+
+.rate-badge.warn {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.rate-badge.bad {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.dark .rate-badge.good {
+    background: rgba(52, 199, 89, 0.2);
+    color: #34c759;
+}
+
+.dark .rate-badge.warn {
+    background: rgba(255, 149, 0, 0.2);
+    color: #ff9500;
+}
+
+.dark .rate-badge.bad {
+    background: rgba(255, 59, 48, 0.2);
+    color: #ff3b30;
+}
+
+/* 섹션 타이틀 */
+.section-title {
+    font-size: 11px;
+    color: #999;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin: 12px 0 8px;
+}
+
+.dark .section-title {
+    color: #93c5fd;  /* 밝은 스카이 블루 - 세부 타이틀용 */
+}
+
+/* 예정/달성률 표기 (라벨 우측 인라인) */
+.summary-plan {
+    display: inline;
+    font-size: 11px; /* 모바일 */
+    font-weight: 400;
+    color: #888;
+    margin-left: 6px;
+}
+
+.dark .summary-plan {
+    color: #a5b4fc;  /* 밝은 라벤더 블루 */
+}
+
+/* 프로그레스 바 하단 정보 */
+.summary-bar-info {
+    display: flex;
+    justify-content: space-between;
+    font-size: 10px;
+    color: #999;
+    margin-top: 2px;
+}
+
+.dark .summary-bar-info {
+    color: #666;
+}
+
+/* 구분선 */
+.summary-divider {
+    height: 1px;
+    background: #e9ecef;
+    margin: 12px 0;
+}
+
+.dark .summary-divider {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+/* 그라데이션 구분선 */
+.gradient-divider {
+    height: 2px;
+    background: linear-gradient(90deg, transparent, #667eea, transparent);
+    margin: 12px 0;
+}
+
+.dark .gradient-divider {
+    background: linear-gradient(90deg, transparent, #a5b4fc, transparent);
+}
+
+/* 내장 테이블 (mating-summary-list 안에서 사용) */
+.embedded-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0 4px;
+    font-size: 12px;
+}
+
+.embedded-table thead th {
+    background: transparent;
+    padding: 6px 8px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--rp-text-secondary);
+    text-align: center;
+}
+
+.embedded-table tbody tr {
+    background: var(--rp-card-row-bg);
+    box-shadow: var(--rp-card-row-shadow);
+    border-radius: 6px;
+}
+
+.embedded-table tbody td {
+    padding: 8px;
+    text-align: center;
+    color: var(--rp-text-primary);
+}
+
+.embedded-table tbody td:first-child {
+    border-radius: 6px 0 0 6px;
+    text-align: left;
+    font-weight: 500;
+}
+
+.embedded-table tbody td:last-child {
+    border-radius: 0 6px 6px 0;
+}
+
+.embedded-table tbody tr.row-highlight {
+    background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
+}
+
+.embedded-table tbody tr.row-highlight td {
+    font-weight: 600;
+}
+
+.dark .embedded-table tbody tr {
+    background: var(--popup-row-bg, #2d3340);
+}
+
+.dark .embedded-table thead th {
+    color: var(--popup-header-color, #b8c9e8);
+}
+
+.dark .embedded-table tbody tr.row-highlight {
+    background: linear-gradient(135deg, rgba(56, 189, 248, 0.15) 0%, rgba(14, 165, 233, 0.2) 100%);
+}
+
+/* 컴팩트 리스트 (기타 정보) */
+.compact-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 12px;
+}
+
+.compact-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    color: #666;
+}
+
+.dark .compact-item {
+    color: #999;
+}
+
+.compact-item .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #666;
+}
+
+.compact-item .dot.primary {
+    background: #007aff;
+}
+
+.compact-item .dot.success {
+    background: #34c759;
+}
+
+.compact-item .dot.warning {
+    background: #ff9500;
+}
+
+.compact-item .dot.danger {
+    background: #ff3b30;
+}
+
+/* 태블릿 (481px~) */
+@media (min-width: 481px) {
+    .mating-summary-list {
+        padding: 14px;
+    }
+
+    .summary-label {
+        font-size: 13px;
+    }
+
+    .summary-value {
+        font-size: 16px;
+    }
+
+    .summary-row.highlight .summary-value {
+        font-size: 22px;
+    }
+
+    .summary-row.compact .summary-label {
+        font-size: 12px;
+    }
+
+    .summary-row.compact .summary-value {
+        font-size: 14px;
+    }
+
+    .summary-plan {
+        font-size: 12px;
+    }
+
+    .embedded-table {
+        font-size: 13px;
+    }
+
+    .embedded-table thead th {
+        font-size: 12px;
+        padding: 7px 10px;
+    }
+
+    .embedded-table tbody td {
+        padding: 9px 10px;
+    }
+}
+
+/* 데스크탑 (769px~) */
+@media (min-width: 769px) {
+    .mating-summary-list {
+        padding: 16px;
+    }
+
+    .summary-row {
+        padding: 12px 16px;
+    }
+
+    .summary-label {
+        font-size: 14px;
+    }
+
+    .summary-value {
+        font-size: 17px;
+    }
+
+    .summary-row.highlight .summary-value {
+        font-size: 24px;
+    }
+
+    .summary-bar {
+        height: 8px;
+    }
+
+    .summary-row.compact .summary-label {
+        font-size: 13px;
+    }
+
+    .summary-row.compact .summary-value {
+        font-size: 15px;
+    }
+
+    .summary-plan {
+        font-size: 13px;
+    }
+
+    .embedded-table {
+        font-size: 14px;
+        border-spacing: 0 6px;
+    }
+
+    .embedded-table thead th {
+        font-size: 13px;
+        padding: 8px 12px;
+    }
+
+    .embedded-table tbody td {
+        padding: 10px 12px;
+    }
+
+    .embedded-table tbody tr {
+        border-radius: 8px;
+    }
+
+    .embedded-table tbody td:first-child {
+        border-radius: 8px 0 0 8px;
+    }
+
+    .embedded-table tbody td:last-child {
+        border-radius: 0 8px 8px 0;
+    }
+}
+
+/* ============================================
+   이유 팝업 - 3×2 그리드 카드 스타일
+   ============================================ */
+
+/* 그리드 카드 기본 스타일 */
+.weaning-grid-card {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 10px;
+    text-align: center;
+}
+
+.weaning-grid-card .card-label {
+    font-size: 11px;
+    color: #666;
+    margin-bottom: 4px;
+}
+
+.weaning-grid-card .card-value {
+    font-size: 16px;
+    font-weight: 700;
+    color: #333;
+}
+
+/* 이유육성율 카드 (강조) */
+.weaning-grid-card.highlight-green {
+    background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+    border: 1px solid #bbf7d0;
+}
+
+.weaning-grid-card.highlight-green .card-label {
+    color: #16a34a;
+}
+
+.weaning-grid-card.highlight-green .card-label-sub {
+    font-size: 10px;
+    color: #22c55e;
+}
+
+.weaning-grid-card.highlight-green .card-value {
+    color: #16a34a;
+}
+
+/* 분만 기준 현황 카드 - 총산 (회색) */
+.weaning-stat-card.gray {
+    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+    border: 1px solid #e2e8f0;
+}
+
+.weaning-stat-card.gray .card-label {
+    color: #64748b;
+}
+
+.weaning-stat-card.gray .card-value {
+    color: #334155;
+}
+
+/* 분만 기준 현황 카드 - 실산 (파랑) */
+.weaning-stat-card.blue {
+    background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+    border: 1px solid #bfdbfe;
+}
+
+.weaning-stat-card.blue .card-label {
+    color: #3b82f6;
+}
+
+.weaning-stat-card.blue .card-value {
+    color: #1d4ed8;
+}
+
+/* 분만 기준 현황 카드 - 포유개시 (초록) */
+.weaning-stat-card.green {
+    background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+    border: 1px solid #bbf7d0;
+}
+
+.weaning-stat-card.green .card-label {
+    color: #22c55e;
+}
+
+.weaning-stat-card.green .card-value {
+    color: #16a34a;
+}
+
+/* 다크모드 - 그리드 카드 */
+.dark .weaning-grid-card {
+    background: var(--popup-row-bg, #2d3340);
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+.dark .weaning-grid-card .card-label {
+    color: #a5b4fc;
+}
+
+.dark .weaning-grid-card .card-value {
+    color: #e2e8f0;
+}
+
+/* 다크모드 - 이유육성율 카드 */
+.dark .weaning-grid-card.highlight-green {
+    background: linear-gradient(135deg, rgba(34, 197, 94, 0.15) 0%, rgba(22, 163, 74, 0.2) 100%);
+    border-color: rgba(34, 197, 94, 0.3);
+}
+
+.dark .weaning-grid-card.highlight-green .card-label {
+    color: #4ade80;
+}
+
+.dark .weaning-grid-card.highlight-green .card-label-sub {
+    color: #86efac;
+}
+
+.dark .weaning-grid-card.highlight-green .card-value {
+    color: #4ade80;
+}
+
+/* 다크모드 - 분만 기준 현황 카드 (총산) */
+.dark .weaning-stat-card.gray {
+    background: linear-gradient(135deg, rgba(100, 116, 139, 0.15) 0%, rgba(71, 85, 105, 0.2) 100%);
+    border-color: rgba(100, 116, 139, 0.3);
+}
+
+.dark .weaning-stat-card.gray .card-label {
+    color: #94a3b8;
+}
+
+.dark .weaning-stat-card.gray .card-value {
+    color: #cbd5e1;
+}
+
+/* 다크모드 - 분만 기준 현황 카드 (실산) */
+.dark .weaning-stat-card.blue {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(37, 99, 235, 0.2) 100%);
+    border-color: rgba(59, 130, 246, 0.3);
+}
+
+.dark .weaning-stat-card.blue .card-label {
+    color: #60a5fa;
+}
+
+.dark .weaning-stat-card.blue .card-value {
+    color: #93c5fd;
+}
+
+/* 다크모드 - 분만 기준 현황 카드 (포유개시) */
+.dark .weaning-stat-card.green {
+    background: linear-gradient(135deg, rgba(34, 197, 94, 0.15) 0%, rgba(22, 163, 74, 0.2) 100%);
+    border-color: rgba(34, 197, 94, 0.3);
+}
+
+.dark .weaning-stat-card.green .card-label {
+    color: #4ade80;
+}
+
+.dark .weaning-stat-card.green .card-value {
+    color: #86efac;
+}
+
+/* ============================================
+   요일별 분포 (.daily-dist)
+   - 예정작업 팝업에서 행 클릭 시 표시
+   - 월~일 7개 셀 항상 표시
+   - .wr-popup-content로 specificity 높임
+   ============================================ */
+.wr-popup-content .popup-table-02 tbody tr.daily-dist-row {
+    background: transparent;
+    box-shadow: none;
+}
+
+.wr-popup-content .popup-table-02 tbody td.daily-dist-cell {
+    padding: 8px 4px;
+    background: var(--rp-bg-secondary);
+    border-radius: 0;
+}
+
+.wr-popup-content .daily-dist-container {
+    display: flex;
+    justify-content: center;
+    gap: 4px;
+    width: 100%;
+    min-width: 252px;
+    overflow: visible;
+}
+
+.wr-popup-content .daily-dist-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: #f0f0f0;
+    border-radius: 4px;
+    width: 32px;
+    min-width: 32px;
+    height: 38px;
+    flex-shrink: 0;
+}
+
+.wr-popup-content .daily-dist-item.has-value {
+    background: #667eea;
+}
+
+/* 요일명 기본 (월~금) */
+.wr-popup-content .daily-dist-item .daily-dist-day {
+    font-size: 11px;
+    color: #555;
+}
+
+/* 주말 요일명 (토~일) - 빨간색 */
+.wr-popup-content .daily-dist-item.weekend .daily-dist-day {
+    color: #dc3545;
+}
+
+/* 값이 있는 셀의 요일명 - 흰색 */
+.wr-popup-content .daily-dist-item.has-value .daily-dist-day {
+    color: #fff;
+}
+
+/* 숫자 기본 */
+.wr-popup-content .daily-dist-item .daily-dist-count {
+    font-size: 13px;
+    font-weight: 700;
+    color: #888;
+}
+
+/* 값이 있는 셀의 숫자 - 흰색 */
+.wr-popup-content .daily-dist-item.has-value .daily-dist-count {
+    color: #fff;
+    font-size: 14px;
+}
+
+/* 다크모드 */
+.dark .wr-popup-content .popup-table-02 tbody td.daily-dist-cell {
+    background: var(--popup-table-wrap-bg, #232830);
+}
+
+.dark .wr-popup-content .daily-dist-item {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.dark .wr-popup-content .daily-dist-item.has-value {
+    background: #667eea;
+}
+
+/* 다크모드 - 요일명 (월~금) */
+.dark .wr-popup-content .daily-dist-item .daily-dist-day {
+    color: #ccc;
+}
+
+/* 다크모드 - 주말 요일명 (토~일) */
+.dark .wr-popup-content .daily-dist-item.weekend .daily-dist-day {
+    color: #ff6b6b;
+}
+
+/* 다크모드 - 값 있는 셀의 요일명 */
+.dark .wr-popup-content .daily-dist-item.has-value .daily-dist-day {
+    color: #fff;
+}
+
+/* 다크모드 - 숫자 기본 */
+.dark .wr-popup-content .daily-dist-item .daily-dist-count {
+    color: #888;
+}
+
+/* 다크모드 - 값 있는 숫자 */
+.dark .wr-popup-content .daily-dist-item.has-value .daily-dist-count {
+    color: #fff;
+}
+
+/* 반응형 - 태블릿 이상 (481px+) */
+@media (min-width: 481px) {
+    .wr-popup-content .daily-dist-container {
+        gap: 6px;
+    }
+    .wr-popup-content .daily-dist-item {
+        width: 36px;
+        min-width: 36px;
+        height: 42px;
+    }
+    .wr-popup-content .daily-dist-item .daily-dist-day {
+        font-size: 11px;
+    }
+    .wr-popup-content .daily-dist-item .daily-dist-count {
+        font-size: 14px;
+    }
+    .wr-popup-content .daily-dist-item.has-value .daily-dist-count {
+        font-size: 15px;
+    }
+}
+
+/* 반응형 - 데스크탑 (769px+) */
+@media (min-width: 769px) {
+    .wr-popup-content .daily-dist-container {
+        gap: 8px;
+    }
+    .wr-popup-content .daily-dist-item {
+        width: 40px;
+        min-width: 40px;
+        height: 46px;
+    }
+    .wr-popup-content .daily-dist-item .daily-dist-day {
+        font-size: 12px;
+    }
+    .wr-popup-content .daily-dist-item .daily-dist-count {
+        font-size: 15px;
+    }
+    .wr-popup-content .daily-dist-item.has-value .daily-dist-count {
+        font-size: 16px;
+    }
+}

@@ -26,6 +26,7 @@ export class LoginResponseDto {
     farmNm: string;
     memberType: string;
     email?: string;
+    lang?: string;
   };
 }
 
@@ -38,4 +39,5 @@ export interface JwtPayload {
   farmNm: string;
   name: string;
   memberType: string;
+  lang: string; // 언어코드 (ko/en/vi)
 }

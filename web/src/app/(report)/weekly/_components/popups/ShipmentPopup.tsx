@@ -1,57 +1,12 @@
 import React, { useState } from 'react';
 import ReactECharts from 'echarts-for-react';
+import { ShipmentPopupData } from '@/types/weekly';
 import { PopupContainer } from './PopupContainer';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTable, faChartLine, faCircle } from '@fortawesome/free-solid-svg-icons';
 import { useChartResponsive } from './useChartResponsive';
 import { useTheme } from '@/contexts/ThemeContext';
-
-interface ShipmentMetrics {
-    totalCount: number;
-    compareLastWeek: string;
-    grade1Rate: number;
-    avgCarcass: number;
-    avgBackfat: number;
-    farmPrice: number;
-    nationalPrice: number;
-}
-
-interface GradeChartItem {
-    name: string;
-    value: number;
-    color: string;
-    colorEnd: string;
-}
-
-interface TableRow {
-    category: string;
-    sub: string;
-    colspan?: boolean;
-    data: number[];
-    sum?: number;
-    avg?: number;
-    unit?: string;
-    highlight?: 'primary' | 'success';
-    gradeRow?: boolean;
-}
-
-interface ShipmentPopupData {
-    metrics: ShipmentMetrics;
-    gradeChart: GradeChartItem[];
-    table: {
-        days: string[];
-        rows: TableRow[];
-    };
-    analysisChart: {
-        dates: string[];
-        shipCount: number[];
-        avgWeight: number[];
-        avgBackfat: number[];
-    };
-    carcassChart: {
-        data: number[][];
-    };
-}
+import { formatNumber } from '@/utils/format';
 
 interface ShipmentPopupProps {
     isOpen: boolean;
@@ -79,7 +34,7 @@ export const ShipmentPopup: React.FC<ShipmentPopupProps> = ({ isOpen, onClose, d
     const subLabelColor = isDark ? '#66d9ef' : '#666';   // 다크모드: 시안 (보조 라벨용)
 
     const { metrics, gradeChart, table, analysisChart, carcassChart } = data;
-    const total = gradeChart.reduce((sum, d) => sum + d.value, 0);
+    const total = gradeChart.reduce((sum, d) => sum + d.value, 0) || 1; // 0으로 나누기 방지
     const priceDiff = metrics.farmPrice - metrics.nationalPrice;
     const priceColor = priceDiff >= 0 ? '#28a745' : '#dc3545';
 
@@ -300,15 +255,55 @@ export const ShipmentPopup: React.FC<ShipmentPopupProps> = ({ isOpen, onClose, d
     };
 
     // 도체분포 산점도 옵션 (원본 com.js _initShipmentCarcassChart 참조)
-    // 동적 max 계산
-    const carcassData = carcassChart.data || [];
-    let xMax = -Infinity, yMax = -Infinity;
-    carcassData.forEach(item => {
-        if (item[0] > xMax) xMax = item[0];
-        if (item[1] > yMax) yMax = item[1];
+    // 60 미만 데이터를 60에 합산 처리
+    const carcassDataRaw = carcassChart.data || [];
+    let hasUnder60 = false;
+    const mergedMap = new Map<number, number>(); // key: backfat, value: count (60 미만 합산용)
+    const carcassData: number[][] = [];
+
+    carcassDataRaw.forEach(item => {
+        const [weight, backfat, count] = item;
+        if (weight < 65) {
+            hasUnder60 = true;
+            // 65 미만 데이터는 동일 등지방별로 합산
+            mergedMap.set(backfat, (mergedMap.get(backfat) || 0) + count);
+        } else {
+            carcassData.push([weight, backfat, count]);
+        }
     });
-    const xMin = 70;  // 고정
-    const yMin = 10;  // 고정
+
+    // 65 미만 합산 데이터를 65 위치에 추가
+    mergedMap.forEach((count, backfat) => {
+        carcassData.push([65, backfat, count]);
+    });
+
+    // 동적 min/max 계산
+    let xMax = -Infinity, yMax = -Infinity;
+    let yMinData = Infinity;
+    let totalCount = 0, grade1Count = 0, grade2Count = 0;
+
+    // 등급 계산은 원본 데이터 기준
+    carcassDataRaw.forEach(item => {
+        const [weight, backfat, count] = item;
+        if (weight > xMax) xMax = weight;
+        if (backfat > yMax) yMax = backfat;
+        if (backfat < yMinData) yMinData = backfat;
+        totalCount += count;
+        // 1등급 범위: 83~92kg, 17~24mm
+        if (weight >= 83 && weight <= 92 && backfat >= 17 && backfat <= 24) {
+            grade1Count += count;
+        }
+        // 2등급 범위: 80~97kg, 15~27mm (1등급 제외)
+        else if (weight >= 80 && weight <= 97 && backfat >= 15 && backfat <= 27) {
+            grade2Count += count;
+        }
+    });
+    const grade1Rate = totalCount > 0 ? ((grade1Count / totalCount) * 100).toFixed(1) : '0.0';
+    const grade2Rate = totalCount > 0 ? ((grade2Count / totalCount) * 100).toFixed(1) : '0.0';
+    // X축: 65 고정 (65 미만 데이터 합산)
+    const xMin = 65;
+    // Y축: 데이터 최소값 - 5 (5단위 내림), 최대 10
+    const yMin = Math.min(Math.floor((yMinData - 5) / 5) * 5, 10);
     xMax = Math.max(Math.ceil(xMax / 5) * 5, 100);  // 최소 100
     yMax = Math.max(Math.ceil(yMax / 5) * 5, 30);   // 최소 30
 
@@ -337,7 +332,18 @@ export const ShipmentPopup: React.FC<ShipmentPopupProps> = ({ isOpen, onClose, d
             min: xMin,
             max: xMax,
             interval: 5,
-            axisLabel: { rotate: 45, fontSize: chartSizes.axisLabelSize, color: textColor },
+            axisLabel: {
+                rotate: 45,
+                fontSize: chartSizes.axisLabelSize,
+                color: textColor,
+                formatter: (value: number) => {
+                    // 65 미만 데이터가 있으면 65 레이블에 ↓ 표시
+                    if (value === 65 && hasUnder60) {
+                        return '65↓';
+                    }
+                    return String(value);
+                }
+            },
             splitLine: { show: true, lineStyle: { color: splitLineColor, type: 'dashed' } }
         },
         yAxis: {
@@ -435,38 +441,52 @@ export const ShipmentPopup: React.FC<ShipmentPopupProps> = ({ isOpen, onClose, d
             {/* 탭1: 출하현황 */}
             {activeTab === 'summary' && (
                 <div className="popup-tab-content" id="tab-shipment-summary">
-                    {/* 메트릭스 + 등급차트 그리드 */}
-                    <div className="shipment-top-grid">
-                        {/* 메트릭스 2x2 */}
-                        <div className="metrics-2x2">
-                            <div className="metric-item highlight">
-                                <div className="metric-value">{metrics.totalCount.toLocaleString()}</div>
-                                <div className="metric-label">출하두수</div>
-                            </div>
-                            <div className="metric-item">
-                                <div className="metric-value">{metrics.grade1Rate}%</div>
-                                <div className="metric-label">1등급↑</div>
-                            </div>
-                            <div className="metric-item">
-                                <div className="metric-value">{metrics.avgCarcass}kg</div>
-                                <div className="metric-label">도체중</div>
-                            </div>
-                            <div className="metric-item">
-                                <div className="metric-value" style={{ color: priceColor }}>
-                                    {metrics.farmPrice.toLocaleString()}원
+                    {/* 유형4: 상단 메트릭스/차트 + 하단 가격 비교 바 */}
+                    <div className="shipment-top-grid" id="shipment-top-grid">
+                        {/* 상단: 메트릭스 2x2 + 등급차트 */}
+                        <div className="shipment-top-row">
+                            <div className="metrics-2x2">
+                                <div className="metric-item highlight">
+                                    <div className="metric-value">{formatNumber(metrics.totalCount)}</div>
+                                    <div className="metric-label">출하두수</div>
                                 </div>
-                                <div className="metric-label">
-                                    내농장가 ({priceDiff >= 0 ? '+' : ''}{priceDiff})
+                                <div className="metric-item">
+                                    <div className="metric-value">{metrics.grade1Rate}%</div>
+                                    <div className="metric-label">1등급↑</div>
                                 </div>
+                                <div className="metric-item">
+                                    <div className="metric-value">{metrics.avgCarcass}kg</div>
+                                    <div className="metric-label">도체중</div>
+                                </div>
+                                <div className="metric-item">
+                                    <div className="metric-value">{metrics.avgBackfat}mm</div>
+                                    <div className="metric-label">등지방</div>
+                                </div>
+                            </div>
+                            {/* 등급차트 - 가로 막대 */}
+                            <div className="grade-chart-wrap" id="cht-shipment-grade">
+                                <ReactECharts
+                                    option={gradeChartOption}
+                                    style={{ width: '100%', height: '120px' }}
+                                    opts={{ renderer: 'svg' }}
+                                />
                             </div>
                         </div>
-                        {/* 등급차트 - 가로 막대 */}
-                        <div className="grade-chart-wrap" id="cht-shipment-grade">
-                            <ReactECharts
-                                option={gradeChartOption}
-                                style={{ width: '100%', height: '120px' }}
-                                opts={{ renderer: 'svg' }}
-                            />
+                        {/* 하단: 가격 비교 바 */}
+                        <div className="price-compare-bar">
+                            <div className="price-item">
+                                <div className="metric-value" style={{ color: priceColor }}>
+                                    {formatNumber(metrics.farmPrice)}원
+                                </div>
+                                <div className="metric-label">내농장 수취단가</div>
+                            </div>
+                            <div className={`diff-badge ${priceDiff >= 0 ? 'positive' : 'negative'}`}>
+                                {priceDiff >= 0 ? '+' : ''}{formatNumber(priceDiff)}원
+                            </div>
+                            <div className="price-item">
+                                <div className="metric-value">{formatNumber(metrics.nationalPrice)}원</div>
+                                <div className="metric-label">전국 (제주,등외제외)</div>
+                            </div>
                         </div>
                     </div>
 
@@ -483,31 +503,68 @@ export const ShipmentPopup: React.FC<ShipmentPopupProps> = ({ isOpen, onClose, d
                                         <th key={i}>{d.slice(-2)}일</th>
                                     ))}
                                     <th>합계</th>
+                                    <th>비율</th>
                                     <th>평균</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {table.rows.map((row, idx) => (
-                                    <tr key={idx} style={getRowStyle(row.highlight)}>
-                                        {row.colspan ? (
-                                            <td colSpan={2} className="label">{row.category}</td>
-                                        ) : (
-                                            <>
-                                                <td className="label">{row.category}</td>
-                                                <td className="label sub" dangerouslySetInnerHTML={{ __html: row.sub }} />
-                                            </>
-                                        )}
-                                        {row.data.map((v, i) => (
-                                            <td key={i}>{v}</td>
-                                        ))}
-                                        <td className="total sum">
-                                            {row.sum !== undefined ? row.sum.toLocaleString() : ''}
-                                        </td>
-                                        <td className="total avg">
-                                            {!row.gradeRow && row.avg !== undefined ? row.avg + (row.unit || '') : ''}
-                                        </td>
-                                    </tr>
-                                ))}
+                                {table.rows.map((row, idx) => {
+                                    // 항상 소숫점 1자리: 육성율(2), 합격율(3), 총지육(10), 지육체중(11), 등지방(12)
+                                    const alwaysDecimalRow = [2, 3, 10, 11, 12].includes(idx);
+                                    const formatValue = (v: number | null) => {
+                                        if (v === null || v === 0) return '-';
+                                        if (alwaysDecimalRow) {
+                                            return Number(v).toFixed(1);
+                                        }
+                                        // 두수: 정수면 정수로, 소숫점 있으면 1자리까지
+                                        return v % 1 === 0 ? v : Number(v).toFixed(1);
+                                    };
+
+                                    // 비율 컬럼: rate 값 사용 (등급/성별 행만 데이터 있음)
+                                    const formatRate = () => {
+                                        if (row.rate == null || row.rate === 0) return '-';
+                                        return row.rate.toFixed(1) + '%';
+                                    };
+
+                                    // 평균 컬럼: avg 값 사용 (alwaysDecimalRow와 동일 규칙 적용)
+                                    const formatAvg = () => {
+                                        if (row.avg == null || row.avg === 0) return '-';
+                                        const avgVal = Number(row.avg);
+                                        let formatted: string;
+                                        if (alwaysDecimalRow) {
+                                            formatted = avgVal.toFixed(1);
+                                        } else {
+                                            // 두수 평균: 정수면 정수로, 소숫점 있으면 1자리까지
+                                            formatted = avgVal % 1 === 0 ? String(avgVal) : avgVal.toFixed(1);
+                                        }
+                                        return formatted + (row.unit || '');
+                                    };
+
+                                    return (
+                                        <tr key={idx} style={getRowStyle(row.highlight)}>
+                                            {row.colspan ? (
+                                                <td colSpan={2} className="label">{row.category}</td>
+                                            ) : (
+                                                <>
+                                                    <td className="label">{row.category}</td>
+                                                    <td className="label sub">{row.sub}</td>
+                                                </>
+                                            )}
+                                            {row.data.map((v, i) => (
+                                                <td key={i}>{formatValue(v)}</td>
+                                            ))}
+                                            <td className="total sum">
+                                                {row.sum != null && row.sum !== 0 ? formatNumber(row.sum) : '-'}
+                                            </td>
+                                            <td className="total rate">
+                                                {formatRate()}
+                                            </td>
+                                            <td className="total avg">
+                                                {formatAvg()}
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
                             </tbody>
                         </table>
                     </div>
@@ -530,6 +587,10 @@ export const ShipmentPopup: React.FC<ShipmentPopupProps> = ({ isOpen, onClose, d
             {/* 탭3: 도체분포 차트 */}
             {activeTab === 'carcass' && (
                 <div className="popup-tab-content" id="tab-shipment-carcass">
+                    <div className="wr-popup-section-desc">
+                        <span style={{ color: 'rgba(128, 128, 255, 0.8)', fontWeight: 600 }}>■</span> 1+ 출현 적정 범위 (83~92kg, 17~24mm): <strong>{grade1Rate}%</strong><br />
+                        <span style={{ color: 'rgba(160, 160, 160, 0.8)', fontWeight: 600 }}>■</span> 1  출현 적정 범위 (80~97kg, 15~27mm): <strong>{grade2Rate}%</strong>
+                    </div>
                     <div id="cht-shipment-carcass">
                         <ReactECharts
                             option={carcassChartOption}

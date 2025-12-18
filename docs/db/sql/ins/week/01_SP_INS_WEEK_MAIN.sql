@@ -33,12 +33,13 @@ CREATE OR REPLACE PROCEDURE SP_INS_WEEK_FARM_PROCESS (
       - TS_INS_WEEK: MERGE로 존재시 상태/집계값 초기화, 없으면 INSERT
     ================================================================
     */
-    P_MASTER_SEQ    IN  NUMBER,
-    P_JOB_NM        IN  VARCHAR2,
-    P_DAY_GB        IN  VARCHAR2,       -- 기간구분 (WEEK, MON, QT)
-    P_FARM_NO       IN  NUMBER,
-    P_DT_FROM       IN  VARCHAR2,       -- YYYYMMDD
-    P_DT_TO         IN  VARCHAR2        -- YYYYMMDD
+    P_MASTER_SEQ      IN  NUMBER,
+    P_JOB_NM          IN  VARCHAR2,
+    P_DAY_GB          IN  VARCHAR2,       -- 기간구분 (WEEK, MON, QT)
+    P_FARM_NO         IN  NUMBER,
+    P_DT_FROM         IN  VARCHAR2,       -- YYYYMMDD
+    P_DT_TO           IN  VARCHAR2,       -- YYYYMMDD
+    P_NATIONAL_PRICE  IN  NUMBER DEFAULT 0  -- 전국 탕박 평균 단가 (SP_INS_WEEK_MAIN에서 1회 계산 후 전달)
 ) AS
     V_LOCALE        VARCHAR2(10);
     V_ERR_CODE      NUMBER;
@@ -174,9 +175,25 @@ BEGIN
     -- 임신사고 팝업 (SG, SG_CHART)
     SP_INS_WEEK_SG_POPUP(P_MASTER_SEQ, P_JOB_NM, P_FARM_NO, V_LOCALE, P_DT_FROM, P_DT_TO);
 
+    -- 도태폐사 팝업 (DOPE_STAT, DOPE_LIST, DOPE_CHART)
     SP_INS_WEEK_DOPE_POPUP(P_MASTER_SEQ, P_JOB_NM, P_FARM_NO, V_LOCALE, P_DT_FROM, P_DT_TO);
-    -- SP_INS_WEEK_CH_POPUP(P_MASTER_SEQ, P_JOB_NM, P_FARM_NO, V_LOCALE, P_DT_FROM, P_DT_TO);
-    -- SP_INS_WEEK_SCHEDULE(P_MASTER_SEQ, P_JOB_NM, P_FARM_NO, V_LOCALE, P_DT_FROM, P_DT_TO);
+
+    -- 출하 팝업 (SHIP_STAT, SHIP_ROW, SHIP_CHART, SHIP_SCATTER)
+    -- ★ 주의: SP_INS_WEEK_SHIP_POPUP 프로시저의 파라미터가 변경되었으므로(P_NATIONAL_PRICE 추가),
+    --          반드시 41_SP_INS_WEEK_SHIP_POPUP.sql을 먼저 실행(컴파일)해야 합니다.
+    SP_INS_WEEK_SHIP_POPUP(P_MASTER_SEQ, P_JOB_NM, P_FARM_NO, V_LOCALE, P_DT_FROM, P_DT_TO, P_NATIONAL_PRICE);
+
+    -- 금주 작업예정 (SCHEDULE, SCHEDULE_CAL)
+    -- ★ 주의: 금주 날짜 계산을 위해 P_DT_FROM, P_DT_TO를 금주 범위로 변환해야 함
+    DECLARE
+        V_THIS_DT_FROM  VARCHAR2(8);
+        V_THIS_DT_TO    VARCHAR2(8);
+    BEGIN
+        -- 금주 범위 계산: 지난주 일요일(P_DT_TO) + 1 ~ + 7
+        V_THIS_DT_FROM := TO_CHAR(TO_DATE(P_DT_TO, 'YYYYMMDD') + 1, 'YYYYMMDD');  -- 금주 월요일
+        V_THIS_DT_TO := TO_CHAR(TO_DATE(P_DT_TO, 'YYYYMMDD') + 7, 'YYYYMMDD');    -- 금주 일요일
+        SP_INS_WEEK_SCHEDULE_POPUP(P_MASTER_SEQ, P_JOB_NM, P_FARM_NO, V_LOCALE, V_THIS_DT_FROM, V_THIS_DT_TO);
+    END;
 
     -- 농장 상태 업데이트 (COMPLETE) + 공유 토큰 생성 + 만료일 설정 (7일)
     -- STANDARD_HASH 사용 (Oracle 12c+, 권한 불필요)
@@ -305,6 +322,9 @@ CREATE OR REPLACE PROCEDURE SP_INS_WEEK_MAIN (
     V_FARMS         T_FARM_LIST := T_FARM_LIST();
     V_IDX           INTEGER := 1;
 
+    -- 전국 탕박 평균 단가 (JOB당 1회 계산)
+    V_NATIONAL_PRICE NUMBER := 0;
+
 BEGIN
     -- 오늘 날짜 설정 (기본: 한국 로케일)
     V_LOCALE := 'KOR';
@@ -344,6 +364,21 @@ BEGIN
         V_DT_TO := TO_CHAR(TRUNC(V_BASE_DT, 'IW') - 1, 'YYYYMMDD');  -- 지난주 일요일
         V_DT_FROM := TO_CHAR(TRUNC(V_BASE_DT, 'IW') - 7, 'YYYYMMDD'); -- 지난주 월요일
     END IF;
+
+    -- ================================================
+    -- 1.3 전국 탕박 평균 단가 계산 (JOB당 1회)
+    --     조건: ABATTCD='057016'(전국), GRADE_CD='ST'(등외제외 전체), SKIN_YN='Y'(탕박)
+    --     가중평균: SUM(두수 * 단가) / SUM(두수)
+    -- ================================================
+    SELECT NVL(ROUND(SUM(AUCTCNT * AUCTAMT) / NULLIF(SUM(AUCTCNT), 0)), 0)
+    INTO V_NATIONAL_PRICE
+    FROM TM_SISAE_DETAIL
+    WHERE ABATTCD = '057016'
+      AND START_DT BETWEEN V_DT_FROM AND V_DT_TO
+      AND GRADE_CD = 'ST'
+      AND SKIN_YN = 'Y'
+      AND JUDGESEX_CD IS NULL
+      AND TO_NUMBER(NVL(AUCTAMT, '0')) > 0;
 
     -- ================================================
     -- 1.5 중복 실행 체크 (동일 기간구분+년도+주차)
@@ -445,7 +480,8 @@ BEGIN
                 job  => V_JOB_NO,
                 what => 'BEGIN SP_INS_WEEK_FARM_PROCESS(' ||
                         V_MASTER_SEQ || ', ''' || V_JOB_NM || ''', ''' || P_DAY_GB || ''', ' ||
-                        V_FARMS(V_IDX) || ', ''' || V_DT_FROM || ''', ''' || V_DT_TO || '''); END;',
+                        V_FARMS(V_IDX) || ', ''' || V_DT_FROM || ''', ''' || V_DT_TO || ''', ' ||
+                        V_NATIONAL_PRICE || '); END;',
                 next_date => SYSDATE
             );
             COMMIT;
@@ -577,12 +613,26 @@ CREATE OR REPLACE PROCEDURE SP_INS_WEEK_RETRY_ERROR (
     V_FARMS         T_FARM_LIST := T_FARM_LIST();
     V_IDX           INTEGER := 1;
 
+    -- 전국 탕박 평균 단가 (재처리 시에도 1회 계산)
+    V_NATIONAL_PRICE NUMBER := 0;
+
 BEGIN
     -- 마스터 정보 조회
     SELECT DAY_GB, DT_FROM, DT_TO, NVL(COMPLETE_CNT, 0), NVL(ERROR_CNT, 0)
     INTO V_DAY_GB, V_DT_FROM, V_DT_TO, V_PREV_COMPLETE, V_PREV_ERROR
     FROM TS_INS_MASTER
     WHERE SEQ = P_MASTER_SEQ;
+
+    -- 전국 탕박 평균 단가 계산 (JOB당 1회)
+    SELECT NVL(ROUND(SUM(AUCTCNT * AUCTAMT) / NULLIF(SUM(AUCTCNT), 0)), 0)
+    INTO V_NATIONAL_PRICE
+    FROM TM_SISAE_DETAIL
+    WHERE ABATTCD = '057016'
+      AND START_DT BETWEEN V_DT_FROM AND V_DT_TO
+      AND GRADE_CD = 'ST'
+      AND SKIN_YN = 'Y'
+      AND JUDGESEX_CD IS NULL
+      AND TO_NUMBER(NVL(AUCTAMT, '0')) > 0;
 
     -- 오류 농장 목록 조회
     FOR farm_rec IN (
@@ -640,7 +690,8 @@ BEGIN
                 job  => V_JOB_NO,
                 what => 'BEGIN SP_INS_WEEK_FARM_PROCESS(' ||
                         P_MASTER_SEQ || ', ''' || V_JOB_NM || ''', ''' || V_DAY_GB || ''', ' ||
-                        V_FARMS(V_IDX) || ', ''' || V_DT_FROM || ''', ''' || V_DT_TO || '''); END;',
+                        V_FARMS(V_IDX) || ', ''' || V_DT_FROM || ''', ''' || V_DT_TO || ''', ' ||
+                        V_NATIONAL_PRICE || '); END;',
                 next_date => SYSDATE
             );
             COMMIT;

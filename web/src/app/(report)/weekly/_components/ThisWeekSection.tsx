@@ -51,7 +51,7 @@ export const ThisWeekSection: React.FC<ThisWeekSectionProps> = ({ data, onPopupO
                     <span className="section-desc">단위: 복</span>
                 </div>
                 <div className="info-note">
-                    <FontAwesomeIcon icon={faCircleInfo} /> 산출기준: 예정작업 미존재시 농장 기본값, [재발확인] 3,4주 고정
+                    <FontAwesomeIcon icon={faCircleInfo} />산출기준: (피그플랜)농장정보 모돈 예정작업 , [재발확인] 3,4주 고정
                 </div>
             </div>
             <div className="card-body">

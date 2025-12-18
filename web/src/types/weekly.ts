@@ -35,7 +35,12 @@ export interface AlertMdItem {
 
 export interface LastWeekData {
   period: { weekNum: number; from: string; to: string };
-  modon: { regCnt: number; sangsiCnt: number };
+  modon: {
+    regCnt: number;
+    sangsiCnt: number;
+    regCntChange?: number;      // 현재모돈 전주대비 증감
+    sangsiCntChange?: number;   // 상시모돈 전주대비 증감
+  };
   mating: { cnt: number; sum: number };
   farrowing: {
     cnt: number;
@@ -60,14 +65,22 @@ export interface LastWeekData {
     jdCnt: number;
     pigletCnt: number;
     avgWeight: number;
+    avgJdCnt?: number;         // 지난주 평균 이유두수 (jdCnt / cnt)
     // 누계 데이터
     sumCnt?: number;           // 이유 복수 누계
     sumJdCnt?: number;         // 이유자돈수 누계
-    sumAvgWeight?: number;     // 누계 평균체중
+    sumAvgJdCnt?: number;      // 누계 평균 이유두수
+    sumAvgWeight?: number;     // 누계 평균 체중
     // 증감 데이터 (1년평균 대비)
+    changeJdCnt?: number;      // 평균 이유두수 증감
     changeWeight?: number;     // 평균체중 증감
   };
-  accident: { cnt: number; sum: number };
+  accident: {
+    cnt: number;
+    sum: number;
+    avgGyungil?: number;      // 지난주 평균 경과일
+    sumAvgGyungil?: number;   // 당해년도 평균 경과일
+  };
   culling: { cnt: number; sum: number };
   shipment: { cnt: number; avg: number; sum: number; avgSum: number };
 }
@@ -146,12 +159,10 @@ export interface TodoItem {
 }
 
 // Popup Data Interfaces
+// mating, farrowing, weaning은 DB에서 직접 조회 (popup API 사용)
 export interface PopupData {
   alertMd: AlertMdPopupData[];
   modon: ModonPopupData;
-  mating: MatingPopupData;
-  farrowing: FarrowingPopupData;
-  weaning: WeaningPopupData;
   accident: AccidentPopupData;
   culling: CullingPopupData;
   shipment: ShipmentPopupData;
@@ -185,12 +196,12 @@ export interface ModonPopupData {
 
 export interface ModonTableRow {
   parity: string;
-  hubo: number;
-  imsin: number;
-  poyu: number;
-  eumo: number;
-  sago: number;
-  change: number;
+  hubo: number | null;
+  imsin: number | null;
+  poyu: number | null;
+  eumo: number | null;
+  sago: number | null;
+  change: number | null;
   group: 'hubo' | 'current';
 }
 
@@ -204,6 +215,20 @@ export interface MatingPopupData {
   chart: {
     xAxis: string[];
     data: number[];
+  };
+  // 요약 정보 (GB_STAT)
+  summary?: {
+    totalActual: number;       // 합계 실적
+    totalPlanned: number;      // 합계 예정
+    accidentCnt: number;       // 교배도중 사고복수
+    farrowingCnt: number;      // 교배도중 분만복수
+    avgReturnDay: number;      // 평균 재귀발정일
+    avgFirstGbDay: number;     // 평균 초교배일
+    firstGbCnt: number;        // 초교배복수 (실적)
+    firstGbPlanned: number;    // 초교배복수 (예정)
+    jsGbCnt: number;           // 정상교배복수 (실적)
+    jsGbPlanned: number;       // 정상교배복수 (예정)
+    sagoGbCnt: number;         // 재발교배복수 (실적) - 예정 없음
   };
 }
 
@@ -240,11 +265,24 @@ export interface WeaningPopupData {
   planned: number;
   actual: number;
   rate: string;
+  // 분만 기준 카드 (이유 대상 모돈의 분만 정보)
+  farrowingBased: {
+    totalBirth: number;   // 총산 합계 (실산+사산+미라)
+    liveBirth: number;    // 실산 합계
+    nursingStart: number; // 포유개시 합계 (실산-폐사+전입-전출)
+  };
   stats: {
     weanPigs: { sum: number; avg: number };
-    partialWean: { sum: number; avg: number };
+    nursingDays: { sum: number; avg: number };
     avgWeight: { avg: number };
     survivalRate: { rate: string };
+    nursingStart: { sum: number };  // 포유개시 합계 (실산-폐사+전입-전출)
+  };
+  pigletChanges: {
+    dead: number;         // 포유자돈폐사 (160001)
+    partialWean: number;  // 부분이유 (160002)
+    fosterIn: number;     // 양자전입 (160003)
+    fosterOut: number;    // 양자전출 (160004)
   };
 }
 
@@ -263,12 +301,15 @@ export interface AccidentPopupData {
 export interface AccidentTableRow {
   type: string;
   lastWeek: number;
+  lastWeekPct: number;
   lastMonth: number;
+  lastMonthPct: number;
 }
 
 /**
- * 도태폐사 팝업 데이터 (유형별 스탯바 + 원인별 테이블)
+ * 도태폐사 팝업 데이터 (유형별 스탯바 + 원인별 테이블 + 상태별 차트)
  * @see data.js _pop.culling
+ * @see docs/db/ins/week/32.culling-popup.md
  */
 export interface CullingPopupData {
   stats: {
@@ -278,6 +319,18 @@ export interface CullingPopupData {
     sale: number;
   };
   table: CullingTableRow[];
+  // 상태별 차트 (DOPE_CHART) - 두 번째 탭
+  chart: {
+    xAxis: string[];    // ['후보돈', '임신돈', '포유돈', '대리모돈', '이유모돈', '재발돈', '유산돈']
+    data: number[];     // CNT_1~CNT_7
+    items?: CullingChartItem[];  // 상세 데이터 (상태코드 포함)
+  };
+}
+
+export interface CullingChartItem {
+  status: string;     // 상태명 (TC_CODE_SYS PCODE='01' 코드명)
+  statusCd: string;   // 상태코드 (010001~010007)
+  count: number;      // 두수
 }
 
 export interface CullingTableRow {
@@ -288,37 +341,66 @@ export interface CullingTableRow {
 
 /**
  * 출하 실적 팝업 데이터 (3탭: 출하현황 + 출하분석차트 + 도체분포차트)
- * @see data.js _pop.shipment
+ * @see docs/db/ins/week/41.shipment-popup.md
+ * GUBUN='SHIP', SUB_GUBUN='STAT/ROW/CHART/SCATTER'
  */
 export interface ShipmentPopupData {
+  // 상단 메트릭스 (2x2 그리드)
   metrics: {
-    totalCount: number;
-    compareLastWeek: string;
-    grade1Rate: number;
-    avgCarcass: number;
-    avgBackfat: number;
-    farmPrice: number;
-    nationalPrice: number;
+    totalCount: number; // 지난주 출하두수
+    compareLastWeek: string; // 전주대비 (현재 미지원)
+    grade1Rate: number; // 1등급↑ 합격율(%)
+    avgCarcass: number; // 평균 도체중(kg)
+    avgBackfat: number; // 평균 등지방(mm)
+    farmPrice: number; // 내농장가 (별도 소스)
+    nationalPrice: number; // 전국평균가 (별도 소스)
   };
-  gradeDistribution: { grade: string; count: number; rate: number }[];
-  dailyTable: ShipmentDailyRow[];
+  // 등급 분포 차트 (가로 막대)
+  gradeChart: ShipmentGradeChartItem[];
+  // 크로스탭 테이블 (15행 × 7일)
+  table: {
+    days: string[]; // 날짜 배열 ['11.18', '11.19', ...]
+    rows: ShipmentTableRow[];
+  };
+  // 출하분석 차트 (막대+라인 복합)
   analysisChart: {
     dates: string[];
-    shipCount: number[];
-    avgWeight: number[];
-    avgBackfat: number[];
+    shipCount: number[]; // 출하두수 (막대)
+    avgWeight: number[]; // 평균 체중 (라인)
+    avgBackfat: number[]; // 평균 등지방 (라인)
   };
+  // 도체분포 산점도
   carcassChart: {
-    data: { weight: number; backfat: number }[];
+    data: number[][]; // [[도체중, 등지방, 두수], ...]
   };
 }
 
-export interface ShipmentDailyRow {
-  date: string;
-  count: number;
-  avgWeight: number;
-  avgBackfat: number;
-  grade1Rate: number;
+/**
+ * 출하 등급 차트 아이템
+ */
+export interface ShipmentGradeChartItem {
+  name: string; // 1+, 1, 2, 등외
+  value: number; // 두수
+  color: string; // 시작 색상
+  colorEnd: string; // 그라데이션 끝 색상
+}
+
+/**
+ * 출하 크로스탭 테이블 행
+ * 15개 항목: 출하두수, 과거이유두수, 육성율, 박피, 탕박, 1등급↑, 1+등급, 1등급, 2등급,
+ *           암, 수, 거세, 총지육, 평균체중, 평균등지방
+ */
+export interface ShipmentTableRow {
+  category: string; // 대분류 (출하두수, 도축, 등급, 성별, 지육, 등지방)
+  sub: string; // 소분류 (두, 박피, 탕박 등)
+  colspan?: boolean; // category+sub 병합 여부
+  data: number[]; // 일별 데이터 (CNT_1~7)
+  sum?: number; // 합계 (VAL_1)
+  rate?: number; // 비율(%) (VAL_2) - 등급/성별 행
+  avg?: number; // 평균 (VAL_3)
+  unit?: string; // 단위 (%, kg, mm)
+  highlight?: 'primary' | 'success'; // 하이라이트 스타일
+  gradeRow?: boolean; // 등급 행 여부 (비율 표시)
 }
 
 export interface SchedulePopupData {
@@ -335,6 +417,8 @@ export interface ScheduleDetailItem {
   targetGroup: string;
   elapsedDays: string;
   count: number;
+  daily?: number[];      // 요일별 분포 [월,화,수,목,금,토,일]
+  vaccineName?: string;  // 백신 예정 팝업에서만 사용
 }
 
 /**

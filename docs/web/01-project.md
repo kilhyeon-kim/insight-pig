@@ -96,7 +96,8 @@ npm run start:dev    # http://localhost:3001
 | `03-backend.md` | Backend 상세 가이드 |
 | `04-deployment.md` | 배포 가이드 |
 | `05-auth.md` | 인증 가이드 |
-| `06-error-handling.md` | **에러 관리 가이드** |
+| `06-error-handling.md` | 에러 관리 가이드 |
+| `07-code-caching.md` | **코드 테이블 캐싱 가이드** |
 
 ---
 
@@ -108,7 +109,8 @@ npm run start:dev    # http://localhost:3001
 - **Frontend 작업**: `02-frontend.md`
 - **Backend 작업**: `03-backend.md`
 - **인증/토큰 관련**: `05-auth.md`
-- **에러 처리**: `06-error-handling.md` ⭐
+- **에러 처리**: `06-error-handling.md`
+- **코드 캐싱**: `07-code-caching.md` ⭐ (SQL에서 코드명 조회 금지, 캐시 사용)
 - **배포 관련**: `04-deployment.md`
 
 ### 7.2 Backend 모듈 책임 영역
@@ -174,8 +176,8 @@ if (!res.ok) {
 
 ## 8. 공유 링크 시스템
 
-- **형식**: `/weekly/s/{64자_SHA256_토큰}`
-- **유효기간**: 생성일로부터 **7일**
+- **형식**: `/weekly/{64자_SHA256_토큰}` (통합 뷰어)
+- **유효기간**: 생성일로부터 **7일** (로그인 사용자는 무제한)
 - **만료 시**: 만료 안내 → 로그인 페이지 유도
 - **세션**: 유효 토큰 접속 시 1시간 임시 JWT 발급
 
@@ -186,6 +188,5 @@ if (!res.ok) {
 | Method | Endpoint | 설명 |
 |--------|----------|------|
 | GET | `/api/weekly/list?farmNo={farmNo}` | 리포트 목록 |
-| GET | `/api/weekly/detail/{masterSeq}/{farmNo}` | 리포트 상세 |
-| GET | `/api/weekly/share/{token}` | 공유 토큰으로 조회 |
+| GET | `/api/weekly/view/{token}` | 리포트 상세 (통합) |
 | GET | `/api/weekly/popup/{type}/{masterSeq}/{farmNo}` | 팝업 데이터 |

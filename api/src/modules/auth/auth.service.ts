@@ -4,6 +4,7 @@ import { DataSource } from 'typeorm';
 import { TaMember } from './entities';
 import { JwtPayload, LoginResponseDto } from './dto';
 import { AUTH_SQL } from './sql';
+import { ComService } from '../com/com.service';
 
 /**
  * Named parameter를 TypeORM query에 전달하기 위한 헬퍼
@@ -15,6 +16,7 @@ export class AuthService {
   constructor(
     private readonly dataSource: DataSource,
     private readonly jwtService: JwtService,
+    private readonly comService: ComService,
   ) {}
 
   /**
@@ -61,10 +63,13 @@ export class AuthService {
       throw new ForbiddenException('인사이트피그플랜 서비스 기간이 만료되었습니다.');
     }
 
-    // 4단계: 농장명 조회
+    // 4단계: 농장명 및 언어코드 조회
     const farms = await this.dataSource.query(AUTH_SQL.getFarm, params({ farmNo: member.FARM_NO }));
     const farm = farms[0];
     const farmNm = farm?.FARM_NM || '';
+
+    // COUNTRY_CODE → 941 → 942 → 언어코드 변환
+    const lang = this.comService.convertCountryToLang(farm?.COUNTRY_CODE);
 
     // JWT 페이로드 생성
     const payload: JwtPayload = {
@@ -73,6 +78,7 @@ export class AuthService {
       farmNm,
       name: member.NAME,
       memberType: member.MEMBER_TYPE,
+      lang,
     };
 
     // 마지막 접속일 업데이트
@@ -87,6 +93,7 @@ export class AuthService {
         farmNm,
         memberType: member.MEMBER_TYPE,
         email: member.EMAIL,
+        lang,
       },
     };
   }

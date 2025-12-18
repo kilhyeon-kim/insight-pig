@@ -67,4 +67,10 @@ export const ErrorMessages = {
         title: '요청 에러',
         default: '요청 처리 중 오류가 발생했습니다.',
     },
+
+    // 알 수 없는 에러
+    UNKNOWN: {
+        title: '알 수 없는 에러',
+        default: '알 수 없는 오류가 발생했습니다.',
+    },
 } as const;

@@ -8,8 +8,9 @@ import { useAuth } from '@/contexts/AuthContext';
 const TEST_ACCOUNTS = [
   { label: '-- 테스트 계정 선택 --', id: '', pw: '' },
   { label: 'jjin', id: 'jjin', pw: '1122' },
-  { label: '(주)에이스팜', id: '(주)에이스팜', pw: '0' },
-  { label: '부강농장1', id: '부강농장1', pw: '0' },
+  { label: '민근농장/장일농장', id: 'centauru1', pw: 'kwak88176' },
+  { label: '용암축산', id: 'csc2005', pw: 'rose2088' },
+  { label: '비흥농장', id: '비흥', pw: '1' },
   { label: '여리', id: '여리', pw: '0' },
 ];
 

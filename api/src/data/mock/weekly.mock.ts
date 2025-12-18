@@ -29,48 +29,7 @@ export interface ParityDistributionItem {
   count: number;
 }
 
-export interface MatingData {
-  kyungsan: { planned: number; actual: number; rate: number };
-  hubo: { planned: number; actual: number; rate: number };
-  sago: { planned: number; actual: number; rate: number };
-  total: { planned: number; actual: number; rate: number };
-}
-
-export interface AccidentTypeItem {
-  type: string;
-  lastWeek: number;
-  lastMonth: number;
-}
-
-export interface AccidentPeriodItem {
-  period: string;
-  count: number;
-}
-
-export interface FarrowingData {
-  planned: number;
-  actual: number;
-  rate: number;
-  stats: {
-    totalBorn: { sum: number; avg: number };
-    bornAlive: { sum: number; avg: number; rate: number };
-    stillborn: { sum: number; avg: number; rate: number };
-    mummy: { sum: number; avg: number; rate: number };
-    culled: { sum: number; avg: number; rate: number };
-  };
-}
-
-export interface WeaningData {
-  planned: number;
-  actual: number;
-  rate: number;
-  stats: {
-    weanPigs: { sum: number; avg: number };
-    partialWean: { sum: number; avg: number };
-    avgWeight: number;
-    survivalRate: number;
-  };
-}
+// AccidentTypeItem, AccidentPeriodItem - DB 연동 완료 (SG, SG_CHART)
 
 export interface CullingData {
   dotae: number;
@@ -93,11 +52,7 @@ export interface LastweekData {
   summary: SummaryData;
   sowStatus: SowStatusItem[];
   parityDistribution: ParityDistributionItem[];
-  mating: MatingData;
-  accidentType: AccidentTypeItem[];
-  accidentPeriod: AccidentPeriodItem[];
-  farrowing: FarrowingData;
-  weaning: WeaningData;
+  // accidentType, accidentPeriod - DB 연동 완료 (SG, SG_CHART)
   culling: CullingData;
   shipment: ShipmentData;
 }
@@ -214,55 +169,7 @@ export const lastweekData: LastweekData = {
     { parity: '8산', count: 113 },
     { parity: '9산↑', count: 113 },
   ],
-  mating: {
-    kyungsan: { planned: 35, actual: 32, rate: 91.4 },
-    hubo: { planned: 10, actual: 8, rate: 80.0 },
-    sago: { planned: 7, actual: 5, rate: 71.4 },
-    total: { planned: 52, actual: 45, rate: 86.5 },
-  },
-  accidentType: [
-    { type: '재발', lastWeek: 3, lastMonth: 15 },
-    { type: '불임', lastWeek: 0, lastMonth: 2 },
-    { type: '공태', lastWeek: 2, lastMonth: 8 },
-    { type: '유산', lastWeek: 1, lastMonth: 5 },
-    { type: '도태', lastWeek: 4, lastMonth: 12 },
-    { type: '폐사', lastWeek: 1, lastMonth: 6 },
-    { type: '임돈전출', lastWeek: 2, lastMonth: 0 },
-    { type: '임돈판매', lastWeek: 0, lastMonth: 2 },
-  ],
-  accidentPeriod: [
-    { period: '~7', count: 3 },
-    { period: '8~10', count: 1 },
-    { period: '11~15', count: 2 },
-    { period: '16~20', count: 1 },
-    { period: '21~35', count: 0 },
-    { period: '36~40', count: 4 },
-    { period: '41~45', count: 2 },
-    { period: '46~', count: 0 },
-  ],
-  farrowing: {
-    planned: 225,
-    actual: 221,
-    rate: 98.2,
-    stats: {
-      totalBorn: { sum: 2890, avg: 13.1 },
-      bornAlive: { sum: 2650, avg: 12.0, rate: 91.7 },
-      stillborn: { sum: 156, avg: 0.7, rate: 5.4 },
-      mummy: { sum: 84, avg: 0.4, rate: 2.9 },
-      culled: { sum: 320, avg: 1.4, rate: 12.1 },
-    },
-  },
-  weaning: {
-    planned: 210,
-    actual: 205,
-    rate: 97.6,
-    stats: {
-      weanPigs: { sum: 2208, avg: 10.8 },
-      partialWean: { sum: 110, avg: 0.5 },
-      avgWeight: 6.2,
-      survivalRate: 92.1,
-    },
-  },
+  // accidentType, accidentPeriod - DB 연동 완료 (SG, SG_CHART)
   culling: {
     dotae: 27,
     dead: 5,
@@ -422,21 +329,7 @@ export const parityReturn = {
   data: [0, 3, 7, 10, 14, 16, 18, 20, 21],
 };
 
-// 임신일별 사고복수
-export const accidentByPeriod = {
-  xData: lastweekData.accidentPeriod.map((p) => p.period),
-  data: lastweekData.accidentPeriod.map((p) => p.count),
-};
-
-// 산차별 사고원인
-export const parityAccident = {
-  xData: ['1산', '2산', '3산', '4산', '5산', '6산', '7산', '8산', '9산↑'],
-  series: [
-    { name: '재발', data: [2, 3, 4, 3, 2, 3, 2, 1, 1] },
-    { name: '불임', data: [0, 1, 1, 0, 1, 0, 1, 0, 0] },
-    { name: '공태', data: [1, 2, 1, 2, 1, 2, 1, 1, 0] },
-  ],
-};
+// accidentByPeriod, parityAccident - DB 연동 완료 (SG, SG_CHART)
 
 // 산차별 분만성적
 export const parityBirth = {
@@ -481,8 +374,6 @@ export const chartDataMap = {
   sowChart: parityDistribution,
   matingChart: matingByReturnDay,
   parityReturn: parityReturn,
-  accidentPeriod: accidentByPeriod,
-  parityAccident: parityAccident,
   parityBirth: parityBirth,
   parityWean: parityWean,
   cullingChart: cullingDistribution,
@@ -549,6 +440,7 @@ export interface ReportDetail {
   todo: {
     items: any[];
   };
+  popupData?: Record<string, any>;
 }
 
 export const reportDetail: ReportDetail = {
@@ -599,68 +491,10 @@ export const reportDetail: ReportDetail = {
   todo: {
     items: [],
   },
+  // 팝업 데이터는 DB에서 조회 (Mock 사용 안함)
+  popupData: {},
 };
 
-// 팝업 데이터
-export interface PopupDataType {
-  alertMd: { sowId: string; status: string; days: number; lastEventDate: string }[];
-  modon: { total: number; breakdown: any[]; history: { date: string; count: number }[] };
-  mating: { total: number; byParity: { parity: number; count: number }[] };
-  farrowing: { total: number; live: number; dead: number; mummy: number };
-  weaning: { total: number; avgWeight: number };
-  accident: { total: number; reasons: { reason: string; count: number }[] };
-  culling: { total: number; reasons: { reason: string; count: number }[] };
-  shipment: { total: number; avgWeight: number; grade1Plus: number };
-  schedule: { date: string; events: { date: string; type: string; count: number; title: string }[] };
-}
-
-export const popupData: PopupDataType = {
-  alertMd: [
-    { sowId: '001', status: '재발', days: 25, lastEventDate: '2023-09-10' },
-    { sowId: '005', status: '유산', days: 5, lastEventDate: '2023-09-30' },
-    { sowId: '012', status: '도태', days: 0, lastEventDate: '2023-10-05' },
-  ],
-  modon: {
-    total: 450,
-    breakdown: [],
-    history: [
-      { date: '2023-09-01', count: 448 },
-      { date: '2023-10-01', count: 450 },
-    ],
-  },
-  mating: {
-    total: 25,
-    byParity: [
-      { parity: 1, count: 5 },
-      { parity: 2, count: 8 },
-      { parity: 3, count: 12 },
-    ],
-  },
-  farrowing: {
-    total: 250,
-    live: 230,
-    dead: 15,
-    mummy: 5,
-  },
-  weaning: {
-    total: 200,
-    avgWeight: 6.5,
-  },
-  accident: {
-    total: 1,
-    reasons: [{ reason: '압사', count: 1 }],
-  },
-  culling: {
-    total: 2,
-    reasons: [{ reason: '지제불량', count: 2 }],
-  },
-  shipment: {
-    total: 150,
-    avgWeight: 115,
-    grade1Plus: 65,
-  },
-  schedule: {
-    date: '2023-10-02',
-    events: [{ date: '2023-10-02', type: 'mating', count: 5, title: '교배 5두' }],
-  },
-};
+// 팝업 데이터는 DB에서 조회 - Mock fallback 제거됨
+// DB 연동 완료: modon, mating, farrowing, weaning, accident, culling, shipment
+export const popupData: Record<string, any> = {};

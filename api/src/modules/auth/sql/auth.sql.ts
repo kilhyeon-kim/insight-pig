@@ -42,6 +42,7 @@ export const AUTH_SQL = {
         F.COMPANY_CD,
         F.SOLE_CD,
         F.AGENT_CD,
+        F.COUNTRY_CODE,
         F.USE_YN
     FROM TA_FARM F
     WHERE F.FARM_NO = :farmNo

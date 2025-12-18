@@ -209,11 +209,13 @@ export default function WeeklyDetailPage({ params }: WeeklyDetailPageProps) {
                 {/* This Week Section */}
                 <ThisWeekSection data={data.thisWeek} onPopupOpen={handlePopupOpen} />
 
-                {/* Extra Section (부가 정보 아코디언) */}
-                {data.extra && <ExtraSection data={data.extra} onPopupOpen={handlePopupOpen} />}
+                <div className="space-y-6">
+                    {/* Extra Section (부가 정보 아코디언) */}
+                    {data.extra && <ExtraSection data={data.extra} onPopupOpen={handlePopupOpen} />}
 
-                {/* Mgmt Section (현재 시기 관리 포인트) */}
-                {data.mgmt && <MgmtSection data={data.mgmt} />}
+                    {/* Mgmt Section (현재 시기 관리 포인트) */}
+                    {data.mgmt && <MgmtSection data={data.mgmt} />}
+                </div>
             </div>
 
             {/* Popups - 조건부 마운트로 메모리 최적화 */}
@@ -314,6 +316,7 @@ export default function WeeklyDetailPage({ params }: WeeklyDetailPageProps) {
                     onClose={handlePopupClose}
                     data={data.scheduleData.vaccine}
                     title="백신 예정"
+                    showVaccineName={true}
                 />
             )}
 

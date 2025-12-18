@@ -14,8 +14,8 @@ export const WEEKLY_SQL = {
         M.SEQ,
         M.REPORT_YEAR,
         M.REPORT_WEEK_NO,
-        TO_CHAR(TO_DATE(M.DT_FROM, 'YYYYMMDD'), 'YYYY.MM.DD') AS DT_FROM,
-        TO_CHAR(TO_DATE(M.DT_TO, 'YYYYMMDD'), 'YYYY.MM.DD') AS DT_TO,
+        TO_CHAR(TO_DATE(M.DT_FROM, 'YYYYMMDD'), 'YY.MM.DD') AS DT_FROM,
+        TO_CHAR(TO_DATE(M.DT_TO, 'YYYYMMDD'), 'YY.MM.DD') AS DT_TO,
         M.STATUS_CD,
         TO_CHAR(SF_GET_LOCALE_VW_DATE_2022('KOR', M.LOG_INS_DT), 'YYYY.MM.DD') AS LOG_INS_DT,
         W.SHARE_TOKEN,
@@ -40,8 +40,8 @@ export const WEEKLY_SQL = {
         M.SEQ,
         M.REPORT_YEAR,
         M.REPORT_WEEK_NO,
-        TO_CHAR(TO_DATE(M.DT_FROM, 'YYYYMMDD'), 'YYYY.MM.DD') AS DT_FROM,
-        TO_CHAR(TO_DATE(M.DT_TO, 'YYYYMMDD'), 'YYYY.MM.DD') AS DT_TO,
+        TO_CHAR(TO_DATE(M.DT_FROM, 'YYYYMMDD'), 'YY.MM.DD') AS DT_FROM,
+        TO_CHAR(TO_DATE(M.DT_TO, 'YYYYMMDD'), 'YY.MM.DD') AS DT_TO,
         M.STATUS_CD,
         TO_CHAR(SF_GET_LOCALE_VW_DATE_2022('KOR', M.LOG_INS_DT), 'YYYY.MM.DD') AS LOG_INS_DT,
         W.SHARE_TOKEN,
@@ -70,11 +70,11 @@ export const WEEKLY_SQL = {
         W.OWNER_NM,
         W.STATUS_CD,
         W.SHARE_TOKEN,
-        TO_CHAR(TO_DATE(W.TOKEN_EXPIRE_DT, 'YYYYMMDD'), 'YYYY.MM.DD') AS TOKEN_EXPIRE_DT,
+        TO_CHAR(TO_DATE(W.TOKEN_EXPIRE_DT, 'YYYYMMDD'), 'YY.MM.DD') AS TOKEN_EXPIRE_DT,
         W.REPORT_YEAR,
         W.REPORT_WEEK_NO,
-        TO_CHAR(TO_DATE(W.DT_FROM, 'YYYYMMDD'), 'YYYY.MM.DD') AS DT_FROM,
-        TO_CHAR(TO_DATE(W.DT_TO, 'YYYYMMDD'), 'YYYY.MM.DD') AS DT_TO,
+        TO_CHAR(TO_DATE(W.DT_FROM, 'YYYYMMDD'), 'YY.MM.DD') AS DT_FROM,
+        TO_CHAR(TO_DATE(W.DT_TO, 'YYYYMMDD'), 'YY.MM.DD') AS DT_TO,
         W.ALERT_TOTAL,
         W.ALERT_HUBO,
         W.ALERT_EU_MI,
@@ -83,6 +83,8 @@ export const WEEKLY_SQL = {
         W.ALERT_EU_DELAY,
         W.MODON_REG_CNT,
         W.MODON_SANGSI_CNT,
+        W.MODON_REG_CHG,
+        W.MODON_SANGSI_CHG,
         W.LAST_GB_CNT,
         W.LAST_GB_SUM,
         W.LAST_BM_CNT,
@@ -95,16 +97,23 @@ export const WEEKLY_SQL = {
         W.LAST_BM_SUM_LIVE,
         W.LAST_BM_AVG_TOTAL,
         W.LAST_BM_AVG_LIVE,
+        W.LAST_BM_SUM_AVG_TOTAL,
+        W.LAST_BM_SUM_AVG_LIVE,
         W.LAST_BM_CHG_TOTAL,
         W.LAST_BM_CHG_LIVE,
         W.LAST_EU_CNT,
         W.LAST_EU_JD_CNT,
+        W.LAST_EU_AVG_JD,
         W.LAST_EU_AVG_KG,
         W.LAST_EU_SUM_CNT,
         W.LAST_EU_SUM_JD,
+        W.LAST_EU_SUM_AVG_JD,
+        W.LAST_EU_CHG_JD,
         W.LAST_EU_CHG_KG,
         W.LAST_SG_CNT,
+        W.LAST_SG_AVG_GYUNGIL,
         W.LAST_SG_SUM,
+        W.LAST_SG_SUM_AVG_GYUNGIL,
         W.LAST_CL_CNT,
         W.LAST_CL_SUM,
         W.LAST_SH_CNT,
@@ -140,16 +149,22 @@ export const WEEKLY_SQL = {
         S.MASTER_SEQ,
         S.FARM_NO,
         S.GUBUN,
+        S.SUB_GUBUN,
         S.SORT_NO,
-        S.CODE_1 AS CODE1, S.CODE_2 AS CODE2,
-        S.CNT_1 AS CNT1, S.CNT_2 AS CNT2, S.CNT_3 AS CNT3,
-        S.CNT_4 AS CNT4, S.CNT_5 AS CNT5, S.CNT_6 AS CNT6,
-        S.VAL_1 AS VAL1, S.VAL_2 AS VAL2, S.VAL_3 AS VAL3, S.VAL_4 AS VAL4,
-        S.STR_1 AS STR1, S.STR_2 AS STR2
+        S.CODE_1, S.CODE_2,
+        S.CNT_1, S.CNT_2, S.CNT_3, S.CNT_4, S.CNT_5,
+        S.CNT_6, S.CNT_7, S.CNT_8, S.CNT_9, S.CNT_10,
+        S.CNT_11, S.CNT_12, S.CNT_13, S.CNT_14, S.CNT_15,
+        S.VAL_1, S.VAL_2, S.VAL_3, S.VAL_4, S.VAL_5,
+        S.VAL_6, S.VAL_7, S.VAL_8, S.VAL_9, S.VAL_10,
+        S.VAL_11, S.VAL_12, S.VAL_13, S.VAL_14, S.VAL_15,
+        S.STR_1, S.STR_2, S.STR_3, S.STR_4, S.STR_5,
+        S.STR_6, S.STR_7, S.STR_8, S.STR_9, S.STR_10,
+        S.STR_11, S.STR_12, S.STR_13, S.STR_14, S.STR_15
     FROM TS_INS_WEEK_SUB S
     WHERE S.MASTER_SEQ = :masterSeq
       AND S.FARM_NO = :farmNo
-    ORDER BY S.GUBUN ASC, S.SORT_NO ASC
+    ORDER BY S.GUBUN ASC, S.SUB_GUBUN ASC, S.SORT_NO ASC
   `,
 
   /**
@@ -164,17 +179,23 @@ export const WEEKLY_SQL = {
         S.MASTER_SEQ,
         S.FARM_NO,
         S.GUBUN,
+        S.SUB_GUBUN,
         S.SORT_NO,
-        S.CODE_1 AS CODE1, S.CODE_2 AS CODE2,
-        S.CNT_1 AS CNT1, S.CNT_2 AS CNT2, S.CNT_3 AS CNT3,
-        S.CNT_4 AS CNT4, S.CNT_5 AS CNT5, S.CNT_6 AS CNT6,
-        S.VAL_1 AS VAL1, S.VAL_2 AS VAL2, S.VAL_3 AS VAL3, S.VAL_4 AS VAL4,
-        S.STR_1 AS STR1, S.STR_2 AS STR2
+        S.CODE_1, S.CODE_2,
+        S.CNT_1, S.CNT_2, S.CNT_3, S.CNT_4, S.CNT_5,
+        S.CNT_6, S.CNT_7, S.CNT_8, S.CNT_9, S.CNT_10,
+        S.CNT_11, S.CNT_12, S.CNT_13, S.CNT_14, S.CNT_15,
+        S.VAL_1, S.VAL_2, S.VAL_3, S.VAL_4, S.VAL_5,
+        S.VAL_6, S.VAL_7, S.VAL_8, S.VAL_9, S.VAL_10,
+        S.VAL_11, S.VAL_12, S.VAL_13, S.VAL_14, S.VAL_15,
+        S.STR_1, S.STR_2, S.STR_3, S.STR_4, S.STR_5,
+        S.STR_6, S.STR_7, S.STR_8, S.STR_9, S.STR_10,
+        S.STR_11, S.STR_12, S.STR_13, S.STR_14, S.STR_15
     FROM TS_INS_WEEK_SUB S
     WHERE S.MASTER_SEQ = :masterSeq
       AND S.FARM_NO = :farmNo
       AND S.GUBUN = :gubun
-    ORDER BY S.SORT_NO ASC
+    ORDER BY S.SUB_GUBUN ASC, S.SORT_NO ASC
   `,
 
   /**
@@ -189,16 +210,118 @@ export const WEEKLY_SQL = {
         S.MASTER_SEQ,
         S.FARM_NO,
         S.GUBUN,
+        S.SUB_GUBUN,
         S.SORT_NO,
-        S.CODE_1 AS CODE1, S.CODE_2 AS CODE2,
-        S.CNT_1 AS CNT1, S.CNT_2 AS CNT2, S.CNT_3 AS CNT3,
-        S.CNT_4 AS CNT4, S.CNT_5 AS CNT5, S.CNT_6 AS CNT6,
-        S.VAL_1 AS VAL1, S.VAL_2 AS VAL2, S.VAL_3 AS VAL3, S.VAL_4 AS VAL4,
-        S.STR_1 AS STR1, S.STR_2 AS STR2
+        S.CODE_1, S.CODE_2,
+        S.CNT_1, S.CNT_2, S.CNT_3, S.CNT_4, S.CNT_5,
+        S.CNT_6, S.CNT_7, S.CNT_8, S.CNT_9, S.CNT_10,
+        S.CNT_11, S.CNT_12, S.CNT_13, S.CNT_14, S.CNT_15,
+        S.VAL_1, S.VAL_2, S.VAL_3, S.VAL_4, S.VAL_5,
+        S.VAL_6, S.VAL_7, S.VAL_8, S.VAL_9, S.VAL_10,
+        S.VAL_11, S.VAL_12, S.VAL_13, S.VAL_14, S.VAL_15,
+        S.STR_1, S.STR_2, S.STR_3, S.STR_4, S.STR_5,
+        S.STR_6, S.STR_7, S.STR_8, S.STR_9, S.STR_10,
+        S.STR_11, S.STR_12, S.STR_13, S.STR_14, S.STR_15
     FROM TS_INS_WEEK_SUB S
     WHERE S.MASTER_SEQ = :masterSeq
       AND S.FARM_NO = :farmNo
       AND S.GUBUN LIKE :gubun
-    ORDER BY S.GUBUN ASC, S.SORT_NO ASC
+    ORDER BY S.GUBUN ASC, S.SUB_GUBUN ASC, S.SORT_NO ASC
+  `,
+
+  /**
+   * 도폐사 원인코드명 조회
+   * @param codes - 원인코드 목록 (콤마 구분, 예: '031038,031035,031073')
+   * @param lang - 언어코드 (ko/en/vi)
+   */
+  getReasonCodeNames: `
+    /* weekly.weekly.getReasonCodeNames : 도폐사 원인코드명 조회 */
+    SELECT CODE, CNAME
+    FROM TC_CODE_JOHAP
+    WHERE PCODE = '031'
+      AND LANGUAGE_CD = :lang
+      AND CODE IN (SELECT REGEXP_SUBSTR(:codes, '[^,]+', 1, LEVEL)
+                   FROM DUAL
+                   CONNECT BY REGEXP_SUBSTR(:codes, '[^,]+', 1, LEVEL) IS NOT NULL)
+  `,
+
+  /**
+   * 예정돈 조회 (FN_MD_SCHEDULE_BSE_2020)
+   * - 지난주 실적 각 팝업의 예정 표시
+   * - 금주 실적 요일별 건수 셋팅
+   * @param farmNo - 농장번호
+   * @param reportGb - 리포트구분 (JOB-DAJANG: 작업예정돈 대장, JOB-CALENDAR: 달력)
+   * @param scheduleGb - 예정구분 (150001:임신진단, 150002:분만, 150003:이유, 150004:백신, 150005:교배, 150007:백신2)
+   * @param statusCode - 모돈상태 (NULL=전체)
+   * @param dtFrom - 시작일 (yyyy-MM-dd)
+   * @param dtTo - 종료일 (yyyy-MM-dd)
+   * @param lang - 언어 (ko/en/vi)
+   * @param seq - 예정작업 SEQ (-1=전체, 콤마구분)
+   * @param sancha - 산차범위 (FROM,TO 형식, NULL=전체)
+   */
+  getScheduleList: `
+    /* weekly.weekly.getScheduleList : 예정돈 조회 */
+    SELECT
+        FARM_NO,
+        PIG_NO,
+        FARM_PIG_NO,
+        IGAK_NO,
+        WK_NM,
+        AUTO_GRP,
+        LOC_NM,
+        SANCHA,
+        GYOBAE_CNT,
+        LAST_WK_DT,
+        PASS_DAY,
+        PASS_DT,
+        LAST_WK_NM,
+        LAST_WK_GUBUN,
+        LAST_WK_GUBUN_CD,
+        ARTICLE_NM,
+        HCODE,
+        DAERI_YN
+    FROM TABLE(FN_MD_SCHEDULE_BSE_2020(
+        :farmNo,
+        :reportGb,
+        :scheduleGb,
+        :statusCode,
+        :dtFrom,
+        :dtTo,
+        NULL,
+        :lang,
+        'yyyy-MM-dd',
+        :seq,
+        :sancha
+    ))
+  `,
+
+  /**
+   * 예정돈 건수 조회
+   * @param farmNo - 농장번호
+   * @param reportGb - 리포트구분
+   * @param scheduleGb - 예정구분
+   * @param statusCode - 모돈상태
+   * @param dtFrom - 시작일
+   * @param dtTo - 종료일
+   * @param lang - 언어
+   * @param seq - 예정작업 SEQ
+   * @param sancha - 산차범위
+   */
+  getScheduleCount: `
+    /* weekly.weekly.getScheduleCount : 예정돈 건수 조회 */
+    SELECT COUNT(*) AS CNT
+    FROM TABLE(FN_MD_SCHEDULE_BSE_2020(
+        :farmNo,
+        :reportGb,
+        :scheduleGb,
+        :statusCode,
+        :dtFrom,
+        :dtTo,
+        NULL,
+        :lang,
+        'yyyy-MM-dd',
+        :seq,
+        :sancha
+    ))
   `,
 };

@@ -32,10 +32,16 @@ export const MatingPopup: React.FC<MatingPopupProps> = ({ isOpen, onClose, data 
     const splitLineColor = isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.08)';
     const dataLabelColor = isDark ? '#ffd700' : '#333';  // 다크모드: 골드 (확 뜨는 색상)
 
-    // 달성률 계산 (소수점 1자리)
+    // 달성률 계산 (소수점 1자리, 문자열 반환)
     const calcRate = (planned: number, actual: number): string => {
         if (planned === 0) return '-';
         return ((actual / planned) * 100).toFixed(1) + '%';
+    };
+
+    // 달성률 계산 (숫자 반환, 프로그레스바 width용)
+    const calcRateNum = (planned: number, actual: number): number => {
+        if (planned === 0) return 0;
+        return (actual / planned) * 100;
     };
 
     // 차트 옵션 (재귀일별 교배복수)
@@ -139,48 +145,72 @@ export const MatingPopup: React.FC<MatingPopupProps> = ({ isOpen, onClose, data 
                         <span>달성율 : 예정작업 대비</span>
                         <span>단위: 복</span>
                     </div>
-                    <div className="popup-table-wrap">
-                        <table className="popup-table-02" id="tbl-mating-type">
-                            <thead>
-                                <tr>
-                                    <th>구분</th>
-                                    <th>예정</th>
-                                    <th>교배</th>
-                                    <th>달성률</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {data.table.map((row, index) => {
-                                    const rate = calcRate(row.planned, row.actual);
-                                    const rateValue = parseFloat(rate);
-                                    return (
-                                        <tr key={index}>
-                                            <td className="label">{row.type}</td>
-                                            <td>{row.planned}</td>
-                                            <td>{row.actual}</td>
-                                            <td className={rate !== '-' ? (rateValue >= 100 ? 'text-green-600' : 'text-red-600') : ''}>
-                                                {rate}
-                                            </td>
-                                        </tr>
-                                    );
-                                })}
-                                <tr className="sum-row">
-                                    <td className="label">합계</td>
-                                    <td>{data.total.planned}</td>
-                                    <td className="total">{data.total.actual}</td>
-                                    {(() => {
-                                        const totalRate = calcRate(data.total.planned, data.total.actual);
-                                        const totalRateValue = parseFloat(totalRate);
-                                        return (
-                                            <td className={totalRateValue >= 100 ? 'text-green-600' : 'text-red-600'}>
-                                                {totalRate}
-                                            </td>
-                                        );
-                                    })()}
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
+
+                    {/* 요약 리스트 - 유형 2 스타일 */}
+                    {data.summary && (
+                        <div className="mating-summary-list" id="mating-summary">
+                            {/* 합계 - 하이라이트 */}
+                            <div className="summary-row highlight">
+                                <div className="summary-row-left">
+                                    <span className="summary-dot"></span>
+                                    <span className="summary-label">합계</span>
+                                    <div className="summary-sub" style={{ marginTop: 0, marginLeft: '8px' }}>
+                                        예정 {data.summary.totalPlanned || data.total.planned} · <span className={`rate-badge ${(data.summary.totalActual / (data.summary.totalPlanned || data.total.planned || 1) * 100) >= 100 ? 'good' : (data.summary.totalActual / (data.summary.totalPlanned || data.total.planned || 1) * 100) >= 80 ? 'warn' : 'bad'}`}>{calcRate(data.summary.totalPlanned || data.total.planned, data.summary.totalActual)}</span>
+                                    </div>
+                                </div>
+                                <div className="summary-row-right">
+                                    <span className="summary-value">{data.summary.totalActual}복</span>
+                                </div>
+                            </div>
+
+                            {/* 교배 구성 - 프로그레스 바 + 예정/실적 */}
+                            <div className="section-title">교배 구성</div>
+
+                            {/* 정상교배복수 - 예정/달성률 표시 */}
+                            <div className="summary-row with-bar">
+                                <div className="summary-row-header">
+                                    <span className="summary-label">정상교배복수(초교배포함 )<span className="summary-plan">예정 {data.summary.jsGbPlanned || 0}복 ({calcRate(data.summary.jsGbPlanned || 0, data.summary.jsGbCnt || 0)})</span></span>
+                                    <span className="summary-value">{data.summary.jsGbCnt || 0}복</span>
+                                </div>
+                            </div>
+
+                            {/* 초교배복수 - 예정/달성률 표시 */}
+                            <div className="summary-row with-bar">
+                                <div className="summary-row-header">
+                                    <span className="summary-label">초교배복수 <span className="summary-plan">예정 {data.summary.firstGbPlanned || 0}복 ({calcRate(data.summary.firstGbPlanned || 0, data.summary.firstGbCnt || 0)})</span></span>
+                                    <span className="summary-value">{data.summary.firstGbCnt || 0}복</span>
+                                </div>
+                            </div>
+
+                            {/* 재발교배복수 - 예정 없음 */}
+                            <div className="summary-row with-bar">
+                                <div className="summary-row-header">
+                                    <span className="summary-label">재발교배복수</span>
+                                    <span className="summary-value">{data.summary.sagoGbCnt || 0}복</span>
+                                </div>
+                            </div>
+
+                            {/* 기타 정보 - 기존 2열 그리드 */}
+                            <div className="summary-row-group">
+                                <div className="summary-row compact">
+                                    <span className="summary-label">교배돈중 사고복수</span>
+                                    <span className="summary-value">{data.summary.accidentCnt}</span>
+                                </div>
+                                <div className="summary-row compact">
+                                    <span className="summary-label">교배돈중 분만복수</span>
+                                    <span className="summary-value">{data.summary.farrowingCnt}</span>
+                                </div>
+                                <div className="summary-row compact">
+                                    <span className="summary-label">평균 재귀발정일</span>
+                                    <span className="summary-value">{data.summary.avgReturnDay > 0 ? data.summary.avgReturnDay.toFixed(1) : '-'}일</span>
+                                </div>
+                                <div className="summary-row compact">
+                                    <span className="summary-label">평균 초교배일</span>
+                                    <span className="summary-value">{data.summary.avgFirstGbDay > 0 ? data.summary.avgFirstGbDay.toFixed(1) : '-'}일</span>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
             )}
 

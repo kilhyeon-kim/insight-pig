@@ -3,6 +3,7 @@ import { DataSource } from 'typeorm';
 import { TsInsWeekSub } from './entities';
 import { WEEKLY_SQL } from './sql';
 import { SHARE_TOKEN_SQL } from '../auth/sql/share-token.sql';
+import { ComService } from '../com/com.service';
 import * as mockData from '../../data/mock/weekly.mock';
 
 /**
@@ -21,7 +22,10 @@ const params = (obj: Record<string, any>): any => obj;
 export class WeeklyService {
   private readonly logger = new Logger(WeeklyService.name);
 
-  constructor(private readonly dataSource: DataSource) { }
+  constructor(
+    private readonly dataSource: DataSource,
+    private readonly comService: ComService,
+  ) { }
 
   // ─────────────────────────────────────────────────────────────────────────────
   // 보고서 목록/상세 (실제 DB 연동)
@@ -227,11 +231,40 @@ export class WeeklyService {
       const subs = await this.dataSource.query(WEEKLY_SQL.getReportSub, params({ masterSeq, farmNo }));
 
       // 3. 데이터 변환
-      return this.transformToReportDetailFromRow(week, subs);
+      const reportData = this.transformToReportDetailFromRow(week, subs);
+
+      // 4. 팝업 데이터 추가 (모든 팝업 데이터를 한 번에 조회)
+      const popupData = await this.getAllPopupData(masterSeq, farmNo);
+
+      return { ...reportData, popupData };
     } catch (error) {
-      this.logger.warn('DB 조회 실패, Mock 데이터 반환', error.message);
-      return mockData.reportDetail;
+      this.logger.error('DB 조회 실패', error.message);
+      // DB 연동 완료 - Mock fallback 제거
+      return null;
     }
+  }
+
+  /**
+   * 모든 팝업 데이터 조회
+   * @param masterSeq 마스터 SEQ
+   * @param farmNo 농장번호
+   */
+  private async getAllPopupData(masterSeq: number, farmNo: number) {
+    const popupTypes = ['modon', 'mating', 'farrowing', 'weaning', 'accident', 'culling', 'shipment'];
+    const popupData: Record<string, any> = {};
+
+    for (const type of popupTypes) {
+      try {
+        const data = await this.getPopupData(type, masterSeq, farmNo);
+        if (data) {
+          popupData[type] = data;
+        }
+      } catch (error) {
+        this.logger.warn(`팝업 데이터 조회 실패: ${type}`, error.message);
+      }
+    }
+
+    return popupData;
   }
 
   /**
@@ -276,6 +309,8 @@ export class WeeklyService {
         modon: {
           regCnt: week.MODON_REG_CNT,
           sangsiCnt: week.MODON_SANGSI_CNT,
+          regCntChange: week.MODON_REG_CHG,       // NULL이면 undefined → 증감 표시 안함
+          sangsiCntChange: week.MODON_SANGSI_CHG, // NULL이면 undefined → 증감 표시 안함
         },
         mating: {
           cnt: week.LAST_GB_CNT,
@@ -283,29 +318,37 @@ export class WeeklyService {
         },
         farrowing: {
           cnt: week.LAST_BM_CNT,
-          total: week.LAST_BM_TOTAL,
-          live: week.LAST_BM_LIVE,
-          dead: week.LAST_BM_DEAD,
-          mummy: week.LAST_BM_MUMMY,
+          totalCnt: week.LAST_BM_TOTAL,
+          liveCnt: week.LAST_BM_LIVE,
+          deadCnt: week.LAST_BM_DEAD,
+          mummyCnt: week.LAST_BM_MUMMY,
           sumCnt: week.LAST_BM_SUM_CNT,
-          sumTotal: week.LAST_BM_SUM_TOTAL,
-          sumLive: week.LAST_BM_SUM_LIVE,
+          sumTotalCnt: week.LAST_BM_SUM_TOTAL,
+          sumLiveCnt: week.LAST_BM_SUM_LIVE,
           avgTotal: week.LAST_BM_AVG_TOTAL,
           avgLive: week.LAST_BM_AVG_LIVE,
-          chgTotal: week.LAST_BM_CHG_TOTAL,
-          chgLive: week.LAST_BM_CHG_LIVE,
+          sumAvgTotal: week.LAST_BM_SUM_AVG_TOTAL,  // 누계 총산 평균
+          sumAvgLive: week.LAST_BM_SUM_AVG_LIVE,    // 누계 실산 평균
+          changeTotal: week.LAST_BM_CHG_TOTAL,
+          changeLive: week.LAST_BM_CHG_LIVE,
         },
         weaning: {
           cnt: week.LAST_EU_CNT,
           jdCnt: week.LAST_EU_JD_CNT,
-          avgKg: week.LAST_EU_AVG_KG,
+          pigletCnt: week.LAST_EU_JD_CNT,  // alias
+          avgWeight: week.LAST_EU_AVG_KG,
+          avgJdCnt: week.LAST_EU_AVG_JD,      // DB 컬럼에서 직접 (분만 패턴과 동일)
           sumCnt: week.LAST_EU_SUM_CNT,
-          sumJd: week.LAST_EU_SUM_JD,
-          chgKg: week.LAST_EU_CHG_KG,
+          sumJdCnt: week.LAST_EU_SUM_JD,
+          sumAvgJdCnt: week.LAST_EU_SUM_AVG_JD,  // 누계 평균 이유두수
+          changeJdCnt: week.LAST_EU_CHG_JD,   // 평균 이유두수 증감 (1년평균 대비)
+          changeWeight: week.LAST_EU_CHG_KG,
         },
         accident: {
           cnt: week.LAST_SG_CNT,
+          avgGyungil: week.LAST_SG_AVG_GYUNGIL,        // 지난주 평균 경과일
           sum: week.LAST_SG_SUM,
+          sumAvgGyungil: week.LAST_SG_SUM_AVG_GYUNGIL, // 당해년도 평균 경과일
         },
         culling: {
           cnt: week.LAST_CL_CNT,
@@ -313,7 +356,7 @@ export class WeeklyService {
         },
         shipment: {
           cnt: week.LAST_SH_CNT,
-          avgKg: week.LAST_SH_AVG_KG,
+          avg: week.LAST_SH_AVG_KG,
           sum: week.LAST_SH_SUM,
           avgSum: week.LAST_SH_AVG_SUM,
         },
@@ -326,6 +369,8 @@ export class WeeklyService {
         vaccineSum: week.THIS_VACCINE_SUM,
         shipSum: week.THIS_SHIP_SUM,
         schedules: this.extractScheduleData(subs),
+        // 캘린더 그리드 데이터 (ThisWeekSection.tsx용)
+        calendarGrid: this.extractCalendarGridData(subs, week),
       },
       kpi: {
         psy: week.KPI_PSY,
@@ -334,7 +379,110 @@ export class WeeklyService {
         psyY: week.PSY_Y,
         psyZone: week.PSY_ZONE,
       },
+      // 부가 정보 (Mock 데이터 사용)
+      extra: {
+        psy: {
+          zone: mockData.operationSummaryData.psyDelay.zone,
+          status: mockData.operationSummaryData.psyDelay.statusLabel,
+          value: mockData.operationSummaryData.psyDelay.psy,
+          delay: mockData.operationSummaryData.psyDelay.delay,
+        },
+        price: {
+          avg: mockData.operationSummaryData.auctionPrice.national,
+          max: mockData.operationSummaryData.auctionPrice.dodram, // 예시 매핑
+          min: mockData.operationSummaryData.auctionPrice.central, // 예시 매핑
+          source: mockData.operationSummaryData.auctionPrice.date,
+        },
+        weather: {
+          min: mockData.operationSummaryData.weather.min,
+          max: mockData.operationSummaryData.weather.max,
+          region: mockData.operationSummaryData.weather.location,
+        },
+      },
+      // 관리 포인트 (Mock 데이터 사용)
+      mgmt: {
+        highlightList: mockData.operationSummaryData.insights.bad.map(text => ({ text, link: null })),
+        recommendList: mockData.operationSummaryData.insights.good.map(item => ({ text: `${item.label}: ${item.value}`, link: null })),
+      },
+      // 금주 작업예정 팝업 데이터 (SCHEDULE_GB, SCHEDULE_BM, SCHEDULE_EU, SCHEDULE_VACCINE)
+      scheduleData: this.extractSchedulePopupData(subs),
     };
+  }
+
+  /**
+   * 금주 작업예정 팝업 데이터 추출
+   * GUBUN='SCHEDULE', SUB_GUBUN='GB/BM/EU/VACCINE'
+   * 컬럼 매핑:
+   *   - STR_1: 예정작업명 (taskNm)
+   *   - STR_2: 기준작업코드 (STD_CD) → ComService로 코드명 변환 (PCODE='02')
+   *   - STR_3: 대상돈군코드 (MODON_STATUS_CD) → ComService로 코드명 변환 (PCODE='01')
+   *   - STR_4: 경과일 (elapsedDays)
+   *   - STR_5: 백신명 (백신예정 시)
+   *   - CNT_1: 대상복수 합계 (count)
+   *   - CNT_2~CNT_8: 요일별 분포 (월~일)
+   */
+  private extractSchedulePopupData(subs: TsInsWeekSub[]) {
+    // 코드 → 코드명 변환 (ComService 캐시 사용)
+    const mapToDetailItem = (s: TsInsWeekSub) => {
+      // STR_2: 기준작업코드 → 기준작업명 (TC_CODE_SYS PCODE='02')
+      const baseTaskCode = s.str2 || '';
+      const baseTaskName = baseTaskCode
+        ? this.comService.getCodeSysName('02', baseTaskCode) || baseTaskCode
+        : '';
+
+      // STR_3: 대상돈군코드 → 대상돈군명 (TC_CODE_SYS PCODE='01')
+      const targetGroupCode = s.str3 || '';
+      const targetGroupName = targetGroupCode
+        ? this.comService.getCodeSysName('01', targetGroupCode) || targetGroupCode
+        : '';
+
+      return {
+        taskNm: s.str1 || '',
+        baseTask: baseTaskName,
+        targetGroup: targetGroupName,
+        elapsedDays: s.str4 || '',
+        count: s.cnt1 || 0,
+        // 요일별 분포 (월~일, CNT_2~CNT_8)
+        daily: [
+          s.cnt2 || 0,  // 월
+          s.cnt3 || 0,  // 화
+          s.cnt4 || 0,  // 수
+          s.cnt5 || 0,  // 목
+          s.cnt6 || 0,  // 금
+          s.cnt7 || 0,  // 토
+          s.cnt8 || 0,  // 일
+        ],
+      };
+    };
+
+    // 교배예정 (GUBUN='SCHEDULE', SUB_GUBUN='GB')
+    const gb = subs
+      .filter((s) => s.gubun === 'SCHEDULE' && s.subGubun === 'GB')
+      .sort((a, b) => (a.sortNo || 0) - (b.sortNo || 0))
+      .map(mapToDetailItem);
+
+    // 분만예정 (GUBUN='SCHEDULE', SUB_GUBUN='BM')
+    const bm = subs
+      .filter((s) => s.gubun === 'SCHEDULE' && s.subGubun === 'BM')
+      .sort((a, b) => (a.sortNo || 0) - (b.sortNo || 0))
+      .map(mapToDetailItem);
+
+    // 이유예정 (GUBUN='SCHEDULE', SUB_GUBUN='EU')
+    const eu = subs
+      .filter((s) => s.gubun === 'SCHEDULE' && s.subGubun === 'EU')
+      .sort((a, b) => (a.sortNo || 0) - (b.sortNo || 0))
+      .map(mapToDetailItem);
+
+    // 백신예정 (GUBUN='SCHEDULE', SUB_GUBUN='VACCINE') - 백신명 추가
+    const vaccine = subs
+      .filter((s) => s.gubun === 'SCHEDULE' && s.subGubun === 'VACCINE')
+      .sort((a, b) => (a.sortNo || 0) - (b.sortNo || 0))
+      .map((s) => ({
+        ...mapToDetailItem(s),
+        vaccineName: s.str5 || '',  // 백신명 추가
+      }));
+
+    return { gb, bm, eu, vaccine };
   }
 
   /**
@@ -381,6 +529,137 @@ export class WeeklyService {
   }
 
   /**
+   * 캘린더 그리드 데이터 추출 (ThisWeekSection.tsx용)
+   * GUBUN='SCHEDULE', SUB_GUBUN='-' (요약), SUB_GUBUN='CAL' (캘린더 그리드)
+   * @see docs/db/sql/00_SQL_GUIDE.md 10.3 SCHEDULE / SCHEDULE_CAL 상세 매핑
+   */
+  private extractCalendarGridData(subs: TsInsWeekSub[], week: any) {
+    // 요약 데이터 (GUBUN='SCHEDULE', SUB_GUBUN='-')
+    const scheduleSub = subs.find((s) => s.gubun === 'SCHEDULE' && s.subGubun === '-');
+
+    // 캘린더 데이터 (GUBUN='SCHEDULE', SUB_GUBUN='CAL', SORT_NO=1~6)
+    const calSubs = subs
+      .filter((s) => s.gubun === 'SCHEDULE' && s.subGubun === 'CAL')
+      .sort((a, b) => (a.sortNo || 0) - (b.sortNo || 0));
+
+    // CODE_1로 각 행 찾기
+    const gbRow = calSubs.find((s) => s.code1 === 'GB');
+    const bmRow = calSubs.find((s) => s.code1 === 'BM');
+    const imsin3wRow = calSubs.find((s) => s.code1 === 'IMSIN_3W');
+    const imsin4wRow = calSubs.find((s) => s.code1 === 'IMSIN_4W');
+    const euRow = calSubs.find((s) => s.code1 === 'EU');
+    const vaccineRow = calSubs.find((s) => s.code1 === 'VACCINE');
+
+    // CNT_1~7을 배열로 변환 (0은 null로)
+    const toArray = (row?: TsInsWeekSub): (number | null)[] => {
+      if (!row) return [null, null, null, null, null, null, null];
+      return [
+        row.cnt1 || null,
+        row.cnt2 || null,
+        row.cnt3 || null,
+        row.cnt4 || null,
+        row.cnt5 || null,
+        row.cnt6 || null,
+        row.cnt7 || null,
+      ];
+    };
+
+    // STR_1~7에서 날짜 추출 (DD 형식)
+    const toDates = (row?: TsInsWeekSub): (number | string)[] => {
+      if (!row) return [];
+      return [
+        row.str1 || '',
+        row.str2 || '',
+        row.str3 || '',
+        row.str4 || '',
+        row.str5 || '',
+        row.str6 || '',
+        row.str7 || '',
+      ].map((d) => {
+        // '01' 같은 문자열은 그대로, 숫자형은 number로
+        const num = parseInt(d, 10);
+        return isNaN(num) ? d : num;
+      });
+    };
+
+    // 날짜 배열 추출 (SCHEDULE_CAL 행에서)
+    // 모든 행에 날짜가 저장되어 있으므로 첫 번째 유효한 행에서 추출
+    let dates = toDates(gbRow || bmRow || imsin3wRow || imsin4wRow || euRow || vaccineRow);
+
+    // SCHEDULE_CAL 데이터가 없는 경우 week 테이블의 DT_TO 기준으로 날짜 생성
+    // DT_TO는 지난주 종료일이므로 +1~+7이 금주
+    if (dates.length === 0 && week.DT_TO) {
+      // DT_TO 형식: 'YY.MM.DD' (API에서 변환됨)
+      // 금주 시작일 계산 (DT_TO + 1)
+      const dtToStr = week.DT_TO; // e.g., '24.12.15'
+      const parts = dtToStr.split('.');
+      if (parts.length === 3) {
+        const year = 2000 + parseInt(parts[0], 10);
+        const month = parseInt(parts[1], 10) - 1;
+        const day = parseInt(parts[2], 10);
+        const lastWeekEnd = new Date(year, month, day);
+
+        dates = [];
+        for (let i = 1; i <= 7; i++) {
+          const d = new Date(lastWeekEnd);
+          d.setDate(d.getDate() + i);
+          dates.push(d.getDate()); // DD만 추출
+        }
+      }
+    }
+
+    // periodFrom/periodTo 계산 (SCHEDULE 데이터 없는 경우 fallback)
+    let periodFrom = scheduleSub?.str1 || '';
+    let periodTo = scheduleSub?.str2 || '';
+
+    if (!periodFrom && dates.length === 7) {
+      // dates[0]과 dates[6]에서 MM.DD 형식 생성
+      // week.DT_TO 기반으로 월 계산
+      const dtToStr = week.DT_TO;
+      const parts = dtToStr?.split('.') || [];
+      if (parts.length === 3) {
+        const year = 2000 + parseInt(parts[0], 10);
+        const month = parseInt(parts[1], 10) - 1;
+        const day = parseInt(parts[2], 10);
+        const lastWeekEnd = new Date(year, month, day);
+
+        const startDate = new Date(lastWeekEnd);
+        startDate.setDate(startDate.getDate() + 1);
+        const endDate = new Date(lastWeekEnd);
+        endDate.setDate(endDate.getDate() + 7);
+
+        periodFrom = `${String(startDate.getMonth() + 1).padStart(2, '0')}.${String(startDate.getDate()).padStart(2, '0')}`;
+        periodTo = `${String(endDate.getMonth() + 1).padStart(2, '0')}.${String(endDate.getDate()).padStart(2, '0')}`;
+      }
+    }
+
+    return {
+      // 주차 정보 (SCHEDULE.CNT_7 또는 week 테이블)
+      weekNum: scheduleSub?.cnt7 || week.REPORT_WEEK_NO || 0,
+      periodFrom,
+      periodTo,
+      // 날짜 배열 (항상 7개)
+      dates,
+      // 요약 합계 (SCHEDULE 행 또는 week 테이블)
+      gbSum: scheduleSub?.cnt1 || week.THIS_GB_SUM || 0,
+      imsinSum: scheduleSub?.cnt2 || week.THIS_IMSIN_SUM || 0,
+      bmSum: scheduleSub?.cnt3 || week.THIS_BM_SUM || 0,
+      euSum: scheduleSub?.cnt4 || week.THIS_EU_SUM || 0,
+      vaccineSum: scheduleSub?.cnt5 || week.THIS_VACCINE_SUM || 0,
+      shipSum: scheduleSub?.cnt6 || week.THIS_SHIP_SUM || 0,
+      // 캘린더 셀 데이터
+      gb: toArray(gbRow),
+      bm: toArray(bmRow),
+      imsin3w: toArray(imsin3wRow),
+      imsin4w: toArray(imsin4wRow),
+      eu: toArray(euRow),
+      vaccine: toArray(vaccineRow),
+      // 출하는 병합 셀 (합계만)
+      ship: scheduleSub?.cnt6 || week.THIS_SHIP_SUM || 0,
+    };
+  }
+
+  /**
    * 날짜 포맷 (YYYY-MM-DD)
    */
   private formatDate(date: Date | string): string {
@@ -410,16 +689,17 @@ export class WeeklyService {
    */
   async getPopupData(type: string, masterSeq: number, farmNo: number) {
     try {
+      // SUB_GUBUN 적용: 단일 GUBUN + SUB_GUBUN으로 구분
       const gubunMap: Record<string, string> = {
         alertMd: 'ALERT_MD',
-        modon: 'PARITY_DIST',
-        mating: 'MATING_RETURN',
-        farrowing: 'PARITY_BIRTH',
-        weaning: 'PARITY_WEAN',
-        accident: 'PARITY_ACCIDENT',
-        culling: 'CULLING_DIST',
-        shipment: 'SHIPMENT',
-        schedule: 'SCHEDULE_%',
+        modon: 'MODON',           // 모돈현황: MODON (산차별 × 상태별)
+        mating: 'GB',             // 교배실적: GB/STAT(요약), GB/CHART(재귀일차트)
+        farrowing: 'BM',          // 분만실적: BM(요약)
+        weaning: 'EU',            // 이유실적: EU(요약)
+        accident: 'SG',           // 임신사고: SG/STAT(원인별), SG/CHART(임신일차트)
+        culling: 'DOPE',          // 도태폐사: DOPE/STAT(요약), DOPE/LIST(원인별), DOPE/CHART(상태별)
+        shipment: 'SHIP',         // 출하실적: SHIP/STAT(요약), SHIP/ROW(크로스탭), SHIP/CHART(차트), SHIP/SCATTER(산점도)
+        schedule: 'SCHEDULE',     // 작업예정: SCHEDULE/-,CAL,GB,BM,EU,VACCINE
       };
 
       const gubun = gubunMap[type];
@@ -427,38 +707,19 @@ export class WeeklyService {
         return null;
       }
 
-      let results: any[];
-
-      if (gubun.includes('%')) {
-        results = await this.dataSource.query(WEEKLY_SQL.getPopupSubLike, params({
-          masterSeq,
-          farmNo,
-          gubun,
-        }));
-      } else {
-        results = await this.dataSource.query(WEEKLY_SQL.getPopupSub, params({
-          masterSeq,
-          farmNo,
-          gubun,
-        }));
-      }
+      // SUB_GUBUN 구조로 변경: 항상 단일 GUBUN으로 조회
+      const results = await this.dataSource.query(WEEKLY_SQL.getPopupSub, params({
+        masterSeq,
+        farmNo,
+        gubun,
+      }));
 
       const subs = results.map((row: any) => this.mapRowToWeekSub(row));
       return this.transformPopupData(type, subs);
     } catch (error) {
-      this.logger.warn(`팝업 데이터 조회 실패: ${type}`, error.message);
-      const popupDataMap: Record<string, any> = {
-        alertMd: mockData.popupData.alertMd,
-        modon: mockData.popupData.modon,
-        mating: mockData.popupData.mating,
-        farrowing: mockData.popupData.farrowing,
-        weaning: mockData.popupData.weaning,
-        accident: mockData.popupData.accident,
-        culling: mockData.popupData.culling,
-        shipment: mockData.popupData.shipment,
-        schedule: mockData.popupData.schedule,
-      };
-      return popupDataMap[type] || null;
+      this.logger.error(`팝업 데이터 조회 실패: ${type}`, error.message);
+      // DB 연동 완료 - Mock fallback 제거
+      return null;
     }
   }
 
@@ -470,21 +731,57 @@ export class WeeklyService {
     sub.masterSeq = row.MASTER_SEQ;
     sub.farmNo = row.FARM_NO;
     sub.gubun = row.GUBUN;
+    sub.subGubun = row.SUB_GUBUN || '-';
     sub.sortNo = row.SORT_NO;
-    sub.code1 = row.CODE1;
-    sub.code2 = row.CODE2;
-    sub.cnt1 = row.CNT1;
-    sub.cnt2 = row.CNT2;
-    sub.cnt3 = row.CNT3;
-    sub.cnt4 = row.CNT4;
-    sub.cnt5 = row.CNT5;
-    sub.cnt6 = row.CNT6;
-    sub.val1 = row.VAL1;
-    sub.val2 = row.VAL2;
-    sub.val3 = row.VAL3;
-    sub.val4 = row.VAL4;
-    sub.str1 = row.STR1;
-    sub.str2 = row.STR2;
+    sub.code1 = row.CODE_1;
+    sub.code2 = row.CODE_2;
+    // CNT_1 ~ CNT_15
+    sub.cnt1 = row.CNT_1;
+    sub.cnt2 = row.CNT_2;
+    sub.cnt3 = row.CNT_3;
+    sub.cnt4 = row.CNT_4;
+    sub.cnt5 = row.CNT_5;
+    sub.cnt6 = row.CNT_6;
+    sub.cnt7 = row.CNT_7;
+    sub.cnt8 = row.CNT_8;
+    sub.cnt9 = row.CNT_9;
+    sub.cnt10 = row.CNT_10;
+    sub.cnt11 = row.CNT_11;
+    sub.cnt12 = row.CNT_12;
+    sub.cnt13 = row.CNT_13;
+    sub.cnt14 = row.CNT_14;
+    sub.cnt15 = row.CNT_15;
+    // VAL_1 ~ VAL_15
+    sub.val1 = row.VAL_1;
+    sub.val2 = row.VAL_2;
+    sub.val3 = row.VAL_3;
+    sub.val4 = row.VAL_4;
+    sub.val5 = row.VAL_5;
+    sub.val6 = row.VAL_6;
+    sub.val7 = row.VAL_7;
+    sub.val8 = row.VAL_8;
+    sub.val9 = row.VAL_9;
+    sub.val10 = row.VAL_10;
+    sub.val11 = row.VAL_11;
+    sub.val12 = row.VAL_12;
+    sub.val13 = row.VAL_13;
+    sub.val14 = row.VAL_14;
+    sub.val15 = row.VAL_15;
+    sub.str1 = row.STR_1;
+    sub.str2 = row.STR_2;
+    sub.str3 = row.STR_3;
+    sub.str4 = row.STR_4;
+    sub.str5 = row.STR_5;
+    sub.str6 = row.STR_6;
+    sub.str7 = row.STR_7;
+    sub.str8 = row.STR_8;
+    sub.str9 = row.STR_9;
+    sub.str10 = row.STR_10;
+    sub.str11 = row.STR_11;
+    sub.str12 = row.STR_12;
+    sub.str13 = row.STR_13;
+    sub.str14 = row.STR_14;
+    sub.str15 = row.STR_15;
     return sub;
   }
 
@@ -526,66 +823,609 @@ export class WeeklyService {
     }));
   }
 
+  /**
+   * 모돈현황 팝업 데이터 변환
+   * GUBUN: MODON
+   * DB 구조: CODE1=산차(후보돈,0산~8산↑), CNT1~5=후보/임신/포유/이유모/사고, CNT6=증감
+   * 원본 SQL: 상태별(행) × 산차별(열) → 피벗하여 산차별(행) × 상태별(열)로 저장
+   * @returns ModonPopupData 형식
+   */
   private transformParityDistPopup(subs: TsInsWeekSub[]) {
-    return subs.map((s) => ({
-      parity: s.code1,
-      count: s.cnt1,
-      ratio: s.val1,
-    }));
+    // 기본 산차 정의: 후보돈 + 0산~8산↑ (원본 SQL 기준: M0~M8)
+    const defaultParities = [
+      { parity: '후보돈', group: 'hubo' as const },
+      { parity: '0산', group: 'current' as const },
+      { parity: '1산', group: 'current' as const },
+      { parity: '2산', group: 'current' as const },
+      { parity: '3산', group: 'current' as const },
+      { parity: '4산', group: 'current' as const },
+      { parity: '5산', group: 'current' as const },
+      { parity: '6산', group: 'current' as const },
+      { parity: '7산', group: 'current' as const },
+      { parity: '8산↑', group: 'current' as const },
+    ];
+
+    // DB 데이터를 Map으로 변환 (CODE1 기준)
+    const dataMap = new Map<string, TsInsWeekSub>();
+    subs.forEach((s) => {
+      if (s.code1) {
+        dataMap.set(s.code1, s);
+      }
+    });
+
+    // 테이블 데이터: 기본 산차 기준으로 생성, 데이터 없으면 null 처리
+    const table = defaultParities.map(({ parity, group }) => {
+      const data = dataMap.get(parity);
+      if (data) {
+        return {
+          parity,
+          hubo: data.cnt1 ?? null,
+          imsin: data.cnt2 ?? null,
+          poyu: data.cnt3 ?? null,
+          eumo: data.cnt4 ?? null,
+          sago: data.cnt5 ?? null,
+          change: data.cnt6 ?? null,
+          group,
+        };
+      }
+      // 데이터 없으면 모두 null (프론트엔드에서 '-' 표시)
+      return {
+        parity,
+        hubo: null,
+        imsin: null,
+        poyu: null,
+        eumo: null,
+        sago: null,
+        change: null,
+        group,
+      };
+    });
+
+    // 차트 데이터: 산차별 두수 (전체 합계), 데이터 없으면 0
+    const chart = {
+      xAxis: defaultParities.map((p) => p.parity),
+      data: defaultParities.map(({ parity }) => {
+        const data = dataMap.get(parity);
+        if (data) {
+          return (data.cnt1 || 0) + (data.cnt2 || 0) + (data.cnt3 || 0) + (data.cnt4 || 0) + (data.cnt5 || 0);
+        }
+        return 0;
+      }),
+    };
+
+    return { table, chart };
   }
 
+  /**
+   * 교배실적 팝업 데이터 변환
+   * GUBUN='GB', SUB_GUBUN='STAT' (요약통계), SUB_GUBUN='CHART' (재귀일별 차트)
+   *
+   * GB/STAT 컬럼 매핑:
+   *   - CNT_1: 합계 실적
+   *   - CNT_2: 교배도중 사고복수
+   *   - CNT_3: 교배도중 분만복수
+   *   - CNT_4: 초교배복수 실적
+   *   - CNT_5: 재발교배복수 실적 (GYOBAE_CNT>1)
+   *   - CNT_6: 정상교배복수 실적 (초교배 제외, GYOBAE_CNT=1)
+   *   - CNT_7: 초교배 예정복수
+   *   - CNT_8: 정상교배 예정복수
+   *   - CNT_9: 재발교배 예정복수
+   *   - VAL_1: 평균 재귀발정일
+   *   - VAL_2: 평균 초교배일
+   *
+   * GB/CHART 컬럼 매핑:
+   *   - CODE_1: 재귀일 구간 (~7, 10, 15, ... 50↑)
+   *   - CNT_1: 해당 구간 교배복수
+   *
+   * @returns MatingPopupData 형식
+   */
   private transformMatingPopup(subs: TsInsWeekSub[]) {
-    return subs.map((s) => ({
-      returnDay: s.code1,
-      count: s.cnt1,
-      ratio: s.val1,
-    }));
+    // 요약 통계 데이터 (GUBUN='GB', SUB_GUBUN='STAT')
+    const statSub = subs.find((s) => s.gubun === 'GB' && s.subGubun === 'STAT');
+
+    // 유형별 테이블 데이터 생성 (초교배, 정상교배, 재발교배)
+    const table: { type: string; planned: number; actual: number; rate: string }[] = [];
+
+    if (statSub) {
+      // 초교배복수
+      const huboPlan = statSub.cnt7 || 0;
+      const huboActual = statSub.cnt4 || 0;
+      table.push({
+        type: '초교배',
+        planned: huboPlan,
+        actual: huboActual,
+        rate: huboPlan > 0 ? ((huboActual / huboPlan) * 100).toFixed(1) + '%' : '-',
+      });
+
+      // 정상교배복수
+      const normalPlan = statSub.cnt8 || 0;
+      const normalActual = statSub.cnt6 || 0;
+      table.push({
+        type: '정상교배',
+        planned: normalPlan,
+        actual: normalActual,
+        rate: normalPlan > 0 ? ((normalActual / normalPlan) * 100).toFixed(1) + '%' : '-',
+      });
+
+      // 재발교배복수
+      const sagoPlan = statSub.cnt9 || 0;
+      const sagoActual = statSub.cnt5 || 0;
+      table.push({
+        type: '재발교배',
+        planned: sagoPlan,
+        actual: sagoActual,
+        rate: sagoPlan > 0 ? ((sagoActual / sagoPlan) * 100).toFixed(1) + '%' : '-',
+      });
+    }
+
+    // 합계 계산
+    const totalPlanned = table.reduce((sum, row) => sum + row.planned, 0);
+    const totalActual = statSub?.cnt1 || table.reduce((sum, row) => sum + row.actual, 0);
+    const total = {
+      planned: totalPlanned,
+      actual: totalActual,
+      rate: totalPlanned > 0 ? ((totalActual / totalPlanned) * 100).toFixed(1) + '%' : '-',
+    };
+
+    // 재귀일별 차트 데이터 (GUBUN='GB', SUB_GUBUN='CHART')
+    const chartSubs = subs.filter((s) => s.gubun === 'GB' && s.subGubun === 'CHART').sort((a, b) => (a.sortNo || 0) - (b.sortNo || 0));
+    const chart = {
+      xAxis: chartSubs.map((s) => s.code1 || ''),
+      data: chartSubs.map((s) => s.cnt1 || 0),
+    };
+
+    // 요약 정보 (GB_STAT)
+    const summary = statSub ? {
+      totalActual: statSub.cnt1 || 0,       // CNT_1: 합계 실적
+      totalPlanned: (statSub.cnt7 || 0) + (statSub.cnt8 || 0),  // 예정 합계 (초교배 + 정상교배)
+      accidentCnt: statSub.cnt2 || 0,       // CNT_2: 교배도중 사고복수
+      farrowingCnt: statSub.cnt3 || 0,      // CNT_3: 교배도중 분만복수
+      avgReturnDay: statSub.val1 || 0,      // VAL_1: 평균 재귀발정일
+      avgFirstGbDay: statSub.val2 || 0,     // VAL_2: 평균 초교배일
+      firstGbCnt: statSub.cnt4 || 0,        // CNT_4: 초교배복수 실적
+      firstGbPlanned: statSub.cnt7 || 0,    // CNT_7: 초교배 예정복수
+      jsGbCnt: statSub.cnt6 || 0,           // CNT_6: 정상교배복수 실적
+      jsGbPlanned: statSub.cnt8 || 0,       // CNT_8: 정상교배 예정복수
+      sagoGbCnt: statSub.cnt5 || 0,         // CNT_5: 재발교배복수 실적 (예정 없음)
+    } : undefined;
+
+    return { table, total, chart, summary };
   }
 
+  /**
+   * 분만실적 팝업 데이터 변환
+   * GUBUN: BM (요약통계)
+   *
+   * BM 컬럼 매핑:
+   *   - CNT_1: 분만복수 (실적)
+   *   - CNT_2: 총산 합계
+   *   - CNT_3: 실산 합계
+   *   - CNT_4: 사산 합계
+   *   - CNT_5: 미라 합계
+   *   - CNT_6: 포유개시 합계
+   *   - CNT_7: 분만복수 (예정)
+   *   - VAL_1: 총산 평균
+   *   - VAL_2: 실산 평균
+   *   - VAL_3: 사산 평균
+   *   - VAL_4: 미라 평균
+   *   - VAL_5: 포유개시 평균
+   *
+   * @returns FarrowingPopupData 형식
+   */
   private transformFarrowingPopup(subs: TsInsWeekSub[]) {
-    return subs.map((s) => ({
-      parity: s.code1,
-      count: s.cnt1,
-      total: s.cnt2,
-      live: s.cnt3,
-      avgTotal: s.val1,
-      avgLive: s.val2,
-    }));
+    // 요약 통계 데이터 (BM)
+    const statSub = subs.find((s) => s.gubun === 'BM');
+
+    const planned = statSub?.cnt7 || 0;
+    const actual = statSub?.cnt1 || 0;
+    const rate = planned > 0 ? ((actual / planned) * 100).toFixed(1) + '%' : '-';
+
+    const totalBornSum = statSub?.cnt2 || 0;
+    const calcRate = (val: number) => (totalBornSum > 0 ? ((val / totalBornSum) * 100).toFixed(1) + '%' : '-');
+
+    return {
+      planned,
+      actual,
+      rate,
+      stats: {
+        totalBorn: {
+          sum: totalBornSum,
+          avg: statSub?.val1 || 0,
+        },
+        bornAlive: {
+          sum: statSub?.cnt3 || 0,
+          avg: statSub?.val2 || 0,
+          rate: calcRate(statSub?.cnt3 || 0),
+        },
+        stillborn: {
+          sum: statSub?.cnt4 || 0,
+          avg: statSub?.val3 || 0,
+          rate: calcRate(statSub?.cnt4 || 0),
+        },
+        mummy: {
+          sum: statSub?.cnt5 || 0,
+          avg: statSub?.val4 || 0,
+          rate: calcRate(statSub?.cnt5 || 0),
+        },
+        culling: {
+          sum: 0, // 도태 데이터 없음
+          avg: 0,
+          rate: '-',
+        },
+        nursingStart: {
+          sum: statSub?.cnt6 || 0,
+          avg: statSub?.val5 || 0, // VAL_5: 포유개시 평균 (DB에서 직접 계산)
+          rate: calcRate(statSub?.cnt6 || 0),
+        },
+      },
+    };
   }
 
+  /**
+   * 이유실적 팝업 데이터 변환
+   * GUBUN: EU (요약통계)
+   *
+   * EU 컬럼 매핑:
+   *   - CNT_1: 이유복수 (실적)
+   *   - CNT_2: 이유두수 합계
+   *   - CNT_3: 실산 합계
+   *   - CNT_4: 포유기간 합계
+   *   - CNT_5: 이유복수 (예정)
+   *   - CNT_6: 포유자돈폐사 두수 (160001)
+   *   - CNT_7: 부분이유 두수 (160002)
+   *   - CNT_8: 양자전입 두수 (160003)
+   *   - CNT_9: 양자전출 두수 (160004)
+   *   - VAL_1: 이유두수 평균
+   *   - VAL_2: 평균체중 (가중평균)
+   *   - VAL_3: 이유육성율 (이유두수/실산 * 100)
+   *   - VAL_4: 평균 포유기간
+   *
+   * @returns WeaningPopupData 형식
+   */
   private transformWeaningPopup(subs: TsInsWeekSub[]) {
-    return subs.map((s) => ({
-      parity: s.code1,
-      count: s.cnt1,
-      piglets: s.cnt2,
-      avgWeight: s.val1,
-    }));
+    // 요약 통계 데이터 (EU)
+    const statSub = subs.find((s) => s.gubun === 'EU');
+
+    const planned = statSub?.cnt5 || 0;   // CNT_5: 이유복수 (예정)
+    const actual = statSub?.cnt1 || 0;    // CNT_1: 이유복수 (실적)
+    const rate = planned > 0 ? ((actual / planned) * 100).toFixed(1) + '%' : '-';
+
+    // 분만 기준 데이터 (이유 대상 모돈의 분만 정보)
+    const totalBirth = parseInt(statSub?.str1 || '0', 10);  // STR_1: 총산 합계
+    const liveBirth = statSub?.cnt3 || 0;                   // CNT_3: 실산 합계
+    const nursingStart = statSub?.val5 || 0;               // VAL_5: 포유개시 합계
+
+    return {
+      planned,
+      actual,
+      rate,
+      // 분만 기준 카드 (이유 대상 모돈의 분만 정보)
+      farrowingBased: {
+        totalBirth,     // 총산 합계 (실산+사산+미라)
+        liveBirth,      // 실산 합계
+        nursingStart,   // 포유개시 합계 (실산-폐사+전입-전출)
+      },
+      stats: {
+        weanPigs: {
+          sum: statSub?.cnt2 || 0,        // CNT_2: 이유두수 합계
+          avg: statSub?.val1 || 0,        // VAL_1: 이유두수 평균
+        },
+        nursingDays: {
+          sum: statSub?.cnt4 || 0,        // CNT_4: 포유기간 합계
+          avg: statSub?.val4 || 0,        // VAL_4: 평균 포유기간
+        },
+        avgWeight: {
+          avg: statSub?.val2 || 0,        // VAL_2: 평균체중 (가중평균)
+        },
+        survivalRate: {
+          rate: statSub?.val3 ? statSub.val3.toFixed(1) + '%' : '-',  // VAL_3: 이유육성율 (이유두수/실산)
+        },
+        nursingStart: {
+          sum: nursingStart,              // VAL_5: 포유개시 합계
+        },
+      },
+      // 포유 기간 중 자돈 증감 내역
+      pigletChanges: {
+        dead: statSub?.cnt6 || 0,         // CNT_6: 포유자돈폐사 (160001)
+        partialWean: statSub?.cnt7 || 0,  // CNT_7: 부분이유 (160002)
+        fosterIn: statSub?.cnt8 || 0,     // CNT_8: 양자전입 (160003)
+        fosterOut: statSub?.cnt9 || 0,    // CNT_9: 양자전출 (160004)
+      },
+    };
   }
 
+  /**
+   * 임신사고 팝업 데이터 변환
+   * GUBUN='SG', SUB_GUBUN='STAT' (원인별 - SORT_NO=1:지난주, 2:최근1개월), SUB_GUBUN='CHART' (임신일별 차트)
+   * CNT_1~8: 사고구분별 복수 (재발,불임,공태,유산,도태,폐사,임돈전출,임돈판매)
+   * VAL_1~8: 사고구분별 비율 (%)
+   * @returns AccidentPopupData 형식
+   */
   private transformAccidentPopup(subs: TsInsWeekSub[]) {
-    return subs.map((s) => ({
-      type: s.code1,
-      period: s.code2,
-      count: s.cnt1,
-      ratio: s.val1,
-    }));
+    // 사고구분명 매핑
+    const typeNames = ['재발', '불임', '공태', '유산', '도태', '폐사', '임돈전출', '임돈판매'];
+
+    // 원인별 테이블 데이터 (GUBUN='SG', SUB_GUBUN='STAT': SORT_NO=1:지난주, SORT_NO=2:최근1개월)
+    const lastWeekSub = subs.find((s) => s.gubun === 'SG' && s.subGubun === 'STAT' && s.sortNo === 1);
+    const lastMonthSub = subs.find((s) => s.gubun === 'SG' && s.subGubun === 'STAT' && s.sortNo === 2);
+
+    const table = typeNames.map((type, i) => {
+      const cntKey = `cnt${i + 1}` as keyof TsInsWeekSub;
+      const valKey = `val${i + 1}` as keyof TsInsWeekSub;
+      return {
+        type,
+        lastWeek: (lastWeekSub?.[cntKey] as number) || 0,
+        lastWeekPct: (lastWeekSub?.[valKey] as number) || 0,
+        lastMonth: (lastMonthSub?.[cntKey] as number) || 0,
+        lastMonthPct: (lastMonthSub?.[valKey] as number) || 0,
+      };
+    });
+
+    // 임신일별 차트 데이터 (GUBUN='SG', SUB_GUBUN='CHART': CNT_1~8 = 임신일 범위별 복수)
+    const chartSub = subs.find((s) => s.gubun === 'SG' && s.subGubun === 'CHART');
+    const chartLabels = ['~7', '8~10', '11~15', '16~20', '21~35', '36~40', '41~45', '46~'];
+    const chartData = chartLabels.map((_, i) => {
+      const cntKey = `cnt${i + 1}` as keyof TsInsWeekSub;
+      return (chartSub?.[cntKey] as number) || 0;
+    });
+
+    const chart = {
+      xAxis: chartLabels,
+      data: chartData,
+    };
+
+    return { table, chart };
   }
 
+  /**
+   * 도태폐사 팝업 데이터 변환
+   * GUBUN='DOPE', SUB_GUBUN='STAT' (유형요약), SUB_GUBUN='LIST' (원인별 15개씩 피벗), SUB_GUBUN='CHART' (상태별)
+   * DB 구조:
+   *   - DOPE/STAT SORT_NO=1: CNT_1~4=도태/폐사/전출/판매 (지난주)
+   *   - DOPE/LIST SORT_NO=1,2...: STR_1~15=원인코드, CNT_1~15=지난주, VAL_1~15=최근1개월
+   *   - DOPE/CHART: CNT_1~6=상태별 (후보돈/이유모돈/임신돈/포유돈/사고돈/비생산돈)
+   * 원인코드→코드명 변환: ComService 캐시 사용 (TC_CODE_JOHAP PCODE='031')
+   * @returns CullingPopupData 형식
+   */
   private transformCullingPopup(subs: TsInsWeekSub[]) {
-    return subs.map((s) => ({
-      reason: s.code1,
-      count: s.cnt1,
-      ratio: s.val1,
+    // 유형별 요약 (GUBUN='DOPE', SUB_GUBUN='STAT', SORT_NO=1: 지난주)
+    const summarySub = subs.find((s) => s.gubun === 'DOPE' && s.subGubun === 'STAT' && s.sortNo === 1);
+    const stats = {
+      dotae: summarySub?.cnt1 || 0,
+      dead: summarySub?.cnt2 || 0,
+      transfer: summarySub?.cnt3 || 0,
+      sale: summarySub?.cnt4 || 0,
+    };
+
+    // 원인별 테이블 데이터 (GUBUN='DOPE', SUB_GUBUN='LIST', SORT_NO=1,2,...)
+    // STR_1~15: 원인코드, CNT_1~15: 지난주, VAL_1~15: 최근1개월
+    const tableSubs = subs.filter((s) => s.gubun === 'DOPE' && s.subGubun === 'LIST');
+    const tableRaw: { reasonCd: string; lastWeek: number; lastMonth: number }[] = [];
+
+    for (const sub of tableSubs) {
+      // 15개 슬롯을 순회하며 원인코드가 있는 것만 추가
+      for (let i = 1; i <= 15; i++) {
+        const reasonCd = sub[`str${i}` as keyof TsInsWeekSub] as string;
+        if (reasonCd) {
+          tableRaw.push({
+            reasonCd,
+            lastWeek: (sub[`cnt${i}` as keyof TsInsWeekSub] as number) || 0,
+            lastMonth: (sub[`val${i}` as keyof TsInsWeekSub] as number) || 0,
+          });
+        }
+      }
+    }
+
+    // 원인코드를 코드명으로 변환 (TC_CODE_JOHAP PCODE='031', 캐시 사용)
+    // lang 파라미터 생략 시 환경변수 DEFAULT_LANG 사용
+    const table = tableRaw.map((r) => ({
+      reason: this.comService.getCodeJohapName('031', r.reasonCd) || r.reasonCd,
+      lastWeek: r.lastWeek,
+      lastMonth: r.lastMonth,
     }));
+
+    // 상태별 차트 데이터 (GUBUN='DOPE', SUB_GUBUN='CHART')
+    // STR_1~7: 상태코드 (TC_CODE_SYS PCODE='01')
+    // CNT_1~7: 상태별 두수
+    // 010001=후보돈, 010002=임신돈, 010003=포유돈, 010004=대리모돈,
+    // 010005=이유모돈, 010006=재발돈, 010007=유산돈
+    const chartSub = subs.find((s) => s.gubun === 'DOPE' && s.subGubun === 'CHART');
+
+    // 상태코드 배열 (STR_1~7)
+    const statusCodes = [
+      chartSub?.str1,
+      chartSub?.str2,
+      chartSub?.str3,
+      chartSub?.str4,
+      chartSub?.str5,
+      chartSub?.str6,
+      chartSub?.str7,
+    ].filter(Boolean) as string[];
+
+    // 상태코드 → 코드명 변환 (TC_CODE_SYS PCODE='01')
+    const xAxis = statusCodes.map(
+      (code) => this.comService.getCodeSysName('01', code) || code,
+    );
+
+    // 차트 데이터 (값이 있는 것만)
+    const chartData: { status: string; statusCd: string; count: number }[] = [];
+    for (let i = 1; i <= 7; i++) {
+      const statusCd = chartSub?.[`str${i}` as keyof TsInsWeekSub] as string;
+      const count = (chartSub?.[`cnt${i}` as keyof TsInsWeekSub] as number) || 0;
+      if (statusCd) {
+        chartData.push({
+          status: this.comService.getCodeSysName('01', statusCd) || statusCd,
+          statusCd,
+          count,
+        });
+      }
+    }
+
+    const chart = {
+      xAxis,
+      data: chartData.map((d) => d.count),
+      items: chartData, // 프론트엔드에서 상세 정보 사용 가능
+    };
+
+    return { stats, table, chart };
   }
 
+  /**
+   * 출하실적 팝업 데이터 변환
+   * GUBUN='SHIP', SUB_GUBUN='STAT' (요약), SUB_GUBUN='ROW' (크로스탭 15행), SUB_GUBUN='CHART' (분석차트), SUB_GUBUN='SCATTER' (산점도)
+   * @see docs/db/ins/week/41.shipment-popup.md
+   * @returns ShipmentPopupData 형식 (3탭: 출하현황/출하분석/도체분포)
+   */
   private transformShipmentPopup(subs: TsInsWeekSub[]) {
-    return subs.map((s) => ({
-      date: s.str1, // 일자는 str1에 저장
-      count: s.cnt1,
-      avgWeight: s.val1,
-      avgBackfat: s.val2,
-    }));
+    // ── 1. 요약 통계 (GUBUN='SHIP', SUB_GUBUN='STAT') ──
+    const statSub = subs.find((s) => s.gubun === 'SHIP' && s.subGubun === 'STAT');
+    const stats = {
+      totalCount: statSub?.cnt1 || 0, // 지난주 출하두수
+      yearTotal: statSub?.cnt2 || 0, // 당해년도 누계
+      grade1Cnt: statSub?.cnt3 || 0, // 1등급+ 합격두수
+      grade1Rate: statSub?.val1 || 0, // 1등급+ 합격율(%)
+      avgCarcass: statSub?.val2 || 0, // 평균 도체중(kg)
+      avgBackfat: statSub?.val3 || 0, // 평균 등지방(mm)
+      farmPrice: statSub?.val4 || 0,  // 내농장 평균 단가
+      nationalPrice: statSub?.val5 || 0, // 전국 탕박 평균 단가
+    };
+
+    // ── 2. 크로스탭 테이블 (SHIP_ROW, 13행) ──
+    // 항목 정의 (SQL ROW_DEF와 매핑)
+    const rowDefs: {
+      sortNo: number;
+      category: string;
+      sub: string;
+      colspan?: boolean;
+      highlight?: 'primary' | 'success';
+      unit?: string;
+      gradeRow?: boolean;
+    }[] = [
+        { sortNo: 1, category: '출하두수', sub: '두', colspan: true, highlight: 'primary' },
+        { sortNo: 2, category: '과거 이유두수', sub: '두', colspan: true },
+        { sortNo: 3, category: '육성율', sub: '%', colspan: true },
+        { sortNo: 4, category: '1등급', sub: '합격율' },
+        { sortNo: 5, category: '등급', sub: '1+', gradeRow: true },
+        { sortNo: 6, category: '', sub: '1', gradeRow: true },
+        { sortNo: 7, category: '', sub: '2', gradeRow: true },
+        { sortNo: 8, category: '성별', sub: '암', gradeRow: true },
+        { sortNo: 9, category: '', sub: '수', gradeRow: true },
+        { sortNo: 10, category: '', sub: '거세', gradeRow: true },
+        { sortNo: 11, category: '총지육', sub: '체중(Kg)' },
+        { sortNo: 12, category: '두당평균', sub: '지육체중(Kg)', highlight: 'success' },
+        { sortNo: 13, category: '', sub: '등지방두께', highlight: 'success' },
+      ];
+
+    // DB 데이터를 Map으로 변환 (GUBUN='SHIP', SUB_GUBUN='ROW')
+    const rowMap = new Map<number, TsInsWeekSub>();
+    subs
+      .filter((s) => s.gubun === 'SHIP' && s.subGubun === 'ROW')
+      .forEach((s) => rowMap.set(s.sortNo || 0, s));
+
+    // 날짜 배열 (첫 번째 행에서 추출)
+    const firstRow = rowMap.get(1);
+    const days = [
+      firstRow?.str1,
+      firstRow?.str2,
+      firstRow?.str3,
+      firstRow?.str4,
+      firstRow?.str5,
+      firstRow?.str6,
+      firstRow?.str7,
+    ].filter((d) => d) as string[];
+
+    // 테이블 행 생성 (null/0은 프론트에서 '-' 표시)
+    // VAL_1: 합계, VAL_2: 비율(%), VAL_3: 평균
+    const tableRows = rowDefs.map((def) => {
+      const row = rowMap.get(def.sortNo);
+      return {
+        category: def.category,
+        sub: def.sub,
+        colspan: def.colspan,
+        highlight: def.highlight,
+        unit: def.unit,
+        gradeRow: def.gradeRow === true,  // 명시적으로 boolean 변환
+        data: [
+          row?.cnt1 ?? null,
+          row?.cnt2 ?? null,
+          row?.cnt3 ?? null,
+          row?.cnt4 ?? null,
+          row?.cnt5 ?? null,
+          row?.cnt6 ?? null,
+          row?.cnt7 ?? null,
+        ].slice(0, days.length),
+        sum: row?.val1 ?? null,
+        rate: row?.val2 ?? null,  // 비율(%) - 등급/성별 행
+        avg: row?.val3 ?? null,   // 평균 - 모든 행
+      };
+    });
+
+    // 등급차트용 데이터 추출 (1+, 1, 2 등급) - SORT_NO: 5,6,7
+    const q11Row = rowMap.get(5);
+    const q1Row = rowMap.get(6);
+    const q2Row = rowMap.get(7);
+    const gradeChart = [
+      {
+        name: '1+',
+        value: q11Row?.val1 || 0,
+        color: '#667eea',
+        colorEnd: '#764ba2',
+      },
+      { name: '1', value: q1Row?.val1 || 0, color: '#4ade80', colorEnd: '#22c55e' },
+      { name: '2', value: q2Row?.val1 || 0, color: '#94a3b8', colorEnd: '#64748b' },
+    ];
+    // 등외 (전체 - 1+ - 1 - 2)
+    const gradeOutCnt =
+      stats.totalCount -
+      (q11Row?.val1 || 0) -
+      (q1Row?.val1 || 0) -
+      (q2Row?.val1 || 0);
+    if (gradeOutCnt > 0) {
+      gradeChart.push({
+        name: '등외',
+        value: gradeOutCnt,
+        color: '#f87171',
+        colorEnd: '#ef4444',
+      });
+    }
+
+    // ── 3. 분석 차트 (GUBUN='SHIP', SUB_GUBUN='CHART', 7행) ──
+    const chartSubs = subs
+      .filter((s) => s.gubun === 'SHIP' && s.subGubun === 'CHART')
+      .sort((a, b) => (a.sortNo || 0) - (b.sortNo || 0));
+    const analysisChart = {
+      dates: chartSubs.map((s) => s.str1 || ''),
+      shipCount: chartSubs.map((s) => s.cnt1 || 0),
+      avgWeight: chartSubs.map((s) => s.val1 || 0),
+      avgBackfat: chartSubs.map((s) => s.val2 || 0),
+    };
+
+    // ── 4. 산점도 (GUBUN='SHIP', SUB_GUBUN='SCATTER') ──
+    const scatterSubs = subs.filter((s) => s.gubun === 'SHIP' && s.subGubun === 'SCATTER');
+    const carcassChart = {
+      data: scatterSubs.map((s) => [s.val1 || 0, s.val2 || 0, s.cnt1 || 0]),
+    };
+
+    // 프론트엔드 인터페이스에 맞게 반환
+    // metrics 형태로 변환 (ShipmentPopup.tsx 호환)
+    return {
+      metrics: {
+        totalCount: stats.totalCount,
+        compareLastWeek: '-', // 프로시저에서 미지원 (향후 추가 가능)
+        grade1Rate: stats.grade1Rate,
+        avgCarcass: stats.avgCarcass,
+        avgBackfat: stats.avgBackfat,
+        farmPrice: stats.farmPrice,
+        nationalPrice: stats.nationalPrice,
+      },
+      gradeChart,
+      table: {
+        days,
+        rows: tableRows,
+      },
+      analysisChart,
+      carcassChart,
+    };
   }
 
   private transformSchedulePopup(subs: TsInsWeekSub[]) {
@@ -630,13 +1470,7 @@ export class WeeklyService {
     return mockData.parityReturn;
   }
 
-  getAccidentByPeriod() {
-    return mockData.accidentByPeriod;
-  }
-
-  getParityAccident() {
-    return mockData.parityAccident;
-  }
+  // getAccidentByPeriod, getParityAccident - DB 연동 완료 (SG, SG_CHART)
 
   getParityBirth() {
     return mockData.parityBirth;
@@ -663,8 +1497,7 @@ export class WeeklyService {
       parityDistribution: mockData.parityDistribution,
       matingByReturnDay: mockData.matingByReturnDay,
       parityReturn: mockData.parityReturn,
-      accidentByPeriod: mockData.accidentByPeriod,
-      parityAccident: mockData.parityAccident,
+      // accidentByPeriod, parityAccident - DB 연동 완료 (SG, SG_CHART)
       parityBirth: mockData.parityBirth,
       parityWean: mockData.parityWean,
       cullingDistribution: mockData.cullingDistribution,
@@ -689,21 +1522,7 @@ export class WeeklyService {
     return mockData.lastweekData.sowStatus;
   }
 
-  getMatingData() {
-    return mockData.lastweekData.mating;
-  }
-
-  getAccidentType() {
-    return mockData.lastweekData.accidentType;
-  }
-
-  getFarrowingData() {
-    return mockData.lastweekData.farrowing;
-  }
-
-  getWeaningData() {
-    return mockData.lastweekData.weaning;
-  }
+  // getAccidentType - DB 연동 완료 (SG)
 
   getCullingData() {
     return mockData.lastweekData.culling;

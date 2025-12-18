@@ -1,6 +1,7 @@
 import { Controller, Get, Param, Query, NotFoundException, ForbiddenException, Headers } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { WeeklyService } from './weekly.service';
+import { ComService } from '../com/com.service';
 import { ChartType } from '../../data/mock/weekly.mock';
 
 /**
@@ -13,6 +14,7 @@ export class WeeklyController {
   constructor(
     private readonly weeklyService: WeeklyService,
     private readonly jwtService: JwtService,
+    private readonly comService: ComService,
   ) { }
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -67,12 +69,15 @@ export class WeeklyController {
    * GET /api/weekly/share/:token
    *
    * 응답:
-   * - success: true → data에 리포트, sessionToken에 임시 세션 JWT
+   * - success: true → data에 리포트, sessionToken에 임시 세션 JWT, lang에 언어코드
    * - success: false, expired: true → 만료됨, 로그인 페이지로 이동 필요
    * - success: false, expired: false → 존재하지 않음
    */
   @Get('share/:token')
-  async getReportByShareToken(@Param('token') token: string) {
+  async getReportByShareToken(
+    @Param('token') token: string,
+    @Headers('accept-language') acceptLanguage: string,
+  ) {
     // 토큰 형식 검증 (64자 hex)
     if (!token || !/^[a-f0-9]{64}$/i.test(token)) {
       throw new NotFoundException('Invalid share token');
@@ -90,6 +95,9 @@ export class WeeklyController {
       };
     }
 
+    // 브라우저 언어 감지 (직접 접속시)
+    const lang = this.comService.parseAcceptLanguage(acceptLanguage);
+
     // 성공: 임시 세션 JWT 발급 (해당 리포트만 접근 가능, 1시간 유효)
     const sessionToken = this.jwtService.sign(
       {
@@ -97,6 +105,7 @@ export class WeeklyController {
         shareToken: token,
         farmNo: result.data.header.farmNo,
         masterSeq: result.data.header.masterSeq || null,
+        lang,
       },
       { expiresIn: '1h' },
     );
@@ -105,17 +114,23 @@ export class WeeklyController {
       success: true,
       data: result.data,
       sessionToken, // 프론트엔드에서 저장하여 후속 API 호출에 사용
+      lang, // 브라우저 언어코드 (ko/en/vi)
     };
   }
 
   /**
    * 통합 리포트 뷰 (로그인/공유 공용)
    * GET /api/weekly/view/:token
+   *
+   * 언어 결정 우선순위:
+   * 1. 로그인 사용자: JWT에 포함된 농장 언어코드 (lang)
+   * 2. 직접 접속: 브라우저 Accept-Language 헤더
    */
   @Get('view/:token')
   async getView(
     @Param('token') token: string,
     @Headers('authorization') authHeader: string,
+    @Headers('accept-language') acceptLanguage: string,
   ) {
     // 토큰 형식 검증
     if (!token || !/^[a-f0-9]{64}$/i.test(token)) {
@@ -123,6 +138,7 @@ export class WeeklyController {
     }
 
     let skipExpiryCheck = false;
+    let lang: string | undefined;
 
     // 로그인 여부 확인 (Authorization 헤더)
     if (authHeader && authHeader.startsWith('Bearer ')) {
@@ -133,10 +149,17 @@ export class WeeklyController {
         // 로그인 토큰인 경우 (sub가 존재하거나 type이 login 등)
         if (payload) {
           skipExpiryCheck = true;
+          // 로그인 사용자: JWT의 lang 사용 (농장 언어)
+          lang = payload.lang || this.comService.getDefaultLang();
         }
       } catch (e) {
         // 토큰 검증 실패 시 무시 (공유 링크로 간주)
       }
+    }
+
+    // 직접 접속 (비로그인): 브라우저 언어 사용
+    if (!lang) {
+      lang = this.comService.parseAcceptLanguage(acceptLanguage);
     }
 
     const result = await this.weeklyService.getReportByShareTokenWithExpiry(token, skipExpiryCheck);
@@ -157,6 +180,7 @@ export class WeeklyController {
         shareToken: token,
         farmNo: result.data.header.farmNo,
         masterSeq: result.data.header.masterSeq || null,
+        lang,
       },
       { expiresIn: '1h' },
     );
@@ -165,7 +189,8 @@ export class WeeklyController {
       success: true,
       data: result.data,
       sessionToken,
-      isLoginAccess: skipExpiryCheck
+      isLoginAccess: skipExpiryCheck,
+      lang, // 언어코드 (ko/en/vi)
     };
   }
 
@@ -245,18 +270,6 @@ export class WeeklyController {
     return { success: true, data: this.weeklyService.getParityReturn() };
   }
 
-  /** GET /api/weekly/accident-period */
-  @Get('accident-period')
-  getAccidentByPeriod() {
-    return { success: true, data: this.weeklyService.getAccidentByPeriod() };
-  }
-
-  /** GET /api/weekly/parity-accident */
-  @Get('parity-accident')
-  getParityAccident() {
-    return { success: true, data: this.weeklyService.getParityAccident() };
-  }
-
   /** GET /api/weekly/parity-birth */
   @Get('parity-birth')
   getParityBirth() {
@@ -307,30 +320,6 @@ export class WeeklyController {
   @Get('lastweek/sow-status')
   getSowStatus() {
     return { success: true, data: this.weeklyService.getSowStatus() };
-  }
-
-  /** GET /api/weekly/lastweek/mating */
-  @Get('lastweek/mating')
-  getMatingData() {
-    return { success: true, data: this.weeklyService.getMatingData() };
-  }
-
-  /** GET /api/weekly/lastweek/accident-type */
-  @Get('lastweek/accident-type')
-  getAccidentType() {
-    return { success: true, data: this.weeklyService.getAccidentType() };
-  }
-
-  /** GET /api/weekly/lastweek/farrowing */
-  @Get('lastweek/farrowing')
-  getFarrowingData() {
-    return { success: true, data: this.weeklyService.getFarrowingData() };
-  }
-
-  /** GET /api/weekly/lastweek/weaning */
-  @Get('lastweek/weaning')
-  getWeaningData() {
-    return { success: true, data: this.weeklyService.getWeaningData() };
   }
 
   /** GET /api/weekly/lastweek/culling */

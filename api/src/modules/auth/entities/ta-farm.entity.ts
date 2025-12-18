@@ -21,6 +21,9 @@ export class TaFarm {
   @Column({ name: 'AGENT_CD', type: 'number', default: 0 })
   agentCd: number;
 
+  @Column({ name: 'COUNTRY_CODE', type: 'varchar2', length: 10, nullable: true })
+  countryCode: string;
+
   @Column({ name: 'USE_YN', type: 'char', length: 1, default: 'Y' })
   useYn: string;
 }

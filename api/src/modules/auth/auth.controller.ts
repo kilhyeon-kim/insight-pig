@@ -82,11 +82,11 @@ export class AuthController {
     return {
       success: true,
       data: {
-        farmNo: service.farmNo,
-        inspigYn: service.inspigYn,
-        inspigFromDt: service.inspigFromDt,
-        inspigToDt: service.inspigToDt,
-        useYn: service.useYn,
+        farmNo: service.FARM_NO,
+        inspigYn: service.INSPIG_YN,
+        inspigFromDt: service.INSPIG_FROM_DT,
+        inspigToDt: service.INSPIG_TO_DT,
+        useYn: service.USE_YN,
       },
     };
   }

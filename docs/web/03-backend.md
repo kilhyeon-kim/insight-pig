@@ -36,6 +36,11 @@ api/
 │   │       └── weekly.mock.ts  # 주간 보고서 Mock 데이터
 │   │
 │   └── modules/                # 비즈니스 로직 모듈 (Domain Modules)
+│       ├── com/                # [공통] 시스템 공통 기능
+│       │   ├── sql/            # 공통 SQL 쿼리
+│       │   ├── com.module.ts
+│       │   └── com.service.ts
+│       │
 │       ├── auth/               # [인증] 로그인, 토큰 발급
 │       │   ├── dto/            # 데이터 전송 객체 (Validation 포함)
 │       │   ├── entities/       # DB 엔티티 (TypeORM)
@@ -127,7 +132,20 @@ export const AUTH_SQL = {
 *   **Filters**: `HttpExceptionFilter` - 예외 발생 시 표준 에러 응답 반환.
 *   **Interceptors**: `LoggingInterceptor` (실행 시간 로깅), `TransformInterceptor` (응답 래핑).
 
-### 3.3 Auth Module (`src/modules/auth`)
+### 3.3 Com Module (`src/modules/com`) - 공통 모듈
+*   **기능**: 시스템 전반에서 공유되는 공통 기능 제공.
+*   **용도**:
+    *   코드성 데이터 조회 (공통코드 등)
+    *   특정 도메인에 종속되지 않는 공통 조회
+    *   시스템 전반에서 재사용되는 SQL
+*   **SQL 파일**: `com.sql.ts`
+
+> **공통 SQL 관리 원칙**:
+> - 특정 도메인에 종속된 SQL은 해당 모듈에 위치 (예: 인증 관련 → `auth/sql/`)
+> - 2개 이상의 모듈에서 공유되는 SQL은 `com/sql/`에 위치
+> - 코드성 데이터(공통코드, 설정값 등) 조회는 `com/sql/`에 위치
+
+### 3.4 Auth Module (`src/modules/auth`)
 *   **기능**: 사용자 로그인, JWT Access Token 발급, **공유 토큰 관리**.
 *   **테이블**: `TA_MEMBER` (사용자), `TA_FARM` (농장), `TS_INS_SERVICE` (서비스).
 *   **책임 영역**:
@@ -140,7 +158,7 @@ export const AUTH_SQL = {
     *   `share-token.sql.ts`: 공유 토큰 생성/검증/조회
 *   **Flow**: `LoginDto` 검증 -> `AuthService.validateUser` -> `AUTH_SQL.login` -> JWT 발급.
 
-### 3.4 Weekly Module (`src/modules/weekly`)
+### 3.5 Weekly Module (`src/modules/weekly`)
 *   **기능**: 주간 보고서 목록/상세 조회, 차트/팝업 데이터 제공.
 *   **테이블**: `TS_INS_MASTER` (보고서 마스터), `TS_INS_WEEK` (주간 요약), `TS_INS_WEEK_SUB` (상세 데이터).
 *   **책임 영역**:

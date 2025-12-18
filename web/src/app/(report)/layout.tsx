@@ -18,7 +18,7 @@ export default function ReportLayout({
       <Header onMenuToggle={() => setIsSidebarOpen(true)} />
       <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
 
-      <main>
+      <main className="pb-20">
         {children}
       </main>
 

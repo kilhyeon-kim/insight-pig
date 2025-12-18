@@ -68,9 +68,29 @@ web/
 
 ### 2.3 ID 명명 규칙 (ID Naming Convention)
 테스트 및 스타일링을 위해 주요 요소에 **고유 ID**를 부여합니다.
-*   **형식**: `{접두어}-{컨텍스트}-{세부사항}`
-*   **접두어**: `sec-`(섹션), `tbl-`(테이블), `cht-`(차트), `pop-`(팝업)
-*   **예시**: `sec-lastweek`, `cht-mating-trend`
+
+#### 접두어 규칙
+| 접두어 | 용도 | 예시 |
+|--------|------|------|
+| `sec-` | 섹션 | `sec-lastweek`, `sec-alert` |
+| `tbl-` | 테이블 | `tbl-mating-type`, `tbl-farrowing-stats` |
+| `cht-` | 차트 | `cht-mating-trend`, `cht-modon-parity` |
+| `pop-` | 팝업/드롭다운 | `pop-alert`, `pop-user-menu` |
+| `btn-` | 버튼 | `btn-user-menu`, `btn-logout` |
+
+#### ID 부여 필수 대상
+*   **버튼**: 주요 액션 버튼 (로그인, 로그아웃, 메뉴 토글 등)
+*   **팝업/드롭다운**: 동적으로 표시되는 모든 팝업 컨테이너
+*   **섹션**: 페이지의 주요 구역
+*   **테이블**: 데이터 테이블
+*   **차트**: 차트 컨테이너
+
+#### 형식
+*   `{접두어}-{컨텍스트}` 또는 `{접두어}-{컨텍스트}-{세부사항}`
+*   예시: `btn-user-menu`, `pop-user-menu`, `tbl-weaning-stats`
+
+> **중요**: 버튼과 해당 버튼이 열리는 팝업은 동일한 컨텍스트명을 사용합니다.
+> 예: `btn-user-menu` (버튼) → `pop-user-menu` (팝업)
 
 ---
 

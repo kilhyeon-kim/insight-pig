@@ -56,6 +56,12 @@ export class TsInsWeek {
   @Column({ name: 'MODON_SANGSI_CNT', type: 'number', default: 0 })
   modonSangsiCnt: number;
 
+  @Column({ name: 'MODON_REG_CHG', type: 'number', default: 0 })
+  modonRegChg: number;  // 현재모돈 전주대비 증감
+
+  @Column({ name: 'MODON_SANGSI_CHG', type: 'number', default: 0 })
+  modonSangsiChg: number;  // 상시모돈 전주대비 증감
+
   // 관리대상 모돈 요약
   @Column({ name: 'ALERT_TOTAL', type: 'number', default: 0 })
   alertTotal: number;
@@ -113,6 +119,12 @@ export class TsInsWeek {
   @Column({ name: 'LAST_BM_AVG_LIVE', type: 'number', precision: 5, scale: 1, default: 0 })
   lastBmAvgLive: number;
 
+  @Column({ name: 'LAST_BM_SUM_AVG_TOTAL', type: 'number', precision: 5, scale: 1, default: 0 })
+  lastBmSumAvgTotal: number;
+
+  @Column({ name: 'LAST_BM_SUM_AVG_LIVE', type: 'number', precision: 5, scale: 1, default: 0 })
+  lastBmSumAvgLive: number;
+
   @Column({ name: 'LAST_BM_CHG_TOTAL', type: 'number', precision: 5, scale: 1, default: 0 })
   lastBmChgTotal: number;
 
@@ -126,6 +138,9 @@ export class TsInsWeek {
   @Column({ name: 'LAST_EU_JD_CNT', type: 'number', default: 0 })
   lastEuJdCnt: number;
 
+  @Column({ name: 'LAST_EU_AVG_JD', type: 'number', precision: 5, scale: 1, default: 0 })
+  lastEuAvgJd: number;  // 지난주 평균 이유두수
+
   @Column({ name: 'LAST_EU_AVG_KG', type: 'number', precision: 5, scale: 1, default: 0 })
   lastEuAvgKg: number;
 
@@ -135,6 +150,12 @@ export class TsInsWeek {
   @Column({ name: 'LAST_EU_SUM_JD', type: 'number', default: 0 })
   lastEuSumJd: number;
 
+  @Column({ name: 'LAST_EU_SUM_AVG_JD', type: 'number', precision: 5, scale: 1, default: 0 })
+  lastEuSumAvgJd: number;
+
+  @Column({ name: 'LAST_EU_CHG_JD', type: 'number', precision: 5, scale: 1, default: 0 })
+  lastEuChgJd: number;  // 평균 이유두수 증감 (1년평균 대비)
+
   @Column({ name: 'LAST_EU_CHG_KG', type: 'number', precision: 5, scale: 1, default: 0 })
   lastEuChgKg: number;
 
@@ -142,8 +163,14 @@ export class TsInsWeek {
   @Column({ name: 'LAST_SG_CNT', type: 'number', default: 0 })
   lastSgCnt: number;
 
+  @Column({ name: 'LAST_SG_AVG_GYUNGIL', type: 'number', precision: 5, scale: 1, default: 0 })
+  lastSgAvgGyungil: number;  // 지난주 평균 경과일
+
   @Column({ name: 'LAST_SG_SUM', type: 'number', default: 0 })
   lastSgSum: number;
+
+  @Column({ name: 'LAST_SG_SUM_AVG_GYUNGIL', type: 'number', precision: 5, scale: 1, default: 0 })
+  lastSgSumAvgGyungil: number;  // 당해년도 평균 경과일
 
   // 지난주 도태폐사
   @Column({ name: 'LAST_CL_CNT', type: 'number', default: 0 })

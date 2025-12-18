@@ -44,13 +44,29 @@ export const LastWeekSection: React.FC<LastWeekSectionProps> = ({ data, onPopupO
                         모돈<FontAwesomeIcon icon={faArrowUpRightFromSquare} className="detail-icon fa-sm" />
                     </div>
                     <div className="cell sub">현재모돈</div>
-                    <div className="cell count lastweek">{formatNumber(data.modon.regCnt)}</div>
+                    <div className="cell count lastweek">
+                        <span>{formatNumber(data.modon.regCnt)}</span>
+                        {data.modon.regCntChange !== undefined && data.modon.regCntChange !== 0 && (
+                            <span className={`change-wrap ${data.modon.regCntChange > 0 ? 'up' : 'down'}`}>
+                                <FontAwesomeIcon icon={data.modon.regCntChange > 0 ? faCaretUp : faCaretDown} />
+                                {Math.abs(data.modon.regCntChange)}
+                            </span>
+                        )}
+                    </div>
                     <div className="cell empty lastweek"></div>
                     <div className="cell empty"></div>
                     <div className="cell empty"></div>
 
                     <div className="cell sub">상시모돈</div>
-                    <div className="cell count lastweek">{formatNumber(data.modon.sangsiCnt)}</div>
+                    <div className="cell count lastweek">
+                        <span>{formatNumber(data.modon.sangsiCnt)}</span>
+                        {data.modon.sangsiCntChange !== undefined && data.modon.sangsiCntChange !== 0 && (
+                            <span className={`change-wrap ${data.modon.sangsiCntChange > 0 ? 'up' : 'down'}`}>
+                                <FontAwesomeIcon icon={data.modon.sangsiCntChange > 0 ? faCaretUp : faCaretDown} />
+                                {Math.abs(data.modon.sangsiCntChange)}
+                            </span>
+                        )}
+                    </div>
                     <div className="cell empty lastweek"></div>
                     <div className="cell empty"></div>
                     <div className="cell empty"></div>
@@ -116,16 +132,16 @@ export const LastWeekSection: React.FC<LastWeekSectionProps> = ({ data, onPopupO
                     <div className="cell sub">이유자돈수</div>
                     <div className="cell count lastweek">{formatNumber(data.weaning.jdCnt)}</div>
                     <div className="cell avg lastweek">
-                        <span>{data.weaning.avgWeight?.toFixed(1)}</span>
-                        {data.weaning.changeWeight !== undefined && data.weaning.changeWeight !== 0 && (
-                            <span className={`change-wrap ${data.weaning.changeWeight > 0 ? 'up' : 'down'}`}>
-                                <FontAwesomeIcon icon={data.weaning.changeWeight > 0 ? faCaretUp : faCaretDown} />
-                                {Math.abs(data.weaning.changeWeight).toFixed(1)}
+                        <span>{(data.weaning.avgJdCnt ?? (data.weaning.cnt > 0 ? data.weaning.jdCnt / data.weaning.cnt : 0))?.toFixed(1)}</span>
+                        {data.weaning.changeJdCnt !== undefined && data.weaning.changeJdCnt !== 0 && (
+                            <span className={`change-wrap ${data.weaning.changeJdCnt > 0 ? 'up' : 'down'}`}>
+                                <FontAwesomeIcon icon={data.weaning.changeJdCnt > 0 ? faCaretUp : faCaretDown} />
+                                {Math.abs(data.weaning.changeJdCnt).toFixed(1)}
                             </span>
                         )}
                     </div>
                     <div className="cell count">{formatNumber(data.weaning.sumJdCnt)}</div>
-                    <div className="cell avg">{data.weaning.sumAvgWeight?.toFixed(1)}</div>
+                    <div className="cell avg">{data.weaning.sumAvgJdCnt?.toFixed(1)}</div>
 
                     {/* 사고 */}
                     <div className="cell label clickable section-start" onClick={() => onPopupOpen('accident')}>
@@ -133,9 +149,15 @@ export const LastWeekSection: React.FC<LastWeekSectionProps> = ({ data, onPopupO
                     </div>
                     <div className="cell sub section-start">교배후 사고<br className="mobile-br"/>(복수)</div>
                     <div className="cell count lastweek section-start">{formatNumber(data.accident.cnt)}</div>
-                    <div className="cell empty lastweek section-start"></div>
+                    <div className="cell avg lastweek section-start">
+                        <span>{data.accident.avgGyungil?.toFixed(1) ?? '-'}</span>
+                        <span className="sub-label">경과일</span>
+                    </div>
                     <div className="cell count section-start">{formatNumber(data.accident.sum)}</div>
-                    <div className="cell empty section-start"></div>
+                    <div className="cell avg section-start">
+                        <span>{data.accident.sumAvgGyungil?.toFixed(1) ?? '-'}</span>
+                        <span className="sub-label">경과일</span>
+                    </div>
 
                     {/* 도태폐사 */}
                     <div className="cell label clickable section-start" onClick={() => onPopupOpen('culling')}>

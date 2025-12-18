@@ -27,7 +27,17 @@
       "Bash(cmd //c \"taskkill /PID 71828 /F\")",
       "Bash(cmd //c \"taskkill /PID 7916 /F\")",
       "Bash(cmd //c \"taskkill /PID 39856 /F\")",
-      "Bash(npx kill-port:*)"
+      "Bash(npx kill-port:*)",
+      "Bash(dir /b \"c:\\Projects\\inspig\\api\\src\\modules\")",
+      "Bash(xargs:*)",
+      "Bash(del \"c:\\Projects\\inspig\\docs\\db\\sql\\99_LEGACY_TABLE_COUNT.sql\")",
+      "Bash(del \"c:\\Projects\\inspig\\docs\\db\\ref\\FN_LOC_MAX_ONE_2020_V2.sql\")",
+      "Bash(dir /b \"c:\\Projects\\inspig\\docs\\db\\sql\\ins\")",
+      "Bash(dir /b \"c:\\Projects\\inspig\\docs\\db\\sql\\ins\\week\")",
+      "Bash(del \"c:\\Projects\\inspig\\docs\\db\\sql\\ins\\week\\21_SP_INS_WEEK_MATING.sql\")",
+      "Bash(del \"c:\\Projects\\inspig\\docs\\db\\sql\\ins\\week\\02_SP_INS_WEEK_MANAGE_SOW.sql\")",
+      "Bash(npx tsc:*)",
+      "Bash(git fetch:*)"
     ],
     "deny": [],
     "ask": []

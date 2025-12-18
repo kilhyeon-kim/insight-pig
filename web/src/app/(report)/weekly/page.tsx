@@ -49,6 +49,10 @@ const formatDateForApi = (date: Date): string => {
 // 날짜 포맷팅 함수 (표시용)
 const formatDate = (dateStr: string): string => {
   if (!dateStr) return '';
+  // 이미 YY.MM.DD 또는 YYYY.MM.DD 형식이면 그대로 반환
+  if (dateStr.includes('.')) {
+    return dateStr;
+  }
   // YYYYMMDD -> YYYY.MM.DD
   if (dateStr.length === 8) {
     return `${dateStr.substring(0, 4)}.${dateStr.substring(4, 6)}.${dateStr.substring(6, 8)}`;

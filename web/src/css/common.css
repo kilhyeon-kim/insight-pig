@@ -156,6 +156,11 @@
         box-shadow: 0 2px 8px rgba(34, 197, 94, 0.08);
     }
 
+    /* sec-lastweek 모바일 셀 패딩 축소 */
+    #sec-lastweek .result-grid .cell {
+        padding: 8px 2px;
+    }
+
     #sec-lastweek .card-header {
         background: linear-gradient(135deg, rgba(34, 197, 94, 0.06) 0%, rgba(34, 197, 94, 0.02) 100%);
     }
@@ -1551,13 +1556,20 @@
 
     /* ============================================
        메트릭스 그리드 (.metrics-2x2)
+       유형4: 상단 메트릭스/차트 + 하단 가격 비교 바
        ============================================ */
     .shipment-top-grid {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        margin-bottom: 12px;
+    }
+
+    .shipment-top-row {
         display: grid;
         grid-template-columns: 1fr 1fr;
         gap: 12px;
         align-items: center;
-        margin-bottom: 12px;
     }
 
     .metrics-2x2 {
@@ -1603,6 +1615,50 @@
 
     .metric-compare.negative {
         color: var(--rp-accent-red);
+    }
+
+    /* 가격 비교 바 (.price-compare-bar) - 컴팩트 스타일 */
+    .price-compare-bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background: linear-gradient(90deg, rgba(40, 167, 69, 0.06) 0%, rgba(0, 122, 255, 0.06) 100%);
+        border-radius: 6px;
+        padding: 6px 12px;
+        border: 1px solid var(--rp-border-color);
+    }
+
+    .price-compare-bar .price-item {
+        text-align: center;
+        flex: 1;
+    }
+
+    .price-compare-bar .price-item .metric-value {
+        font-size: 14px;
+    }
+
+    .price-compare-bar .price-item .metric-label {
+        font-size: 9px;
+        color: var(--rp-text-tertiary);
+        margin-top: 1px;
+    }
+
+    .price-compare-bar .diff-badge {
+        background: var(--rp-accent-green);
+        color: #fff;
+        padding: 3px 8px;
+        border-radius: 12px;
+        font-size: 11px;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+
+    .price-compare-bar .diff-badge.negative {
+        background: var(--rp-accent-red);
+    }
+
+    .price-compare-bar .diff-badge.positive {
+        background: var(--rp-accent-green);
     }
 
     /* ============================================
@@ -1701,6 +1757,14 @@
 
     /* 모바일 전용 줄바꿈 */
     .mobile-br {
+        display: inline;
+    }
+
+    /* 모바일/데스크탑 전용 텍스트 */
+    .desktop-only {
+        display: none;
+    }
+    .mobile-only {
         display: inline;
     }
 
@@ -2235,6 +2299,7 @@
         .alert-card-values {
             width: auto;
             order: 0;
+            overflow: visible;  /* 모바일의 overflow:hidden 해제 */
         }
 
         .alert-card-total {
@@ -2558,6 +2623,14 @@
 
         /* 데스크탑 전용 줄바꿈 숨김 */
         .mobile-br {
+            display: none;
+        }
+
+        /* 데스크탑/모바일 전용 텍스트 */
+        .desktop-only {
+            display: inline;
+        }
+        .mobile-only {
             display: none;
         }
     }
