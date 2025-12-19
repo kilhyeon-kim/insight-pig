@@ -1299,11 +1299,16 @@ export class WeeklyService {
   private transformShipmentPopup(subs: TsInsWeekSub[]) {
     // ── 1. 요약 통계 (GUBUN='SHIP', SUB_GUBUN='STAT') ──
     const statSub = subs.find((s) => s.gubun === 'SHIP' && s.subGubun === 'STAT');
+
+    // ★ 합격율 평균은 SHIP/ROW의 SORT_NO=4 (ONE_RATIO) 행의 VAL_3에서 가져옴
+    //    테이블의 "1등급 > 합격율 > 평균" 값과 동일하게 표시
+    const oneRatioRow = subs.find((s) => s.gubun === 'SHIP' && s.subGubun === 'ROW' && s.sortNo === 4);
+
     const stats = {
       totalCount: statSub?.cnt1 || 0, // 지난주 출하두수
       yearTotal: statSub?.cnt2 || 0, // 당해년도 누계
       grade1Cnt: statSub?.cnt3 || 0, // 1등급+ 합격두수
-      grade1Rate: statSub?.val1 || 0, // 1등급+ 합격율(%)
+      grade1Rate: oneRatioRow?.val3 || statSub?.val1 || 0, // 1등급+ 합격율(%): ROW의 평균값 우선
       avgCarcass: statSub?.val2 || 0, // 평균 도체중(kg)
       avgBackfat: statSub?.val3 || 0, // 평균 등지방(mm)
       farmPrice: statSub?.val4 || 0,  // 내농장 평균 단가
