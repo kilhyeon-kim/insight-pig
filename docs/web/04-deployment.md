@@ -1,456 +1,135 @@
-# Docker 배포 가이드
+# 배포 및 운영 가이드 (Docker 기반)
 
 **대상**: DevOps, 배포 담당자  
-**최종 업데이트**: 2025-12-03
+**최종 업데이트**: 2025-12-19  
+**주요 내용**: Docker Compose를 이용한 이중화 환경 배포 및 운영 가이드
 
 ---
 
-## 1. 배포 아키텍처
+## 1. 운영 환경 분석 (Production Environment)
+
+현재 운영 서버는 고가용성을 위해 **이중화(Dual Server)**로 구성되어 있으며, 기존 레거시 서비스와 공존하는 환경입니다.
+
+### 1.1 서버 구성
+| 서버 구분 | IP 주소 | 역할 | OS |
+| :--- | :--- | :--- | :--- |
+| **운영 서버 #1** | 10.4.38.10 | Web/API 서비스 (Active) | CentOS 7 |
+| **운영 서버 #2** | 10.4.99.10 | Web/API 서비스 (Active/Active) | CentOS 7 |
+
+### 1.2 기존 서비스 현황 (Port Inventory)
+새로운 서비스 배포 시 아래 기존 포트와의 충돌에 주의해야 합니다.
+*   **8080 (TCP6)**: Tomcat (Java) 서비스 구동 중
+*   **5000 (TCP)**: uWSGI (Python) 서비스 구동 중
+*   **8002 (HTTP)**: **신규 서비스용 포트 (Nginx)** - ALB와 연결됨
+*   **3000, 3001**: Docker 내부 서비스용 (외부 노출 불필요)
+
+### 1.3 리소스 현황
+*   **Memory**: 총 7.5GB (가용 메모리 약 4.2GB)
+*   **Disk**: `/data` 파티션 활용 (권장 경로: `/data/insightPig`)
+
+---
+
+## 2. 배포 아키텍처
 
 ```
 ┌─────────────────────────────────────────┐
-│         Nginx (Reverse Proxy)           │
-│         Port: 80, 443 (SSL)             │
+│       AWS Application Load Balancer     │
+│         Domain: ins.pigplan.io          │
+│         (Port 80/443 -> 8002)           │
 └─────────────┬───────────────────────────┘
               │
       ┌───────┴────────┐
-      │                │
-┌─────▼─────┐    ┌────▼─────┐
-│  Next.js  │    │  NestJS  │
-│  Frontend │    │  Backend │
-│  Port:3000│    │  Port:3001│
-└───────────┘    └─────┬────┘
-                       │
-                 ┌─────▼─────┐
-                 │  Oracle   │
-                 │  Database │
-                 └───────────┘
+      │  Docker Engine │
+      ├────────────────┤
+      │ - Web (Next.js)│ (Internal: 3000)
+      │ - API (NestJS) │ (Internal: 3001)
+      │ - Nginx        │ (External: 8002)
+      └───────┬────────┘
+              │
+      ┌───────▼───────────────┐
+      │        Oracle Database        │
+      │  - Data Processing (Job)      │
+      │  - Data Storage               │
+      └───────────────────────────────┘
 ```
 
 ---
 
-## 2. Docker 파일 구성
+## 3. 서버 설정 및 배포 절차
 
-### 2.1 Frontend Dockerfile
-**파일**: `web/Dockerfile`
+### 3.1 Docker 환경 구축 (최초 1회, 양쪽 서버 공통)
+CentOS 7의 라이브러리 제약을 극복하기 위해 Docker를 사용합니다.
+```bash
+# 1. Docker 엔진 설치
+sudo yum install -y yum-utils
+sudo yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+sudo yum install -y docker-ce docker-ce-cli containerd.io
+sudo systemctl start docker
+sudo systemctl enable docker
 
-```dockerfile
-# Build stage
-FROM node:20-alpine AS builder
+# 2. 권한 설정 (pigplan 계정)
+sudo usermod -aG docker pigplan
+# 즉시 적용을 위해 소켓 권한 변경
+sudo chmod 666 /var/run/docker.sock
 
-WORKDIR /app
-
-# Copy package files
-COPY package*.json ./
-RUN npm ci
-
-# Copy source code
-COPY . .
-
-# Build Next.js app
-RUN npm run build
-
-# Production stage
-FROM node:20-alpine AS runner
-
-WORKDIR /app
-
-ENV NODE_ENV=production
-
-# Copy built files
-COPY --from=builder /app/public ./public
-COPY --from=builder /app/.next/standalone ./
-COPY --from=builder /app/.next/static ./.next/static
-
-EXPOSE 3000
-
-CMD ["node", "server.js"]
+# 3. Docker Compose 설치 (v2.24.5)
+sudo curl -L "https://github.com/docker/compose/releases/download/v2.24.5/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+sudo chmod +x /usr/local/bin/docker-compose
 ```
 
-### 2.2 Backend Dockerfile
-**파일**: `api/Dockerfile`
+### 3.2 소스 코드 배포 (SFTP)
+VS Code의 SFTP 확장을 사용하여 이중화 서버에 동시 배포합니다.
+*   **설정 파일**: `.vscode/sftp.json`
+*   **대상 경로**: `/data/insightPig`
+*   **방법**: `Ctrl + Shift + P` -> `SFTP: Upload Project` 실행 (38번, 99번 서버 각각 수행)
 
-```dockerfile
-FROM node:20-alpine
-
-WORKDIR /app
-
-# Copy package files
-COPY package*.json ./
-RUN npm ci --only=production
-
-# Copy source code
-COPY . .
-
-# Build NestJS app
-RUN npm run build
-
-EXPOSE 3001
-
-CMD ["node", "dist/main"]
-```
-
-### 2.3 Nginx Dockerfile
-**파일**: `nginx/Dockerfile`
-
-```dockerfile
-FROM nginx:alpine
-
-COPY nginx.conf /etc/nginx/nginx.conf
-
-EXPOSE 80
-```
-
----
-
-## 3. Nginx 설정
-
-**파일**: `nginx/nginx.conf`
-
-```nginx
-events {
-    worker_connections 1024;
-}
-
-http {
-    upstream frontend {
-        server web:3000;
-    }
-
-    upstream backend {
-        server api:3001;
-    }
-
-    server {
-        listen 80;
-        server_name localhost;
-
-        # Frontend
-        location / {
-            proxy_pass http://frontend;
-            proxy_http_version 1.1;
-            proxy_set_header Upgrade $http_upgrade;
-            proxy_set_header Connection 'upgrade';
-            proxy_set_header Host $host;
-            proxy_cache_bypass $http_upgrade;
-        }
-
-        # Backend API
-        location /api {
-            proxy_pass http://backend;
-            proxy_http_version 1.1;
-            proxy_set_header Host $host;
-            proxy_set_header X-Real-IP $remote_addr;
-            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        }
-    }
-}
-```
-
----
-
-## 4. Docker Compose
-
-**파일**: `docker-compose.yml`
-
-```yaml
-version: '3.8'
-
-services:
-  # Frontend (Next.js)
-  web:
-    build:
-      context: ./web
-      dockerfile: Dockerfile
-    container_name: inspig-web
-    environment:
-      - NEXT_PUBLIC_API_URL=http://api:3001
-      - NEXT_PUBLIC_USE_MOCK=false
-    ports:
-      - "3000:3000"
-    depends_on:
-      - api
-    restart: unless-stopped
-
-  # Backend (NestJS)
-  api:
-    build:
-      context: ./api
-      dockerfile: Dockerfile
-    container_name: inspig-api
-    environment:
-      - NODE_ENV=production
-      - USE_MOCK_DATA=false
-      - DB_HOST=${DB_HOST}
-      - DB_PORT=${DB_PORT}
-      - DB_USER=${DB_USER}
-      - DB_PASSWORD=${DB_PASSWORD}
-      - DB_SERVICE_NAME=${DB_SERVICE_NAME}
-    ports:
-      - "3001:3001"
-    restart: unless-stopped
-
-  # Nginx (Reverse Proxy)
-  nginx:
-    build:
-      context: ./nginx
-      dockerfile: Dockerfile
-    container_name: inspig-nginx
-    ports:
-      - "80:80"
-      - "443:443"
-    depends_on:
-      - web
-      - api
-    restart: unless-stopped
-```
-
----
-
-## 5. 환경 변수 설정
-
-**파일**: `.env` (루트 디렉토리)
-
+### 3.3 환경 변수 설정 (`.env`)
+각 서버의 `/data/insightPig/.env` 파일에 실제 DB 접속 정보를 설정합니다.
 ```env
-# Database Configuration
-DB_HOST=your-oracle-host
+DB_HOST=10.x.x.x
 DB_PORT=1521
-DB_USER=your-username
-DB_PASSWORD=your-password
-DB_SERVICE_NAME=your-service-name
-
-# Application
-NODE_ENV=production
+DB_USER=username
+DB_PASSWORD=password
+DB_SERVICE_NAME=xe
 ```
 
----
-
-## 6. 배포 명령어
-
-### 6.1 로컬 개발 환경
+### 3.4 서비스 실행
 ```bash
-# Frontend
-cd web && npm run dev
-
-# Backend
-cd api && npm run start:dev
-```
-
-### 6.2 Docker 배포
-```bash
-# 1. 환경 변수 설정
-cp .env.example .env
-# .env 파일 수정
-
-# 2. Docker 이미지 빌드 및 실행
+cd /data/insightPig
+# 컨테이너 빌드 및 백그라운드 실행
 docker-compose up -d --build
-
-# 3. 로그 확인
-docker-compose logs -f
-
-# 4. 특정 서비스 로그
-docker-compose logs -f web
-docker-compose logs -f api
-
-# 5. 중지
-docker-compose down
-
-# 6. 완전 삭제 (볼륨 포함)
-docker-compose down -v
-```
-
-### 6.3 개별 서비스 재시작
-```bash
-# Frontend 재시작
-docker-compose restart web
-
-# Backend 재시작
-docker-compose restart api
-
-# Nginx 재시작
-docker-compose restart nginx
 ```
 
 ---
 
-## 7. Next.js 설정 수정
+## 4. 데이터 처리 및 모니터링
 
-### 7.1 Standalone 모드 활성화
-**파일**: `web/next.config.ts`
+### 4.1 Oracle Job 운영 (현재 방식)
+데이터 수집 및 가공은 현재 Oracle 내부 스케줄러를 통해 수행됩니다.
+*   **JOB 명칭**: `JOB_INS_WEEKLY_REPORT`
+*   **실행 주기**: 매주 월요일 02:00 (KST)
+*   **프로시저**: `SP_INS_WEEK_MAIN` 호출
 
-```typescript
-import type { NextConfig } from "next";
-
-const nextConfig: NextConfig = {
-  output: 'standalone', // Docker 배포를 위한 설정
-  // ... 기타 설정
-};
-
-export default nextConfig;
-```
+### 4.2 모니터링 및 유지보수
+*   **로그 확인**: `docker-compose logs -f`
+*   **상태 확인**: `docker-compose ps`
+*   **서비스 재시작**: `docker-compose restart`
+*   **완전 삭제 후 재시작**: `docker-compose down && docker-compose up -d --build`
 
 ---
 
-## 8. .dockerignore 파일
+## 5. [차후 과제] Python ETL 전환 계획
 
-### 8.1 Frontend
-**파일**: `web/.dockerignore`
-
-```
-node_modules
-.next
-.git
-.env.local
-*.log
-```
-
-### 8.2 Backend
-**파일**: `api/.dockerignore`
-
-```
-node_modules
-dist
-.git
-.env
-*.log
-```
+향후 데이터 처리의 유연성을 위해 Oracle Job을 파이썬 스크립트로 전환할 예정입니다.
+*   **실행 환경**: 기존 파이썬 서비스 서버(CentOS 7) 내 독립 가상환경(`venv`)
+*   **주요 라이브러리**: `python-oracledb` (Thin mode), `pandas`
+*   **배포 방식**: `etl/` 폴더 내 스크립트 배치 및 `crontab` 등록
 
 ---
 
-## 9. 프로덕션 배포 (클라우드)
+## 6. 주의 사항 및 팁
 
-### 9.1 Docker Hub에 이미지 푸시
-```bash
-# 로그인
-docker login
-
-# 이미지 태그
-docker tag inspig-web:latest your-registry/inspig-web:latest
-docker tag inspig-api:latest your-registry/inspig-api:latest
-
-# 푸시
-docker push your-registry/inspig-web:latest
-docker push your-registry/inspig-api:latest
-```
-
-### 9.2 서버에서 Pull & Run
-```bash
-# 이미지 Pull
-docker pull your-registry/inspig-web:latest
-docker pull your-registry/inspig-api:latest
-
-# 실행
-docker-compose up -d
-```
-
----
-
-## 10. SSL 인증서 (HTTPS)
-
-### 10.1 Let's Encrypt 사용
-```bash
-# Certbot 설치
-sudo apt-get install certbot python3-certbot-nginx
-
-# 인증서 발급
-sudo certbot --nginx -d yourdomain.com
-```
-
-### 10.2 Nginx 설정 업데이트
-```nginx
-server {
-    listen 443 ssl;
-    server_name yourdomain.com;
-
-    ssl_certificate /etc/letsencrypt/live/yourdomain.com/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/yourdomain.com/privkey.pem;
-
-    # ... 기존 설정
-}
-
-server {
-    listen 80;
-    server_name yourdomain.com;
-    return 301 https://$server_name$request_uri;
-}
-```
-
----
-
-## 11. 모니터링 (선택사항)
-
-### 11.1 Portainer 추가
-**docker-compose.yml에 추가**:
-
-```yaml
-  portainer:
-    image: portainer/portainer-ce
-    container_name: inspig-portainer
-    ports:
-      - "9000:9000"
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - portainer-data:/data
-    restart: unless-stopped
-
-volumes:
-  portainer-data:
-```
-
-접속: `http://localhost:9000`
-
----
-
-## 12. 배포 체크리스트
-
-- [ ] `.env` 파일 설정 (DB 접속 정보)
-- [ ] `next.config.ts`에 `output: 'standalone'` 추가
-- [ ] Dockerfile 생성 (web, api, nginx)
-- [ ] `docker-compose.yml` 생성
-- [ ] `.dockerignore` 파일 생성
-- [ ] Docker 이미지 빌드 테스트
-- [ ] 로컬에서 Docker Compose 실행 테스트
-- [ ] 환경 변수 검증
-- [ ] 프로덕션 서버 배포
-- [ ] SSL 인증서 설정 (HTTPS)
-- [ ] 방화벽 설정 (80, 443 포트)
-
----
-
-## 13. 트러블슈팅
-
-### 13.1 포트 충돌
-```bash
-# 사용 중인 포트 확인
-netstat -ano | findstr :3000
-netstat -ano | findstr :3001
-
-# 프로세스 종료 (Windows)
-taskkill /PID <PID> /F
-```
-
-### 13.2 Docker 빌드 실패
-```bash
-# 캐시 없이 빌드
-docker-compose build --no-cache
-
-# 로그 확인
-docker-compose logs
-```
-
-### 13.3 컨테이너 접속
-```bash
-# 컨테이너 내부 접속
-docker exec -it inspig-web sh
-docker exec -it inspig-api sh
-```
-
----
-
-## 14. 참고 사항
-
-- **포트**: 80, 443, 3000, 3001 포트가 사용 중이 아닌지 확인
-- **방화벽**: 클라우드 환경에서는 보안 그룹/방화벽 설정 필요
-- **메모리**: Next.js 빌드 시 최소 2GB RAM 권장
-- **Oracle DB**: 외부 DB 사용 시 네트워크 연결 확인
-- **환경 변수**: `.env` 파일은 Git에 커밋하지 않음 (`.gitignore` 추가)
+1.  **이중화 동기화**: 소스 코드 수정 시 반드시 두 서버(38, 99) 모두에 업로드 및 재빌드를 수행해야 합니다.
+2.  **AWS 설정**: AWS 보안 그룹에서 **8002 포트**가 인바운드 허용되어야 하며, ALB 리스너 규칙에 `ins.pigplan.io`가 등록되어야 합니다. (상세 내용은 `docs/aws.md` 참조)
+3.  **접속 주소**: `http://ins.pigplan.io` (ALB 연동으로 포트 번호 생략 가능)
+4.  **권한 문제**: `docker-compose` 실행 시 권한 에러가 발생하면 `sudo chmod 666 /var/run/docker.sock`을 다시 실행하십시오.

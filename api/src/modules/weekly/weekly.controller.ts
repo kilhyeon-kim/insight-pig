@@ -372,6 +372,24 @@ export class WeeklyController {
     return { success: true, data: this.weeklyService.getAuctionPrice() };
   }
 
+  /**
+   * GET /api/weekly/auction-price/stats
+   * 경락가격 통계 조회 (평균/최고/최저) - 실시간
+   * @query from - 시작일 (YYYY-MM-DD)
+   * @query to - 종료일 (YYYY-MM-DD)
+   */
+  @Get('auction-price/stats')
+  async getAuctionPriceStats(
+    @Query('from') from: string,
+    @Query('to') to: string,
+  ) {
+    if (!from || !to) {
+      return { success: false, error: 'from, to 파라미터가 필요합니다.' };
+    }
+    const data = await this.weeklyService.getAuctionPriceStats(from, to);
+    return { success: true, data };
+  }
+
   /** GET /api/weekly/weather */
   @Get('weather')
   getWeather() {

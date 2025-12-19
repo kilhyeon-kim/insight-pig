@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { TsInsWeekSub } from './entities';
 import { WEEKLY_SQL } from './sql';
+import { COM_SQL } from '../com/sql/com.sql';
 import { SHARE_TOKEN_SQL } from '../auth/sql/share-token.sql';
 import { ComService } from '../com/com.service';
 import * as mockData from '../../data/mock/weekly.mock';
@@ -236,7 +237,36 @@ export class WeeklyService {
       // 4. 팝업 데이터 추가 (모든 팝업 데이터를 한 번에 조회)
       const popupData = await this.getAllPopupData(masterSeq, farmNo);
 
-      return { ...reportData, popupData };
+      // 5. 경락가격 실시간 조회 (extra.price + auction 팝업)
+      // DT_FROM, DT_TO: YY.MM.DD 형식 그대로 전달 (SQL에서 YYYYMMDD로 변환)
+      const dtFrom = week.DT_FROM;
+      const dtTo = week.DT_TO;
+      let auctionPopupData: {
+        xData: string[];
+        grade1Plus: number[];
+        grade1: number[];
+        grade2: number[];
+        gradeOut: number[];
+        excludeOut: number[];
+        average: number[];
+      } | null = null;
+
+      if (dtFrom && dtTo) {
+        // 경락가격 통계 (cardPrice용)
+        if (reportData.extra) {
+          const auctionStats = await this.getAuctionPriceStats(dtFrom, dtTo);
+          reportData.extra.price = {
+            avg: auctionStats.avg,
+            max: auctionStats.max,
+            min: auctionStats.min,
+            source: auctionStats.source,
+          };
+        }
+        // 경락가격 등급별 (팝업 차트용)
+        auctionPopupData = await this.getAuctionPopupData(dtFrom, dtTo);
+      }
+
+      return { ...reportData, popupData, auction: auctionPopupData };
     } catch (error) {
       this.logger.error('DB 조회 실패', error.message);
       // DB 연동 완료 - Mock fallback 제거
@@ -379,7 +409,7 @@ export class WeeklyService {
         psyY: week.PSY_Y,
         psyZone: week.PSY_ZONE,
       },
-      // 부가 정보 (Mock 데이터 사용)
+      // 부가 정보
       extra: {
         psy: {
           zone: mockData.operationSummaryData.psyDelay.zone,
@@ -388,10 +418,10 @@ export class WeeklyService {
           delay: mockData.operationSummaryData.psyDelay.delay,
         },
         price: {
-          avg: mockData.operationSummaryData.auctionPrice.national,
-          max: mockData.operationSummaryData.auctionPrice.dodram, // 예시 매핑
-          min: mockData.operationSummaryData.auctionPrice.central, // 예시 매핑
-          source: mockData.operationSummaryData.auctionPrice.date,
+          avg: 0,
+          max: 0,
+          min: 0,
+          source: '전국(제주제외) 탕박 등외제외',
         },
         weather: {
           min: mockData.operationSummaryData.weather.min,
@@ -1589,6 +1619,120 @@ export class WeeklyService {
 
   getAuctionPrice() {
     return mockData.operationSummaryData.auctionPrice;
+  }
+
+  /**
+   * 경락가격 통계 조회 (평균/최고/최저) - 실시간
+   * @param dtFrom - 시작일 (YY.MM.DD 형식)
+   * @param dtTo - 종료일 (YY.MM.DD 형식)
+   */
+  async getAuctionPriceStats(dtFrom: string, dtTo: string) {
+    try {
+      const results = await this.dataSource.query(
+        COM_SQL.getAuctionPriceStats,
+        params({ dtFrom, dtTo }),
+      );
+
+      if (!results || results.length === 0) {
+        return {
+          avg: 0,
+          max: 0,
+          min: 0,
+          source: '전국(제주제외) 탕박 등외제외',
+          period: `${dtFrom} ~ ${dtTo}`,
+        };
+      }
+
+      const row = results[0];
+      return {
+        avg: Number(row.AVG_PRICE) || 0,
+        max: Number(row.MAX_PRICE) || 0,
+        min: Number(row.MIN_PRICE) || 0,
+        source: '전국(제주제외) 탕박 등외제외',
+        period: row.PERIOD || `${dtFrom} ~ ${dtTo}`,
+      };
+    } catch (error) {
+      this.logger.error(`경락가격 통계 조회 실패: ${error.message}`);
+      return {
+        avg: 0,
+        max: 0,
+        min: 0,
+        source: '전국(제주제외) 탕박 등외제외',
+        period: `${dtFrom} ~ ${dtTo}`,
+      };
+    }
+  }
+
+  /**
+   * 경락가격 등급별 일별 조회 (팝업 차트용) - 실시간
+   * @param dtFrom - 시작일 (YY.MM.DD 형식)
+   * @param dtTo - 종료일 (YY.MM.DD 형식)
+   * @returns AuctionPopupData 형식 (xData, grade1Plus, grade1, grade2, gradeOut, excludeOut, average)
+   */
+  async getAuctionPopupData(dtFrom: string, dtTo: string) {
+    try {
+      const results = await this.dataSource.query(
+        COM_SQL.getAuctionPriceByGrade,
+        params({ dtFrom, dtTo }),
+      );
+
+      // 날짜별 그룹화
+      const dateMap = new Map<
+        string,
+        { display: string; grades: Record<string, number> }
+      >();
+
+      for (const row of results) {
+        const dt = row.START_DT;
+        if (!dateMap.has(dt)) {
+          dateMap.set(dt, { display: row.DT_DISPLAY, grades: {} });
+        }
+        dateMap.get(dt)!.grades[row.GRADE_CD] = Number(row.PRICE) || 0;
+      }
+
+      // 날짜순 정렬
+      const sortedDates = Array.from(dateMap.keys()).sort();
+
+      const xData: string[] = [];
+      const grade1Plus: number[] = [];
+      const grade1: number[] = [];
+      const grade2: number[] = [];
+      const gradeOut: number[] = [];
+      const excludeOut: number[] = [];
+      const average: number[] = [];
+
+      for (const dt of sortedDates) {
+        const entry = dateMap.get(dt)!;
+        xData.push(entry.display);
+        grade1Plus.push(entry.grades['029068'] || 0);
+        grade1.push(entry.grades['029069'] || 0);
+        grade2.push(entry.grades['029070'] || 0);
+        gradeOut.push(entry.grades['029076'] || 0);
+        excludeOut.push(entry.grades['ST'] || 0);
+        average.push(entry.grades['T'] || 0);
+      }
+
+      return {
+        xData,
+        grade1Plus,
+        grade1,
+        grade2,
+        gradeOut,
+        excludeOut,
+        average,
+      };
+    } catch (error) {
+      this.logger.error(`경락가격 등급별 조회 실패: ${error.message}`);
+      return {
+        xData: [],
+        grade1Plus: [],
+        grade1: [],
+        grade2: [],
+        gradeOut: [],
+        excludeOut: [],
+        average: [],
+      };
+    }
   }
 
   getWeather() {

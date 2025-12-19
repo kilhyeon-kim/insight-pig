@@ -37,7 +37,9 @@
       "Bash(del \"c:\\Projects\\inspig\\docs\\db\\sql\\ins\\week\\21_SP_INS_WEEK_MATING.sql\")",
       "Bash(del \"c:\\Projects\\inspig\\docs\\db\\sql\\ins\\week\\02_SP_INS_WEEK_MANAGE_SOW.sql\")",
       "Bash(npx tsc:*)",
-      "Bash(git fetch:*)"
+      "Bash(git fetch:*)",
+      "Bash(scp:*)",
+      "Bash(ssh:*)"
     ],
     "deny": [],
     "ask": []

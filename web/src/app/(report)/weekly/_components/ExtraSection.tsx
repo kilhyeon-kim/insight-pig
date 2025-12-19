@@ -101,7 +101,7 @@ export const ExtraSection: React.FC<ExtraSectionProps> = ({ data, onPopupOpen })
                     <div className="info-accordion-card" id="cardPrice">
                         <div className="card-header">
                             <div className="card-title">
-                                <FontAwesomeIcon icon={faWonSign} className="fa-sm" /> 경락가격(지난주)
+                                <FontAwesomeIcon icon={faWonSign} className="fa-sm" /> 경락가격(지난주) <span className="title-note">- 등외/제주제외, 탕박</span>
                             </div>
                             <button className="card-more" onClick={() => handlePopup('auction')}>
                                 <FontAwesomeIcon icon={faChartLine} />&nbsp;주간가격
@@ -121,10 +121,6 @@ export const ExtraSection: React.FC<ExtraSectionProps> = ({ data, onPopupOpen })
                                     <div className="label">최저</div>
                                     <div className="value blue">{data.price.min.toLocaleString()}원</div>
                                 </div>
-                            </div>
-                            <div className="section-right">
-                                <div className="source-label">출처</div>
-                                <div className="source-value">{data.price.source}</div>
                             </div>
                         </div>
                     </div>

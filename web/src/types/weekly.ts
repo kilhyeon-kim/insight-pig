@@ -454,7 +454,7 @@ export interface PsyTrendPopupData {
 }
 
 /**
- * 경락가격 팝업 데이터
+ * 경락가격 팝업 데이터 (차트용)
  * @see data.js _pop.auction
  */
 export interface AuctionPopupData {

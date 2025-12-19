@@ -76,4 +76,64 @@ export const COM_SQL = {
         AND C2.LANGUAGE_CD = 'ko'
     WHERE F.FARM_NO = :farmNo
   `,
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // 경락가격 실시간 조회 (TM_SISAE_DETAIL)
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  /**
+   * 경락가격 통계 조회 (평균/최고/최저)
+   * - 전국 탕박 등외제외 평균단가
+   * @param dtFrom - 시작일 (YY.MM.DD)
+   * @param dtTo - 종료일 (YY.MM.DD)
+   */
+  getAuctionPriceStats: `
+    /* com.com.getAuctionPriceStats : 경락가격 통계 (평균/최고/최저) */
+    SELECT
+        NVL(ROUND(SUM(AUCTCNT * AUCTAMT) / NULLIF(SUM(AUCTCNT), 0)), 0) AS AVG_PRICE,
+        NVL(MAX(AUCTAMT), 0) AS MAX_PRICE,
+        NVL(MIN(CASE WHEN AUCTAMT > 0 THEN AUCTAMT END), 0) AS MIN_PRICE,
+        :dtFrom || ' ~ ' || :dtTo AS PERIOD
+    FROM TM_SISAE_DETAIL
+    WHERE ABATTCD = '057016'
+      AND START_DT BETWEEN TO_CHAR(TO_DATE(:dtFrom, 'YY.MM.DD'), 'YYYYMMDD')
+                       AND TO_CHAR(TO_DATE(:dtTo, 'YY.MM.DD'), 'YYYYMMDD')
+      AND GRADE_CD = 'ST'
+      AND SKIN_YN = 'Y'
+      AND JUDGESEX_CD IS NULL
+      AND TO_NUMBER(NVL(AUCTAMT, '0')) > 0
+  `,
+
+  /**
+   * 경락가격 등급별 일별 조회 (팝업 차트용)
+   * - 전국 탕박 (제주제외)
+   * - 등급별: 1+, 1, 2, 등외, 등외제외(ST), 평균(T)
+   * @param dtFrom - 시작일 (YY.MM.DD)
+   * @param dtTo - 종료일 (YY.MM.DD)
+   */
+  getAuctionPriceByGrade: `
+    /* com.com.getAuctionPriceByGrade : 경락가격 등급별 일별 조회 */
+    SELECT
+        START_DT,
+        TO_CHAR(TO_DATE(START_DT, 'YYYYMMDD'), 'MM.DD') AS DT_DISPLAY,
+        GRADE_CD,
+        ROUND(AUCTAMT) AS PRICE
+    FROM TM_SISAE_DETAIL
+    WHERE ABATTCD = '057016'
+      AND START_DT BETWEEN TO_CHAR(TO_DATE(:dtFrom, 'YY.MM.DD'), 'YYYYMMDD')
+                       AND TO_CHAR(TO_DATE(:dtTo, 'YY.MM.DD'), 'YYYYMMDD')
+      AND GRADE_CD IN ('029068', '029069', '029070', '029076', 'ST', 'T')
+      AND SKIN_YN = 'Y'
+      AND JUDGESEX_CD IS NULL
+      AND TO_NUMBER(NVL(AUCTAMT, '0')) > 0
+    ORDER BY START_DT,
+             CASE WHEN GRADE_CD = '029068' THEN 1000
+                  WHEN GRADE_CD = '029069' THEN 2000
+                  WHEN GRADE_CD = '029070' THEN 3000
+                  WHEN GRADE_CD = '029076' THEN 4000
+                  WHEN GRADE_CD = 'ST' THEN 5000
+                  WHEN GRADE_CD = 'T' THEN 9100
+                  ELSE 10
+             END
+  `,
 };

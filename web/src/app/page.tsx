@@ -1,8 +1,11 @@
 'use client';
 
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Icon } from '@/components/common';
 import { MainLayout } from '@/components/layout';
+import { useAuth } from '@/contexts/AuthContext';
 
 const menuItems = [
   {
@@ -29,6 +32,24 @@ const menuItems = [
 ];
 
 export default function HomePage() {
+  const router = useRouter();
+  const { isAuthenticated, isLoading } = useAuth();
+
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      router.replace('/login');
+    }
+  }, [isAuthenticated, isLoading, router]);
+
+  // 로딩 중이거나 미인증 상태면 빈 화면 (리다이렉트 전)
+  if (isLoading || !isAuthenticated) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-100">
+        <div className="text-gray-500">로딩 중...</div>
+      </div>
+    );
+  }
+
   return (
     <MainLayout showFooter={false}>
       <div className="flex flex-col items-center justify-center min-h-[calc(100vh-60px)] p-6">

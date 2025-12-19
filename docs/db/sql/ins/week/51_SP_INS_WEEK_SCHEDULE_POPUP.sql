@@ -53,7 +53,7 @@
 -- - TC_FARM_CONFIG 참조: 140005(기준출하일령, 기본 180) - 140003(평균포유기간, 기본 21)
 -- - 이유일 + (기준출하일령 - 평균포유기간) = 출하예정일
 -- - 예: 이유일 + (180 - 21) = 이유일 + 159일 = 출하예정일
--- - 출하예정 두수 = 이유두수 * 90% (육성율)
+-- - 출하예정 두수 = 이유두수 * 90% (이유후육성율)
 -- ============================================================
 
 CREATE OR REPLACE PROCEDURE SP_INS_WEEK_SCHEDULE_POPUP (
@@ -90,9 +90,9 @@ CREATE OR REPLACE PROCEDURE SP_INS_WEEK_SCHEDULE_POPUP (
     V_SHIP_DAY      INTEGER := 180;  -- 기준출하일령 (140005)
     V_WEAN_PERIOD   INTEGER := 21;   -- 평균포유기간 (140003)
     V_SHIP_OFFSET   INTEGER := 159;  -- 이유→출하 경과일 (V_SHIP_DAY - V_WEAN_PERIOD)
-    V_REARING_RATE  NUMBER := 85;    -- 육성율 (CONFIG에서 조회)
-    V_RATE_FROM     VARCHAR2(10);    -- 육성율 계산 시작월 (YY.MM)
-    V_RATE_TO       VARCHAR2(10);    -- 육성율 계산 종료월 (YY.MM)
+    V_REARING_RATE  NUMBER := 85;    -- 이유후육성율 (CONFIG에서 조회)
+    V_RATE_FROM     VARCHAR2(10);    -- 이유후육성율 계산 시작월 (YY.MM)
+    V_RATE_TO       VARCHAR2(10);    -- 이유후육성율 계산 종료월 (YY.MM)
 
     -- 요일별 날짜 배열 (월~일)
     TYPE T_DATE_ARR IS TABLE OF DATE INDEX BY PLS_INTEGER;
@@ -127,9 +127,9 @@ BEGIN
     BEGIN
         SELECT NVL(CNT_3, 180),  -- 기준출하일령
                NVL(CNT_2, 21),   -- 평균포유기간
-               NVL(VAL_1, 85),   -- 육성율 (6개월 평균)
-               STR_4,            -- 육성율 계산 시작월 (YY.MM)
-               STR_5             -- 육성율 계산 종료월 (YY.MM)
+               NVL(VAL_1, 85),   -- 이유후육성율 (6개월 평균)
+               STR_4,            -- 이유후육성율 계산 시작월 (YY.MM)
+               STR_5             -- 이유후육성율 계산 종료월 (YY.MM)
         INTO V_SHIP_DAY, V_WEAN_PERIOD, V_REARING_RATE, V_RATE_FROM, V_RATE_TO
         FROM TS_INS_WEEK_SUB
         WHERE MASTER_SEQ = P_MASTER_SEQ
@@ -321,7 +321,7 @@ BEGIN
     -- ================================================
     -- 7. 출하예정 (TB_EU 이유두수 기반)
     --    이유일 + (기준출하일령 - 평균포유기간) = 출하예정일
-    --    출하예정 두수 = 이유두수 * 육성율 (CONFIG에서 이미 조회됨)
+    --    출하예정 두수 = 이유두수 * 이유후육성율 (CONFIG에서 이미 조회됨)
     -- ================================================
     -- ★ 최적화: 좌측 컬럼 가공 제거 → WK_DT 인덱스 활용 가능
     -- 기존: TO_DATE(E.WK_DT) + V_SHIP_OFFSET BETWEEN V_DT_FROM AND V_DT_TO
@@ -642,10 +642,10 @@ BEGIN
            (SELECT LISTAGG(WK_NM || '(' || PASS_DAY || '일)', ',') WITHIN GROUP (ORDER BY WK_NM)
             FROM TB_PLAN_MODON WHERE FARM_NO = P_FARM_NO AND JOB_GUBUN_CD = '150004' AND USE_YN = 'Y'),
            -- STR_5: 출하 산출기준 (계산식) - ShipmentPopup 툴팁과 동일 형태
-           '* 공식: (이유두수 × 육성율)' || CHR(10) ||
+           '* 공식: (이유두수 × 이유후육성율)' || CHR(10) ||
            '* 이유일 = 출하예정일 - (기준출하일령 ' || V_SHIP_DAY || '일 - 평균포유기간 ' || V_WEAN_PERIOD || '일)' || CHR(10) ||
            '  (설정값: ' || V_SHIP_DAY || ' - ' || V_WEAN_PERIOD || ' = ' || V_SHIP_OFFSET || '일 전)' || CHR(10) ||
-           '* 육성율: ' || V_REARING_RATE || '% (' || V_RATE_FROM || '~' || V_RATE_TO || ' 평균, 기본 85%)',
+           '* 이유후육성율: ' || V_REARING_RATE || '% (' || V_RATE_FROM || '~' || V_RATE_TO || ' 평균, 기본 85%)',
            -- STR_6: 재발확인 산출기준 (고정)
            '(고정)교배후 3주(21일~27일), 4주(28일~35일) 대상모돈'
     FROM DUAL;

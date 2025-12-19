@@ -210,7 +210,7 @@ export const AuctionPopup: React.FC<AuctionPopupProps> = ({ isOpen, onClose, dat
             isOpen={isOpen}
             onClose={onClose}
             title="경락가격 추이"
-            subtitle="축산물품질평가원 지육거래정보 (제주제외, 탕박)"
+            subtitle="축산물품질평가원 지육거래정보"
             maxWidth="max-w-2xl"
             id="pop-auction"
         >

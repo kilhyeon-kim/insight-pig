@@ -20,17 +20,17 @@
 --   - CNT_3: 140005 기준출하일령 (기본 180)
 --   - CNT_4: 140007 후보돈초교배일령 (기본 240)
 --   - CNT_5: 140008 평균재귀일 (기본 7)
---   - VAL_1: 육성율 (6개월 평균, 기본 85%)
+--   - VAL_1: 이유후육성율 (6개월 평균, 기본 85%)
 --
 -- DB 컬럼 매핑 (JSON - 프론트엔드용):
 --   - STR_1: 코드 목록 (JSON 배열) - ["140002","140003",...]
 --   - STR_2: 코드명 목록 (JSON 배열) - ["평균임신기간","평균포유기간",...]
 --   - STR_3: 적용값 목록 (JSON 배열) - [115,21,...]
 --
--- DB 컬럼 매핑 (육성율 계산 기간):
---   - STR_4: 육성율 계산 시작월 (YY.MM 형식, 예: "24.06")
---   - STR_5: 육성율 계산 종료월 (YY.MM 형식, 예: "24.11")
---   ※ 육성율은 최근 6개월간의 출하두수/이유두수 평균 (당월 제외)
+-- DB 컬럼 매핑 (이유후육성율 계산 기간):
+--   - STR_4: 이유후육성율 계산 시작월 (YY.MM 형식, 예: "24.06")
+--   - STR_5: 이유후육성율 계산 종료월 (YY.MM 형식, 예: "24.11")
+--   ※ 이유후육성율은 최근 6개월간의 출하두수/이유두수 평균 (당월 제외)
 --
 -- 등록 대상 코드 (9개):
 --   140002: 평균임신기간 (기본 115) → CNT_1
@@ -64,10 +64,10 @@ CREATE OR REPLACE PROCEDURE SP_INS_WEEK_CONFIG (
     V_SHIP_DAY      INTEGER := 180;   -- 140005: 기준출하일령
     V_FIRST_GB_DAY  INTEGER := 240;   -- 140007: 후보돈초교배일령
     V_AVG_RETURN    INTEGER := 7;     -- 140008: 평균재귀일
-    V_REARING_RATE  NUMBER := 85;     -- 육성율 (6개월 평균)
+    V_REARING_RATE  NUMBER := 85;     -- 이유후육성율 (6개월 평균)
     V_SHIP_OFFSET   INTEGER := 159;   -- 출하→이유 역산일 (V_SHIP_DAY - V_WEAN_PERIOD)
-    V_RATE_FROM     VARCHAR2(10);     -- 육성율 계산 시작월 (YY.MM)
-    V_RATE_TO       VARCHAR2(10);     -- 육성율 계산 종료월 (YY.MM)
+    V_RATE_FROM     VARCHAR2(10);     -- 이유후육성율 계산 시작월 (YY.MM)
+    V_RATE_TO       VARCHAR2(10);     -- 이유후육성율 계산 종료월 (YY.MM)
 
 BEGIN
     -- 로그 시작
@@ -145,7 +145,7 @@ BEGIN
     );
 
     -- ================================================
-    -- 2-1. 육성율 계산 (최근 6개월)
+    -- 2-1. 이유후육성율 계산 (최근 6개월)
     -- ================================================
     BEGIN
 
@@ -181,7 +181,7 @@ BEGIN
             FROM RAW_DATA
             GROUP BY YM
         )
-        -- 월별 육성율의 평균 계산
+        -- 월별 이유후육성율의 평균 계산
         SELECT ROUND(AVG(CASE WHEN WEAN_CNT > 0 THEN SHIP_CNT / WEAN_CNT * 100 END), 1)
         INTO V_REARING_RATE
         FROM MONTHLY_STATS;
@@ -194,20 +194,20 @@ BEGIN
         V_REARING_RATE := 85;
     END IF;
 
-    -- 육성율 계산 기간 설정 (최근 6개월, 당월 제외)
+    -- 이유후육성율 계산 기간 설정 (최근 6개월, 당월 제외)
     V_RATE_FROM := TO_CHAR(ADD_MONTHS(TRUNC(SYSDATE, 'MM'), -6), 'YY.MM');
     V_RATE_TO := TO_CHAR(ADD_MONTHS(TRUNC(SYSDATE, 'MM'), -1), 'YY.MM');
 
-    -- JSON에 육성율 추가
+    -- JSON에 이유후육성율 추가
     V_CODES := SUBSTR(V_CODES, 1, LENGTH(V_CODES)-1) || ',"REARING_RATE"]';
-    V_NAMES := SUBSTR(V_NAMES, 1, LENGTH(V_NAMES)-1) || ',"육성율(6개월)"]';
+    V_NAMES := SUBSTR(V_NAMES, 1, LENGTH(V_NAMES)-1) || ',"이유후육성율(6개월)"]';
     V_VALUES := SUBSTR(V_VALUES, 1, LENGTH(V_VALUES)-1) || ',' || V_REARING_RATE || ']';
 
     -- ================================================
     -- 3. 1ROW INSERT (GUBUN='CONFIG')
     --    개별 컬럼: CNT_1~CNT_5 (다른 프로시저에서 조회용)
     --    JSON: STR_1~STR_3 (프론트엔드용)
-    --    STR_4~STR_5: 육성율 계산 기간 (YY.MM 형식)
+    --    STR_4~STR_5: 이유후육성율 계산 기간 (YY.MM 형식)
     -- ================================================
     INSERT INTO TS_INS_WEEK_SUB (
         MASTER_SEQ, FARM_NO, GUBUN, SORT_NO,
@@ -223,12 +223,12 @@ BEGIN
         V_SHIP_DAY,      -- CNT_3: 140005 기준출하일령
         V_FIRST_GB_DAY,  -- CNT_4: 140007 후보돈초교배일령
         V_AVG_RETURN,    -- CNT_5: 140008 평균재귀일
-        V_REARING_RATE,  -- VAL_1: 육성율 (6개월 평균)
+        V_REARING_RATE,  -- VAL_1: 이유후육성율 (6개월 평균)
         V_CODES,         -- STR_1: 코드 목록 JSON
         V_NAMES,         -- STR_2: 코드명 목록 JSON
         V_VALUES,        -- STR_3: 적용값 목록 JSON
-        V_RATE_FROM,     -- STR_4: 육성율 계산 시작월 (YY.MM)
-        V_RATE_TO        -- STR_5: 육성율 계산 종료월 (YY.MM)
+        V_RATE_FROM,     -- STR_4: 이유후육성율 계산 시작월 (YY.MM)
+        V_RATE_TO        -- STR_5: 이유후육성율 계산 종료월 (YY.MM)
     );
 
     V_PROC_CNT := 1;

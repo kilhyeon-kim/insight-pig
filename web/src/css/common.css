@@ -1194,6 +1194,13 @@
         color: var(--rp-text-secondary);
     }
 
+    /* 경락가격 카드 타이틀 보조 텍스트 */
+    .info-accordion-card .card-title .title-note {
+        font-size: 10px;
+        color: var(--rp-text-tertiary);
+        font-weight: 400;
+    }
+
     /* ============================================
        관리 포인트 (.mgmt-section)
        ============================================ */
