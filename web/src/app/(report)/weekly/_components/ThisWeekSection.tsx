@@ -179,7 +179,7 @@ export const ThisWeekSection: React.FC<ThisWeekSectionProps> = ({ data, onPopupO
                         {weekDays.map((_, i) => {
                             const count = grid?.gb?.[i];
                             return (
-                                <div key={i} className={`calendar-cell${i === 6 ? ' last-col' : ''}`} onClick={() => count && onPopupOpen('scheduleGb')}>
+                                <div key={i} className={`calendar-cell${i === 6 ? ' last-col' : ''}`}>
                                     {count && <span className="count">{count}</span>}
                                 </div>
                             );
@@ -192,7 +192,7 @@ export const ThisWeekSection: React.FC<ThisWeekSectionProps> = ({ data, onPopupO
                         {weekDays.map((_, i) => {
                             const count = grid?.bm?.[i];
                             return (
-                                <div key={i} className={`calendar-cell highlight${i === 6 ? ' last-col' : ''}`} onClick={() => count && onPopupOpen('scheduleBm')}>
+                                <div key={i} className={`calendar-cell highlight${i === 6 ? ' last-col' : ''}`}>
                                     {count && <span className="count">{count}</span>}
                                 </div>
                             );
@@ -232,7 +232,7 @@ export const ThisWeekSection: React.FC<ThisWeekSectionProps> = ({ data, onPopupO
                         {weekDays.map((_, i) => {
                             const count = grid?.eu?.[i];
                             return (
-                                <div key={i} className={`calendar-cell${i === 6 ? ' last-col' : ''}`} onClick={() => count && onPopupOpen('scheduleEu')}>
+                                <div key={i} className={`calendar-cell${i === 6 ? ' last-col' : ''}`}>
                                     {count && <span className="count">{count}</span>}
                                 </div>
                             );
@@ -245,7 +245,7 @@ export const ThisWeekSection: React.FC<ThisWeekSectionProps> = ({ data, onPopupO
                         {weekDays.map((_, i) => {
                             const count = grid?.vaccine?.[i];
                             return (
-                                <div key={i} className={`calendar-cell${i === 6 ? ' last-col' : ''}`} onClick={() => count && onPopupOpen('scheduleVaccine')}>
+                                <div key={i} className={`calendar-cell${i === 6 ? ' last-col' : ''}`}>
                                     {count && <span className="count">{count}</span>}
                                 </div>
                             );
