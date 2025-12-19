@@ -91,6 +91,8 @@ CREATE OR REPLACE PROCEDURE SP_INS_WEEK_SCHEDULE_POPUP (
     V_WEAN_PERIOD   INTEGER := 21;   -- 평균포유기간 (140003)
     V_SHIP_OFFSET   INTEGER := 159;  -- 이유→출하 경과일 (V_SHIP_DAY - V_WEAN_PERIOD)
     V_REARING_RATE  NUMBER := 85;    -- 육성율 (CONFIG에서 조회)
+    V_RATE_FROM     VARCHAR2(10);    -- 육성율 계산 시작월 (YY.MM)
+    V_RATE_TO       VARCHAR2(10);    -- 육성율 계산 종료월 (YY.MM)
 
     -- 요일별 날짜 배열 (월~일)
     TYPE T_DATE_ARR IS TABLE OF DATE INDEX BY PLS_INTEGER;
@@ -125,8 +127,10 @@ BEGIN
     BEGIN
         SELECT NVL(CNT_3, 180),  -- 기준출하일령
                NVL(CNT_2, 21),   -- 평균포유기간
-               NVL(VAL_1, 85)    -- 육성율 (6개월 평균)
-        INTO V_SHIP_DAY, V_WEAN_PERIOD, V_REARING_RATE
+               NVL(VAL_1, 85),   -- 육성율 (6개월 평균)
+               STR_4,            -- 육성율 계산 시작월 (YY.MM)
+               STR_5             -- 육성율 계산 종료월 (YY.MM)
+        INTO V_SHIP_DAY, V_WEAN_PERIOD, V_REARING_RATE, V_RATE_FROM, V_RATE_TO
         FROM TS_INS_WEEK_SUB
         WHERE MASTER_SEQ = P_MASTER_SEQ
           AND FARM_NO = P_FARM_NO
@@ -136,6 +140,8 @@ BEGIN
             V_SHIP_DAY := 180;
             V_WEAN_PERIOD := 21;
             V_REARING_RATE := 85;
+            V_RATE_FROM := TO_CHAR(ADD_MONTHS(TRUNC(SYSDATE, 'MM'), -6), 'YY.MM');
+            V_RATE_TO := TO_CHAR(ADD_MONTHS(TRUNC(SYSDATE, 'MM'), -1), 'YY.MM');
     END;
     V_SHIP_OFFSET := V_SHIP_DAY - V_WEAN_PERIOD;
 
@@ -639,7 +645,7 @@ BEGIN
            '* 공식: (이유두수 × 육성율)' || CHR(10) ||
            '* 이유일 = 출하예정일 - (기준출하일령 ' || V_SHIP_DAY || '일 - 평균포유기간 ' || V_WEAN_PERIOD || '일)' || CHR(10) ||
            '  (설정값: ' || V_SHIP_DAY || ' - ' || V_WEAN_PERIOD || ' = ' || V_SHIP_OFFSET || '일 전)' || CHR(10) ||
-           '* 육성율: ' || V_REARING_RATE || '% (6개월 평균, 기본 85%)',
+           '* 육성율: ' || V_REARING_RATE || '% (' || V_RATE_FROM || '~' || V_RATE_TO || ' 평균, 기본 85%)',
            -- STR_6: 재발확인 산출기준 (고정)
            '(고정)교배후 3주(21일~27일), 4주(28일~35일) 대상모돈'
     FROM DUAL;
