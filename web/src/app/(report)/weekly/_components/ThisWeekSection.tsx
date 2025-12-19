@@ -106,9 +106,15 @@ export const ThisWeekSection: React.FC<ThisWeekSectionProps> = ({ data, onPopupO
                                         <span className="help-label">모돈백신</span>
                                         <span className="help-desc">{grid?.help?.vaccine || '설정된 예정작업정보 없음'}</span>
                                     </div>
-                                    <div className="help-item">
+                                    <div className="help-item" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '4px' }}>
                                         <span className="help-label">출하</span>
-                                        <span className="help-desc">{grid?.help?.shipment || '-'}</span>
+                                        {grid?.help?.shipment ? (
+                                            <span className="help-desc" style={{ whiteSpace: 'pre-line', lineHeight: '1.5' }}>
+                                                {grid.help.shipment}
+                                            </span>
+                                        ) : (
+                                            <span className="help-desc">-</span>
+                                        )}
                                     </div>
                                 </div>
                                 <div className="help-tooltip-footer">

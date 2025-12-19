@@ -635,9 +635,11 @@ BEGIN
            -- STR_4: 백신 산출기준
            (SELECT LISTAGG(WK_NM || '(' || PASS_DAY || '일)', ',') WITHIN GROUP (ORDER BY WK_NM)
             FROM TB_PLAN_MODON WHERE FARM_NO = P_FARM_NO AND JOB_GUBUN_CD = '150004' AND USE_YN = 'Y'),
-           -- STR_5: 출하 산출기준 (계산식)
-           '이유일 산정기준 => 이유일 + ' || V_SHIP_OFFSET || '일 (출하일령 ' || V_SHIP_DAY || '일 - 포유기간 ' || V_WEAN_PERIOD || '일)' || CHR(10) ||
-           '육성율 : ' || V_REARING_RATE || '% (6개월간 평균육성율), 출하정보 없는경우 85% 적용',
+           -- STR_5: 출하 산출기준 (계산식) - ShipmentPopup 툴팁과 동일 형태
+           '* 공식: (이유두수 × 육성율)' || CHR(10) ||
+           '* 이유일 = 출하예정일 - (기준출하일령 ' || V_SHIP_DAY || '일 - 평균포유기간 ' || V_WEAN_PERIOD || '일)' || CHR(10) ||
+           '  (설정값: ' || V_SHIP_DAY || ' - ' || V_WEAN_PERIOD || ' = ' || V_SHIP_OFFSET || '일 전)' || CHR(10) ||
+           '* 육성율: ' || V_REARING_RATE || '% (6개월 평균, 기본 85%)',
            -- STR_6: 재발확인 산출기준 (고정)
            '(고정)교배후 3주(21일~27일), 4주(28일~35일) 대상모돈'
     FROM DUAL;
