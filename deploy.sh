@@ -2,12 +2,18 @@
 # InsightPig 이중화 서버 배포 스크립트
 # 사용법:
 #   ./deploy.sh          - 변경된 파일만 배포
-#   ./deploy.sh --all    - 전체 프로젝트 배포
+#   ./deploy.sh -all     - 전체 프로젝트 배포
+
+# 스크립트가 있는 디렉토리로 이동
+cd "$(dirname "$0")"
+PROJECT_DIR=$(pwd)
 
 KEY_PATH="E:/ssh key/sshkey/aws/ProdPigplanKey.pem"
 REMOTE_PATH="/data/insightPig"
 SERVERS=("10.4.38.10" "10.4.99.10")
 USER="pigplan"
+
+echo "프로젝트 경로: $PROJECT_DIR"
 
 # 배포 제외 패턴
 EXCLUDE_PATTERNS=(
@@ -27,22 +33,36 @@ echo "  InsightPig 이중화 서버 배포"
 echo "========================================="
 
 # 모드 확인
-if [ "$1" == "--all" ]; then
-    echo ">>> 모드: 전체 배포"
-    TARGETS="api web nginx docker-compose.yml"
+if [ "$1" == "-all" ]; then
+    echo ">>> 모드: 전체 배포 (scp)"
+    echo ""
 
     for SERVER in "${SERVERS[@]}"; do
-        echo ""
         echo ">>> 배포 중: $SERVER"
         echo "-----------------------------------------"
-        scp -i "$KEY_PATH" -r $TARGETS ${USER}@${SERVER}:${REMOTE_PATH}/
+
+        # docker-compose.yml 업로드
+        echo "  업로드: docker-compose.yml"
+        scp -i "$KEY_PATH" docker-compose.yml ${USER}@${SERVER}:${REMOTE_PATH}/
+
+        # nginx 디렉토리 업로드 (작은 파일들)
+        echo "  업로드: nginx/"
+        scp -i "$KEY_PATH" -r nginx ${USER}@${SERVER}:${REMOTE_PATH}/
+
+        # api 디렉토리 업로드 (node_modules 제외 - tar 사용)
+        echo "  업로드: api/ (node_modules 제외)"
+        tar --exclude='node_modules' --exclude='.git' --exclude='docs' --exclude='*.md' -cf - api | ssh -i "$KEY_PATH" ${USER}@${SERVER} "cd ${REMOTE_PATH} && tar -xf -"
+
+        # web 디렉토리 업로드 (node_modules 제외 - tar 사용)
+        echo "  업로드: web/ (node_modules 제외)"
+        tar --exclude='node_modules' --exclude='.git' --exclude='docs' --exclude='*.md' -cf - web | ssh -i "$KEY_PATH" ${USER}@${SERVER} "cd ${REMOTE_PATH} && tar -xf -"
 
         if [ $? -eq 0 ]; then
             echo "[OK] $SERVER 배포 완료"
         else
             echo "[FAIL] $SERVER 배포 실패"
-            exit 1
         fi
+        echo ""
     done
 else
     echo ">>> 모드: 변경 파일만 배포 (git diff 기반)"

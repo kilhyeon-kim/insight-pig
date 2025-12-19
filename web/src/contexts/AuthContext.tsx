@@ -149,9 +149,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       };
     } catch (error) {
       console.error('Login error:', error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
       return {
         success: false,
-        error: '서버 연결에 실패했습니다.',
+        error: `서버 연결에 실패했습니다. (${errorMessage})`,
       };
     }
   }, []);
