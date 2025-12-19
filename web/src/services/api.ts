@@ -7,6 +7,7 @@
  */
 
 import { MOCK_REPORT_LIST, MOCK_WEEKLY_DATA, MOCK_POPUP_DATA, MOCK_CHART_DATA } from './mockData';
+import { ErrorCode, detectErrorCode, detectErrorCodeByStatus, getErrorMessage } from '@/err';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK !== 'false'; // 기본값: true (Mock 사용)
@@ -18,11 +19,26 @@ interface ApiResponse<T> {
 }
 
 /**
+ * API 에러 클래스
+ */
+export class ApiError extends Error {
+  code: ErrorCode;
+  statusCode?: number;
+
+  constructor(code: ErrorCode, message?: string, statusCode?: number) {
+    super(message || getErrorMessage(code));
+    this.name = 'ApiError';
+    this.code = code;
+    this.statusCode = statusCode;
+  }
+}
+
+/**
  * 공통 fetch 함수
  * - USE_MOCK=true: Mock 데이터 반환
  * - USE_MOCK=false: 실제 Backend API 호출
  */
-async function fetchApi<T>(endpoint: string): Promise<T> {
+async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> {
   // Mock Data Interception (개발 모드)
   if (USE_MOCK) {
     if (endpoint.startsWith('/api/weekly/list')) {
@@ -36,16 +52,64 @@ async function fetchApi<T>(endpoint: string): Promise<T> {
     }
   }
 
-  // 실제 API 호출
-  const response = await fetch(`${API_BASE_URL}${endpoint}`);
-  if (!response.ok) {
-    throw new Error(`API Error: ${response.status}`);
+  try {
+    // 실제 API 호출
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        ...options?.headers,
+      },
+    });
+
+    let result: any;
+    try {
+      result = await response.json();
+    } catch {
+      throw new ApiError(ErrorCode.ETC_PARSE_ERROR, undefined, response.status);
+    }
+
+    if (!response.ok) {
+      const code = detectErrorCodeByStatus(response.status, result);
+      throw new ApiError(code, result.message, response.status);
+    }
+
+    if (!result.success) {
+      throw new ApiError(
+        ErrorCode.SRV_INTERNAL_ERROR,
+        result.message || getErrorMessage(ErrorCode.SRV_INTERNAL_ERROR)
+      );
+    }
+
+    return result.data;
+  } catch (error) {
+    // 이미 ApiError면 그대로 throw
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    // 네트워크/CORS/SSL 등 에러 감지
+    const code = detectErrorCode(error);
+    throw new ApiError(code);
   }
-  const result: ApiResponse<T> = await response.json();
-  if (!result.success) {
-    throw new Error(result.message || 'API request failed');
+}
+
+/**
+ * 인증이 필요한 API 호출
+ */
+async function fetchApiWithAuth<T>(endpoint: string, options?: RequestInit): Promise<T> {
+  const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+
+  if (!token) {
+    throw new ApiError(ErrorCode.AUTH_LOGIN_REQUIRED);
   }
-  return result.data;
+
+  return fetchApi<T>(endpoint, {
+    ...options,
+    headers: {
+      ...options?.headers,
+      Authorization: `Bearer ${token}`,
+    },
+  });
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

@@ -40,9 +40,7 @@ export default function LoginPage() {
     if (result.success) {
       router.push('/weekly');
     } else {
-      const errMsg = result.error || '로그인에 실패했습니다.';
-      setError(errMsg);
-      alert(errMsg);
+      setError(result.error || '로그인에 실패했습니다.');
     }
 
     setIsSubmitting(false);
@@ -64,9 +62,7 @@ export default function LoginPage() {
     if (result.success) {
       router.push('/weekly');
     } else {
-      const errMsg = result.error || '로그인에 실패했습니다.';
-      setError(errMsg);
-      alert(errMsg);
+      setError(result.error || '로그인에 실패했습니다.');
       setSelectedAccount('');
     }
 

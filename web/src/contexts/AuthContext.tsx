@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import { ErrorCode, detectErrorCode, detectErrorCodeByStatus, getErrorMessage } from '@/err';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
@@ -117,7 +118,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [getAccessToken, fetchUserInfo]);
 
   // 로그인
-  const login = useCallback(async (memberId: string, password: string): Promise<{ success: boolean; error?: string }> => {
+  const login = useCallback(async (memberId: string, password: string): Promise<{ success: boolean; error?: string; code?: ErrorCode }> => {
     try {
       const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
         method: 'POST',
@@ -127,13 +128,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         body: JSON.stringify({ memberId, password }),
       });
 
-      const data = await response.json();
+      let data: any;
+      try {
+        data = await response.json();
+      } catch {
+        const code = ErrorCode.ETC_PARSE_ERROR;
+        return { success: false, error: getErrorMessage(code), code };
+      }
 
       if (!response.ok) {
-        return {
-          success: false,
-          error: data.message || '로그인에 실패했습니다.',
-        };
+        // 401: 인증 실패 (아이디/비밀번호 오류)
+        if (response.status === 401) {
+          const code = ErrorCode.AUTH_INVALID_CREDENTIALS;
+          return { success: false, error: getErrorMessage(code), code };
+        }
+        // 기타 HTTP 에러
+        const code = detectErrorCodeByStatus(response.status, data);
+        return { success: false, error: data.message || getErrorMessage(code), code };
       }
 
       if (data.success && data.data) {
@@ -143,17 +154,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return { success: true };
       }
 
-      return {
-        success: false,
-        error: '로그인 응답 형식이 올바르지 않습니다.',
-      };
+      const code = ErrorCode.ETC_PARSE_ERROR;
+      return { success: false, error: getErrorMessage(code), code };
     } catch (error) {
-      console.error('Login error:', error);
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      return {
-        success: false,
-        error: `서버 연결에 실패했습니다. (${errorMessage})`,
-      };
+      // 네트워크/CORS/SSL 등 에러 감지
+      const code = detectErrorCode(error);
+      return { success: false, error: getErrorMessage(code), code };
     }
   }, []);
 
