@@ -37,7 +37,7 @@ export const ShipmentPopup: React.FC<ShipmentPopupProps> = ({ isOpen, onClose, d
 
     const { metrics, gradeChart, table, analysisChart, carcassChart, rearingConfig } = data;
 
-    // 육성율 산출기준 설정값 (기본값 적용)
+    // 이유후육성율 산출기준 설정값 (기본값 적용)
     const shipDay = rearingConfig?.shipDay ?? 180;
     const weanPeriod = rearingConfig?.weanPeriod ?? 21;
     const euDays = rearingConfig?.euDays ?? (shipDay - weanPeriod);
@@ -511,7 +511,7 @@ export const ShipmentPopup: React.FC<ShipmentPopupProps> = ({ isOpen, onClose, d
                             </div>
                             <div className="price-item">
                                 <div className="metric-value">{formatNumber(metrics.nationalPrice)}원</div>
-                                <div className="metric-label">전국 (제주,등외제외)</div>
+                                <div className="metric-label">전국탕박 (제주,등외제외)</div>
                             </div>
                         </div>
                     </div>
@@ -535,12 +535,18 @@ export const ShipmentPopup: React.FC<ShipmentPopupProps> = ({ isOpen, onClose, d
                             </thead>
                             <tbody>
                                 {table.rows.map((row, idx) => {
-                                    // 항상 소숫점 1자리: 육성율(2), 합격율(3), 총지육(10), 지육체중(11), 등지방(12)
-                                    const alwaysDecimalRow = [2, 3, 10, 11, 12].includes(idx);
+                                    // 항상 소숫점 1자리: 이유후육성율(2), 합격율(3), 지육체중(11), 등지방(12)
+                                    // 총지육(10)은 데이터셀은 정수, 평균만 소숫점
+                                    const alwaysDecimalRow = [2, 3, 11, 12].includes(idx);
+                                    const isTotalCarcassRow = idx === 10; // 총지육 행
                                     const formatValue = (v: number | null) => {
                                         if (v === null || v === 0) return '-';
                                         if (alwaysDecimalRow) {
                                             return Number(v).toFixed(1);
+                                        }
+                                        // 총지육 행: 데이터셀은 정수로 표시
+                                        if (isTotalCarcassRow) {
+                                            return Math.round(v);
                                         }
                                         // 두수: 정수면 정수로, 소숫점 있으면 1자리까지
                                         return v % 1 === 0 ? v : Number(v).toFixed(1);
@@ -552,12 +558,13 @@ export const ShipmentPopup: React.FC<ShipmentPopupProps> = ({ isOpen, onClose, d
                                         return row.rate.toFixed(1) + '%';
                                     };
 
-                                    // 평균 컬럼: avg 값 사용 (alwaysDecimalRow와 동일 규칙 적용)
+                                    // 평균 컬럼: avg 값 사용
                                     const formatAvg = () => {
                                         if (row.avg == null || row.avg === 0) return '-';
                                         const avgVal = Number(row.avg);
                                         let formatted: string;
-                                        if (alwaysDecimalRow) {
+                                        // 총지육(10), 지육체중(11), 등지방(12), 이유후육성율(2), 합격율(3)은 평균에서 소숫점
+                                        if (alwaysDecimalRow || isTotalCarcassRow) {
                                             formatted = avgVal.toFixed(1);
                                         } else {
                                             // 두수 평균: 정수면 정수로, 소숫점 있으면 1자리까지
@@ -571,7 +578,7 @@ export const ShipmentPopup: React.FC<ShipmentPopupProps> = ({ isOpen, onClose, d
                                             {row.colspan ? (
                                                 <td colSpan={2} className="label">
                                                     {row.category}
-                                                    {/* 육성율(idx===2) 툴팁 */}
+                                                    {/* 이유후육성율(idx===2) 툴팁 */}
                                                     {idx === 2 && (
                                                         <div style={{ display: 'inline-block', marginLeft: '6px', position: 'relative', verticalAlign: 'middle' }} ref={tooltipRef}>
                                                             <FontAwesomeIcon
@@ -586,7 +593,7 @@ export const ShipmentPopup: React.FC<ShipmentPopupProps> = ({ isOpen, onClose, d
                                                             {showTooltip && (
                                                                 <div className="help-tooltip" style={{ width: '340px', left: '20px', top: '-10px', textAlign: 'left', zIndex: 100 }}>
                                                                     <div className="help-tooltip-header">
-                                                                        <span>육성율 산출기준</span>
+                                                                        <span>이유후육성율 산출기준</span>
                                                                         <button className="close-btn" onClick={() => setShowTooltip(false)}>
                                                                             <FontAwesomeIcon icon={faXmark} />
                                                                         </button>

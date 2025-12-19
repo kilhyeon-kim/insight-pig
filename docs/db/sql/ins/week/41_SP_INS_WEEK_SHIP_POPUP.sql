@@ -218,9 +218,9 @@ BEGIN
                SUM(BUT_CNT) S_BUT, SUM(EU_DUSU) S_EU, SUM(TOT_NET) S_NET,
                SUM(Q_11) S_Q11, SUM(Q_1) S_Q1, SUM(Q_2) S_Q2,
                SUM(FEMALE) S_FEM, SUM(MALE) S_MALE, SUM(ETC) S_ETC,
-               -- 일별 평균 (두수 기반)
+               -- 일별 평균 (두수 기반, 데이터 있는 일자만)
                ROUND(AVG(BUT_CNT), 1) A_BUT,
-               ROUND(AVG(EU_DUSU), 1) A_EU,
+               ROUND(AVG(CASE WHEN EU_DUSU > 0 THEN EU_DUSU END), 1) A_EU,
                ROUND(AVG(Q_11), 1) A_Q11,
                ROUND(AVG(Q_1), 1) A_Q1,
                ROUND(AVG(Q_2), 1) A_Q2,
