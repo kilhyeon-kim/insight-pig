@@ -656,6 +656,26 @@ export class WeeklyService {
       vaccine: toArray(vaccineRow),
       // 출하는 병합 셀 (합계만)
       ship: scheduleSub?.cnt6 || week.THIS_SHIP_SUM || 0,
+      // 산출기준 도움말 (GUBUN='SCHEDULE', SUB_GUBUN='HELP')
+      help: this.extractScheduleHelpData(subs),
+    };
+  }
+
+  /**
+   * 산출기준 도움말 추출 (GUBUN='SCHEDULE', SUB_GUBUN='HELP')
+   * @see SP_INS_WEEK_SCHEDULE_POPUP 11. HELP 정보 INSERT
+   */
+  private extractScheduleHelpData(subs: TsInsWeekSub[]) {
+    const helpSub = subs.find((s) => s.gubun === 'SCHEDULE' && s.subGubun === 'HELP');
+    if (!helpSub) return undefined;
+
+    return {
+      mating: helpSub.str1 || '',        // 교배 산출기준
+      farrowing: helpSub.str2 || '',     // 분만 산출기준
+      weaning: helpSub.str3 || '',       // 이유 산출기준
+      vaccine: helpSub.str4 || '',       // 백신 산출기준
+      shipment: helpSub.str5 || '',      // 출하 산출기준
+      checking: helpSub.str6 || '교배일+21일/28일',  // 재발확인 산출기준 (고정)
     };
   }
 
@@ -1288,6 +1308,12 @@ export class WeeklyService {
       avgBackfat: statSub?.val3 || 0, // 평균 등지방(mm)
       farmPrice: statSub?.val4 || 0,  // 내농장 평균 단가
       nationalPrice: statSub?.val5 || 0, // 전국 탕박 평균 단가
+      // 육성율 산출기준 설정값
+      shipDay: statSub?.cnt4 || 180, // 기준출하일령 (기본 180일)
+      weanPeriod: statSub?.cnt5 || 21, // 평균포유기간 (기본 21일)
+      euDays: statSub?.cnt6 || 159, // 역산일 (shipDay - weanPeriod)
+      euDateFrom: statSub?.str1 || '', // 이유일 FROM (MM.DD)
+      euDateTo: statSub?.str2 || '', // 이유일 TO (MM.DD)
     };
 
     // ── 2. 크로스탭 테이블 (SHIP_ROW, 13행) ──
@@ -1302,7 +1328,7 @@ export class WeeklyService {
       gradeRow?: boolean;
     }[] = [
         { sortNo: 1, category: '출하두수', sub: '두', colspan: true, highlight: 'primary' },
-        { sortNo: 2, category: '과거 이유두수', sub: '두', colspan: true },
+        { sortNo: 2, category: '이유두수', sub: '두', colspan: true },
         { sortNo: 3, category: '육성율', sub: '%', colspan: true },
         { sortNo: 4, category: '1등급', sub: '합격율' },
         { sortNo: 5, category: '등급', sub: '1+', gradeRow: true },
@@ -1417,6 +1443,14 @@ export class WeeklyService {
         avgBackfat: stats.avgBackfat,
         farmPrice: stats.farmPrice,
         nationalPrice: stats.nationalPrice,
+      },
+      // 육성율 산출기준 설정값 (툴팁용)
+      rearingConfig: {
+        shipDay: stats.shipDay,       // 기준출하일령 (기본 180일)
+        weanPeriod: stats.weanPeriod, // 평균포유기간 (기본 21일)
+        euDays: stats.euDays,         // 역산일 (shipDay - weanPeriod)
+        euDateFrom: stats.euDateFrom, // 이유일 FROM (MM.DD)
+        euDateTo: stats.euDateTo,     // 이유일 TO (MM.DD)
       },
       gradeChart,
       table: {

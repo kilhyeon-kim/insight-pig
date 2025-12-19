@@ -113,12 +113,84 @@ BEGIN
     --    자돈 증감 내역 포함 (TB_MODON_JADON_TRANS)
     --    대리모돈(DAERI_YN='Y') 처리: 다음 이유기록 전까지만 조회
     --
+    --    ★ 성능 최적화: 스칼라 서브쿼리 11회 → WITH절 사전 집계로 변경
     --    WN (다음작업) JOIN 조건:
     --      - WN.WK_GUBUN = 'G' : 다음 교배일까지 조회
     --      - WN IS NULL AND DAERI_YN = 'N' : 오늘까지 조회
     --      - 그 외 (대리모돈 등) : 현재 이유일 - 1일까지 조회
     -- ================================================
-    SELECT /*+ LEADING(A D B E) USE_NL(D B E WN) INDEX(A IX_TB_MODON_WK_01) */
+    WITH
+    -- 자돈 증감 내역 사전 집계 (SANCHA+WK_DT 기준)
+    JADON_TRANS_AGG AS (
+        SELECT /*+ INDEX(JT IX_TB_MODON_JADON_TRANS_01) */
+               JT.FARM_NO, JT.PIG_NO, JT.SANCHA, JT.WK_DT,
+               SUM(CASE WHEN JT.GUBUN_CD = '160001' THEN NVL(JT.DUSU,0)+NVL(JT.DUSU_SU,0) ELSE 0 END) AS PS_DS,
+               SUM(CASE WHEN JT.GUBUN_CD = '160002' THEN NVL(JT.DUSU,0)+NVL(JT.DUSU_SU,0) ELSE 0 END) AS BB_DS,
+               SUM(CASE WHEN JT.GUBUN_CD = '160003' THEN NVL(JT.DUSU,0)+NVL(JT.DUSU_SU,0) ELSE 0 END) AS JI_DS,
+               SUM(CASE WHEN JT.GUBUN_CD = '160004' THEN NVL(JT.DUSU,0)+NVL(JT.DUSU_SU,0) ELSE 0 END) AS JC_DS
+        FROM TB_MODON_JADON_TRANS JT
+        WHERE JT.FARM_NO = P_FARM_NO
+          AND JT.USE_YN = 'Y'
+        GROUP BY JT.FARM_NO, JT.PIG_NO, JT.SANCHA, JT.WK_DT
+    ),
+    -- 포유개시용 사전 집계 (BUN_DT 기준)
+    JADON_POGAE_AGG AS (
+        SELECT /*+ INDEX(JT IX_TB_MODON_JADON_TRANS_01) */
+               JT.FARM_NO, JT.PIG_NO, JT.BUN_DT,
+               SUM(CASE WHEN JT.GUBUN_CD = '160001' THEN NVL(JT.DUSU,0)+NVL(JT.DUSU_SU,0) ELSE 0 END) AS PS_DS,
+               SUM(CASE WHEN JT.GUBUN_CD = '160003' THEN NVL(JT.DUSU,0)+NVL(JT.DUSU_SU,0) ELSE 0 END) AS JI_DS,
+               SUM(CASE WHEN JT.GUBUN_CD = '160004' THEN NVL(JT.DUSU,0)+NVL(JT.DUSU_SU,0) ELSE 0 END) AS JC_DS
+        FROM TB_MODON_JADON_TRANS JT
+        WHERE JT.FARM_NO = P_FARM_NO
+          AND JT.USE_YN = 'Y'
+        GROUP BY JT.FARM_NO, JT.PIG_NO, JT.BUN_DT
+    ),
+    -- 다음 작업일 사전 계산 (스칼라 서브쿼리 제거)
+    NEXT_WK AS (
+        SELECT FARM_NO, PIG_NO, WK_DT AS CUR_WK_DT,
+               MIN(NEXT_WK_DT) AS NEXT_WK_DT, MIN(NEXT_WK_GUBUN) KEEP (DENSE_RANK FIRST ORDER BY NEXT_WK_DT) AS NEXT_WK_GUBUN
+        FROM (
+            SELECT A.FARM_NO, A.PIG_NO, A.WK_DT,
+                   B.WK_DT AS NEXT_WK_DT, B.WK_GUBUN AS NEXT_WK_GUBUN
+            FROM TB_MODON_WK A
+            INNER JOIN TB_MODON_WK B
+                ON B.FARM_NO = A.FARM_NO AND B.PIG_NO = A.PIG_NO
+               AND B.WK_DT > A.WK_DT AND B.USE_YN = 'Y'
+            WHERE A.FARM_NO = P_FARM_NO
+              AND A.WK_GUBUN = 'E'
+              AND A.USE_YN = 'Y'
+              AND A.WK_DT >= P_DT_FROM
+              AND A.WK_DT <= P_DT_TO
+        )
+        GROUP BY FARM_NO, PIG_NO, WK_DT
+    ),
+    -- 기간별 자돈 증감 합계 (분만일~종료일)
+    JADON_PERIOD_AGG AS (
+        SELECT A.FARM_NO, A.PIG_NO, A.SANCHA, A.WK_DT AS EU_WK_DT, B.WK_DT AS BM_WK_DT,
+               NVL(SUM(JT.PS_DS), 0) AS SUM_PS_DS,
+               NVL(SUM(JT.BB_DS), 0) AS SUM_BB_DS,
+               NVL(SUM(JT.JI_DS), 0) AS SUM_JI_DS,
+               NVL(SUM(JT.JC_DS), 0) AS SUM_JC_DS
+        FROM TB_MODON_WK A
+        INNER JOIN TB_MODON_WK B
+            ON B.FARM_NO = A.FARM_NO AND B.PIG_NO = A.PIG_NO
+           AND B.SANCHA = A.SANCHA AND B.WK_GUBUN = 'B' AND B.USE_YN = 'Y'
+        LEFT OUTER JOIN NEXT_WK NW
+            ON NW.FARM_NO = A.FARM_NO AND NW.PIG_NO = A.PIG_NO AND NW.CUR_WK_DT = A.WK_DT
+        LEFT OUTER JOIN JADON_TRANS_AGG JT
+            ON JT.FARM_NO = A.FARM_NO AND JT.PIG_NO = A.PIG_NO AND JT.SANCHA = A.SANCHA
+           AND JT.WK_DT >= B.WK_DT
+           AND JT.WK_DT <= CASE WHEN NW.NEXT_WK_GUBUN = 'G' THEN NW.NEXT_WK_DT
+                                WHEN NW.NEXT_WK_DT IS NULL AND A.DAERI_YN = 'N' THEN TO_CHAR(SYSDATE, 'YYYYMMDD')
+                                ELSE TO_CHAR(TO_DATE(A.WK_DT, 'YYYYMMDD') - 1, 'YYYYMMDD') END
+        WHERE A.FARM_NO = P_FARM_NO
+          AND A.WK_GUBUN = 'E'
+          AND A.USE_YN = 'Y'
+          AND A.WK_DT >= P_DT_FROM
+          AND A.WK_DT <= P_DT_TO
+        GROUP BY A.FARM_NO, A.PIG_NO, A.SANCHA, A.WK_DT, B.WK_DT
+    )
+    SELECT /*+ LEADING(A D B E) USE_NL(D B E) INDEX(A IX_TB_MODON_WK_01) */
         COUNT(*),
         NVL(SUM(NVL(D.DUSU, 0) + NVL(D.DUSU_SU, 0)), 0),
         -- 분만 기준: 총산 (실산+사산+미라), 실산
@@ -128,48 +200,17 @@ BEGIN
         NVL(SUM(NVL(D.TOTAL_KG, 0)), 0),
         NVL(ROUND(AVG(NVL(D.DUSU, 0) + NVL(D.DUSU_SU, 0)), 1), 0),
         NVL(ROUND(AVG(TO_DATE(A.WK_DT, 'YYYYMMDD') - TO_DATE(B.WK_DT, 'YYYYMMDD')), 1), 0),
-        -- 자돈 증감 내역 (SANCHA + WK_DT BETWEEN 분만일 AND 종료일)
-        -- 종료일: 대리모돈 여부에 따라 동적 계산
-        NVL(SUM(NVL((SELECT SUM(NVL(DUSU,0)+NVL(DUSU_SU,0)) FROM TB_MODON_JADON_TRANS
-            WHERE FARM_NO=A.FARM_NO AND PIG_NO=A.PIG_NO AND SANCHA=A.SANCHA
-            AND WK_DT BETWEEN B.WK_DT AND
-                CASE WHEN WN.WK_GUBUN = 'G' THEN WN.WK_DT
-                     WHEN WN.WK_GUBUN IS NULL AND A.DAERI_YN = 'N' THEN TO_CHAR(SYSDATE, 'YYYYMMDD')
-                     ELSE TO_CHAR(TO_DATE(A.WK_DT, 'YYYYMMDD') - 1, 'YYYYMMDD') END
-            AND GUBUN_CD='160001' AND USE_YN='Y'), 0)), 0),  -- 포유자돈폐사
-        NVL(SUM(NVL((SELECT SUM(NVL(DUSU,0)+NVL(DUSU_SU,0)) FROM TB_MODON_JADON_TRANS
-            WHERE FARM_NO=A.FARM_NO AND PIG_NO=A.PIG_NO AND SANCHA=A.SANCHA
-            AND WK_DT BETWEEN B.WK_DT AND
-                CASE WHEN WN.WK_GUBUN = 'G' THEN WN.WK_DT
-                     WHEN WN.WK_GUBUN IS NULL AND A.DAERI_YN = 'N' THEN TO_CHAR(SYSDATE, 'YYYYMMDD')
-                     ELSE TO_CHAR(TO_DATE(A.WK_DT, 'YYYYMMDD') - 1, 'YYYYMMDD') END
-            AND GUBUN_CD='160002' AND USE_YN='Y'), 0)), 0),  -- 부분이유
-        NVL(SUM(NVL((SELECT SUM(NVL(DUSU,0)+NVL(DUSU_SU,0)) FROM TB_MODON_JADON_TRANS
-            WHERE FARM_NO=A.FARM_NO AND PIG_NO=A.PIG_NO AND SANCHA=A.SANCHA
-            AND WK_DT BETWEEN B.WK_DT AND
-                CASE WHEN WN.WK_GUBUN = 'G' THEN WN.WK_DT
-                     WHEN WN.WK_GUBUN IS NULL AND A.DAERI_YN = 'N' THEN TO_CHAR(SYSDATE, 'YYYYMMDD')
-                     ELSE TO_CHAR(TO_DATE(A.WK_DT, 'YYYYMMDD') - 1, 'YYYYMMDD') END
-            AND GUBUN_CD='160003' AND USE_YN='Y'), 0)), 0),  -- 양자전입
-        NVL(SUM(NVL((SELECT SUM(NVL(DUSU,0)+NVL(DUSU_SU,0)) FROM TB_MODON_JADON_TRANS
-            WHERE FARM_NO=A.FARM_NO AND PIG_NO=A.PIG_NO AND SANCHA=A.SANCHA
-            AND WK_DT BETWEEN B.WK_DT AND
-                CASE WHEN WN.WK_GUBUN = 'G' THEN WN.WK_DT
-                     WHEN WN.WK_GUBUN IS NULL AND A.DAERI_YN = 'N' THEN TO_CHAR(SYSDATE, 'YYYYMMDD')
-                     ELSE TO_CHAR(TO_DATE(A.WK_DT, 'YYYYMMDD') - 1, 'YYYYMMDD') END
-            AND GUBUN_CD='160004' AND USE_YN='Y'), 0)), 0),  -- 양자전출
+        -- 자돈 증감 내역 (WITH절 사전 집계 사용)
+        NVL(SUM(PA.SUM_PS_DS), 0),  -- 포유자돈폐사
+        NVL(SUM(PA.SUM_BB_DS), 0),  -- 부분이유
+        NVL(SUM(PA.SUM_JI_DS), 0),  -- 양자전입
+        NVL(SUM(PA.SUM_JC_DS), 0),  -- 양자전출
         -- 포유개시 합계 (실산 - 폐사 + 양자전입 - 양자전출) : BUN_DT=분만일 기준
         NVL(SUM(
             NVL(E.SILSAN, 0)
-            - NVL((SELECT SUM(NVL(DUSU,0)+NVL(DUSU_SU,0)) FROM TB_MODON_JADON_TRANS
-                WHERE FARM_NO=A.FARM_NO AND PIG_NO=A.PIG_NO AND BUN_DT=B.WK_DT
-                AND GUBUN_CD='160001' AND USE_YN='Y'), 0)
-            + NVL((SELECT SUM(NVL(DUSU,0)+NVL(DUSU_SU,0)) FROM TB_MODON_JADON_TRANS
-                WHERE FARM_NO=A.FARM_NO AND PIG_NO=A.PIG_NO AND BUN_DT=B.WK_DT
-                AND GUBUN_CD='160003' AND USE_YN='Y'), 0)
-            - NVL((SELECT SUM(NVL(DUSU,0)+NVL(DUSU_SU,0)) FROM TB_MODON_JADON_TRANS
-                WHERE FARM_NO=A.FARM_NO AND PIG_NO=A.PIG_NO AND BUN_DT=B.WK_DT
-                AND GUBUN_CD='160004' AND USE_YN='Y'), 0)
+            - NVL(PO.PS_DS, 0)
+            + NVL(PO.JI_DS, 0)
+            - NVL(PO.JC_DS, 0)
         ), 0)
     INTO V_TOTAL_CNT, V_SUM_EUDUSU, V_SUM_CHONGSAN, V_SUM_SILSAN,
          V_SUM_POUGIGAN, V_SUM_KG, V_AVG_EUDUSU, V_AVG_POUGIGAN,
@@ -184,15 +225,13 @@ BEGIN
     INNER JOIN TB_BUNMAN E
         ON E.FARM_NO = B.FARM_NO AND E.PIG_NO = B.PIG_NO
        AND E.WK_DT = B.WK_DT AND E.WK_GUBUN = B.WK_GUBUN AND E.USE_YN = 'Y'
-    -- 다음 작업 조회 (교배 또는 이유 등)
-    LEFT OUTER JOIN TB_MODON_WK WN
-        ON WN.FARM_NO = A.FARM_NO AND WN.PIG_NO = A.PIG_NO
-       AND WN.WK_DT > A.WK_DT AND WN.USE_YN = 'Y'
-       AND WN.WK_DT = (
-           SELECT MIN(WK_DT) FROM TB_MODON_WK
-           WHERE FARM_NO = A.FARM_NO AND PIG_NO = A.PIG_NO
-             AND WK_DT > A.WK_DT AND USE_YN = 'Y'
-       )
+    -- 자돈 증감 사전 집계 JOIN
+    LEFT OUTER JOIN JADON_PERIOD_AGG PA
+        ON PA.FARM_NO = A.FARM_NO AND PA.PIG_NO = A.PIG_NO
+       AND PA.SANCHA = A.SANCHA AND PA.EU_WK_DT = A.WK_DT
+    -- 포유개시용 사전 집계 JOIN
+    LEFT OUTER JOIN JADON_POGAE_AGG PO
+        ON PO.FARM_NO = A.FARM_NO AND PO.PIG_NO = A.PIG_NO AND PO.BUN_DT = B.WK_DT
     WHERE A.FARM_NO = P_FARM_NO
       AND A.WK_GUBUN = 'E'
       AND A.USE_YN = 'Y'

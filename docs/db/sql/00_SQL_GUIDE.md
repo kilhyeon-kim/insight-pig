@@ -340,6 +340,7 @@ WHERE WK_GUBUN = 'F'
 | `140003` | 평균포유기간 | 21 | 분만~이유 기준일수 |
 | `140007` | 후보돈초교배일령 | 240 | 출생~초교배 기준일수 |
 | `140008` | 평균재귀일 | 7 | 이유~재교배 기준일수 |
+| `140005` | 기준출하일령 | 180 | 자돈분만일~출하 기준일수 |
 
 ### 5.2 설정값 조회 방법
 
@@ -974,6 +975,243 @@ WHERE WK.FARM_NO = :farm_no;
 
 | 버전 | 일자 | 작성자 | 내용 |
 |------|------|--------|------|
+```
+        ROLLBACK;
+        SP_INS_COM_LOG_ERROR(V_LOG_SEQ, SQLCODE, SQLERRM);
+        RAISE;
+```
+
+### 11.3 COMMIT 정책
+
+- 각 논리적 단위 완료 시 COMMIT
+- EXCEPTION 발생 시 ROLLBACK 후 로그 기록
+
+---
+
+## 12. 체크리스트
+
+### SQL 작성 전 확인사항
+
+- [ ] `VM_LAST_MODON_SEQ_WK` 뷰 사용 (직접 MAX 조회 금지)
+- [ ] `OUT_DT = '9999-12-31'` 조건 포함 (미도폐사 모돈)
+- [ ] `USE_YN = 'Y'` 조건 포함
+- [ ] `DAERI_YN = 'N'` 조건 확인 (이유 관련)
+- [ ] WK_DT 비교 시 `TO_DATE(WK_DT, 'YYYY-MM-DD')` 변환
+- [ ] 농장 설정값 `TC_FARM_CONFIG` 참조
+- [ ] 기본값 `NVL` 처리
+
+### 프로시저 작성 전 확인사항
+
+- [ ] 로그 시작/종료 호출
+- [ ] EXCEPTION 처리
+- [ ] COMMIT/ROLLBACK 정책 준수
+- [ ] 파라미터 검증
+
+---
+
+## 13. 운영 데이터 규모
+
+### 13.1 주요 테이블 건수 (2025.12 기준)
+
+| 테이블 | 건수 | 비고 |
+|--------|------|------|
+| `TB_MODON_WK` | **40,465,033** | 모돈 작업 이력 (최대) |
+| `TB_GYOBAE` | 14,881,595 | 교배 |
+| `TB_BUNMAN` | 11,485,759 | 분만 |
+| `TB_EU` | 11,383,819 | 이유 |
+| `TB_MODON_JADON_TRANS` | 10,000,368 | 자돈 전입 |
+| `TB_MODON` | **3,317,247** | 모돈 마스터 |
+| `TB_SAGO` | 2,713,315 | 임신사고 |
+| `TB_WT_BCS` | 893,954 | 체중/BCS |
+| `TC_FARM_CONFIG` | 597,935 | 농가설정 |
+| `TB_PLAN_MODON` | 27,948 | 예정작업 |
+| `TC_CODE_FARM` | 16,277 | 농장코드 |
+| `TA_MEMBER` | 3,163 | 회원 |
+| `TA_FARM` | 3,135 | 농장 |
+| `TC_CODE_SYS` | 2,588 | 시스템코드 |
+
+### 13.2 성능 고려사항
+
+#### TB_MODON_WK (4천만건)
+```sql
+-- 금지: WK_DT 기준 MAX 조회 (동일 날짜 복수 작업 시 오류)
+SELECT * FROM TB_MODON_WK
+WHERE WK_DT = (SELECT MAX(WK_DT) FROM TB_MODON_WK WHERE ...)  -- 잘못된 방식
+
+-- 권장: SEQ 기준 MAX 조회 (뷰 또는 동일 로직)
+SELECT * FROM VM_LAST_MODON_SEQ_WK WHERE ...
+-- 또는
+WITH LAST_WK AS (
+    SELECT FARM_NO, PIG_NO, MAX(SEQ) AS MSEQ
+    FROM TB_MODON_WK WHERE FARM_NO = :farm_no AND USE_YN = 'Y'
+    GROUP BY FARM_NO, PIG_NO
+)
+SELECT ... FROM LAST_WK ...
+```
+
+#### TB_MODON (350만건)
+```sql
+-- 권장: 농장번호 + 상태코드 조건 필수
+WHERE FARM_NO = :farm_no      -- 파티션/인덱스 활용
+  AND STATUS_CD = '010001'    -- 추가 필터링
+  AND OUT_DT = TO_DATE('9999-12-31', 'YYYY-MM-DD')
+  AND USE_YN = 'Y'
+```
+
+
+### 13.3 인덱스 활용
+
+| 테이블 | 주요 인덱스 컬럼 | 용도 |
+|--------|-----------------|------|
+| `TB_MODON` | FARM_NO, STATUS_CD, OUT_DT | 재적 모돈 조회 |
+| `TB_MODON_WK` | FARM_NO, PIG_NO, WK_DT | 작업 이력 조회 |
+| `TB_GYOBAE` | FARM_NO, PIG_NO, WK_DT | 교배 이력 |
+| `TB_BUNMAN` | FARM_NO, PIG_NO, WK_DT | 분만 이력 |
+
+### 13.4 OUTER JOIN 최적화
+
+> **원칙**: 데이터 건수가 적은 테이블을 드라이빙 테이블로 사용
+
+```sql
+-- 권장: 소량 테이블(TB_MODON) 기준으로 대량 테이블(TB_MODON_WK) OUTER JOIN
+SELECT MD.*, WK.WK_DT
+FROM TB_MODON MD                              -- 소량 (농장별 수백~수천 건)
+LEFT OUTER JOIN (
+    SELECT /*+ INDEX(TB_MODON_WK IX_TB_MODON_WK_01) */
+           DISTINCT FARM_NO, PIG_NO
+    FROM TB_MODON_WK
+    WHERE FARM_NO = :farm_no
+      AND USE_YN = 'Y'
+) WK ON WK.FARM_NO = MD.FARM_NO AND WK.PIG_NO = MD.PIG_NO
+WHERE MD.FARM_NO = :farm_no
+  AND MD.OUT_DT = TO_DATE('9999-12-31', 'YYYY-MM-DD')
+  AND MD.USE_YN = 'Y'
+  AND WK.FARM_NO IS NULL;  -- 작업이력 없는 모돈
+```
+
+### 13.5 힌트 사용 가이드
+
+#### 자주 사용하는 힌트
+
+| 힌트 | 용도 | 예시 |
+|------|------|------|
+| `/*+ INDEX(table idx) */` | 특정 인덱스 강제 사용 | 대용량 테이블 조회 |
+| `/*+ LEADING(t1 t2) */` | 조인 순서 지정 | 소량 → 대량 순서 |
+| `/*+ USE_NL(t2) */` | Nested Loop 조인 | 소량 결과 예상 시 |
+| `/*+ USE_HASH(t2) */` | Hash 조인 | 대량 결과 예상 시 |
+| `/*+ PARALLEL(table n) */` | 병렬 처리 | 배치 작업 시 |
+
+#### 힌트 사용 예시
+
+```sql
+-- 예시 1: 대용량 TB_MODON_WK 조회 시 인덱스 힌트
+SELECT /*+ INDEX(WK IX_TB_MODON_WK_01) */
+       WK.*
+FROM TB_MODON_WK WK
+WHERE WK.FARM_NO = :farm_no
+  AND WK.USE_YN = 'Y';
+
+-- 예시 2: 조인 순서 지정 (TB_MODON 먼저 → TB_MODON_WK)
+SELECT /*+ LEADING(MD WK) USE_NL(WK) */
+       MD.PIG_NO, WK.WK_DT
+FROM TB_MODON MD
+INNER JOIN TB_MODON_WK WK
+    ON WK.FARM_NO = MD.FARM_NO AND WK.PIG_NO = MD.PIG_NO
+WHERE MD.FARM_NO = :farm_no
+  AND MD.STATUS_CD = '010003';
+
+-- 예시 3: 배치 프로시저에서 병렬 처리
+SELECT /*+ PARALLEL(WK 4) */
+       COUNT(*)
+FROM TB_MODON_WK WK
+WHERE WK.FARM_NO = :farm_no;
+```
+
+### 13.6 성능 최적화 체크리스트
+
+- [ ] 대용량 테이블 조회 시 FARM_NO 조건 필수
+- [ ] OUTER JOIN 시 소량 테이블을 드라이빙 테이블로 사용
+- [ ] TB_MODON_WK 조회 시 인덱스 힌트 검토
+- [ ] 집계 쿼리 시 WITH 절로 대상 축소 후 처리
+- [ ] 조인 순서가 비효율적이면 LEADING 힌트 사용
+- [ ] 실행 계획(EXPLAIN PLAN) 확인 후 튜닝
+
+---
+
+## 14. 자돈 두수 관리 (TB_MODON_JADON_TRANS)
+
+> 포유 기간 중 발생하는 자돈 증감 내역(폐사, 부분이유, 양자전입/전출)을 기록
+>
+> **테이블 상세**: [docs/db/ref/01.table.md](../../ref/01.table.md)
+
+### 14.1 GUBUN_CD 코드 정의
+
+| GUBUN_CD | 명칭 | 두수 영향 |
+|----------|------|----------|
+| `160001` | 포유자돈폐사 | 감소 (-) |
+| `160002` | 부분이유 | 감소 (-) |
+| `160003` | 양자전입 | 증가 (+) |
+| `160004` | 양자전출 | 감소 (-) |
+
+### 14.2 이유 실적 집계 시 두수 계산
+
+| 항목 | 계산 방법 | 비고 |
+|------|----------|------|
+| 이유두수 | TB_EU.DUSU + TB_EU.DUSU_SU | 이유 시점 실제 두수 |
+| 실산 | TB_BUNMAN.SILSAN | 분만 시 총산 |
+| 포유기간 | 이유일 - 분만일 | TB_MODON_WK 날짜 차이 |
+| 이유육성율 | 이유두수 / 실산 * 100 | 포유 기간 생존율 |
+
+> **참고**: TB_MODON_JADON_TRANS는 포유 기간 중 세부 증감 내역 추적용이며,
+> 이유 실적 집계 시에는 TB_EU의 최종 두수(DUSU + DUSU_SU)를 사용합니다.
+
+---
+
+## 변경 이력
+
+| 버전 | 일자 | 작성자 | 내용 |
+|------|------|--------|------|
 | 1.0 | 2025-12-09 | - | 최초 작성 |
 | 1.1 | 2025-12-15 | - | 7. 관리대상 모돈 추출 로직 상세화 (후보돈 판별 기준 추가) |
 | 1.2 | 2025-12-16 | - | 14. TB_MODON_JADON_TRANS 자돈 두수 관리 테이블 정의 추가 |
+---
+
+## 13. 운영 데이터 규모 및 인덱스 현황
+
+SQL 작성 및 튜닝 시 아래 데이터 규모와 인덱스 구성을 고려하여 최적의 쿼리를 작성해야 합니다.
+
+### 13.1 주요 테이블 건수 (2025-12-18 기준)
+
+| 테이블명 | 건수 | 비고 |
+|----------|------|------|
+| **TA_FARM** | 3,137 | 농장 마스터 |
+| **TB_MODON** | 3,318,516 | 모돈 마스터 |
+| **TB_MODON_WK** | 40,495,449 | **대용량** (작업 이력) |
+| **TB_GYOBAE** | 14,892,455 | 교배 기록 |
+| **TB_BUNMAN** | 11,494,542 | 분만 기록 |
+| **TB_EU** | 11,392,475 | **대용량** (이유 기록) |
+| **TB_SAGO** | 2,715,432 | 사고 기록 |
+| **TM_LPD_DATA** | 10,352,012 | **대용량** (도축 데이터) |
+| **TM_SISAE_DETAIL** | 27,201 | 시세 상세 |
+| **TS_INS_WEEK** | 30 | 리포트 요약 |
+| **TS_INS_WEEK_SUB** | 3,861 | 리포트 상세 |
+
+### 13.2 주요 테이블 인덱스 현황
+
+| 테이블명 | 인덱스명 | 구성 컬럼 (순서 중요) | 유형 |
+|----------|----------|-----------------------|------|
+| **TB_MODON_WK** | IDX_TB_MODON_WK_03 | FARM_NO, PIG_NO, **WK_DATE**, WK_GUBUN | UNIQUE |
+| | IDX_TB_MODON_WK | FARM_NO, PIG_NO, WK_DT, WK_GUBUN | UNIQUE |
+| **TM_LPD_DATA** | IDX_TM_LPD_DATA_00 | **FARM_NO, DOCHUK_DT**, DOCHUK_NO, FACTORY_CD | UNIQUE |
+| **TB_MODON** | IDX_TB_MODON | FARM_NO, PIG_NO | UNIQUE |
+| | IDX_TB_MODON_01 | FARM_NO, FARM_PIG_NO, **OUT_DT DESC**, USE_YN | FUNCTION-BASED |
+| **TB_EU** | IDX_TB_EU | FARM_NO, PIG_NO, WK_DT, WK_GUBUN | UNIQUE |
+| **TB_BUNMAN** | IDX_TB_BUNMAN | FARM_NO, PIG_NO, WK_DT, WK_GUBUN | UNIQUE |
+| | IDX_TB_BUNMAN_01 | FARM_NO, WK_DT, WK_GUBUN, USE_YN | NONUNIQUE |
+
+### 13.3 튜닝 지침
+1. **인덱스 선두 컬럼 활용**: 모든 대용량 테이블 조회 시 `FARM_NO`를 반드시 조건절 최상단에 배치합니다.
+2. **데이터 타입 매칭**: `WK_DATE`는 DATE 타입, `WK_DT` 및 `DOCHUK_DT`는 문자열 타입임에 주의하여 비교 연산자를 사용합니다.
+3. **복합 인덱스 순서 고려**: `TM_LPD_DATA` 조회 시 `FARM_NO`와 `DOCHUK_DT`를 함께 조건으로 주면 `IDX_TM_LPD_DATA_00`을 효율적으로 탈 수 있습니다.
+4. **일괄 집계 방식**: 루프 내 반복 조회 대신 `GROUP BY`를 통한 일괄 처리를 지향합니다.
+```

@@ -104,30 +104,44 @@ BEGIN
 
     -- ================================================
     -- 4. 분만 요약 통계 직접 집계 (GUBUN='BM')
+    --    ★ 성능 최적화: 스칼라 서브쿼리 6회 → WITH절 사전 집계로 변경
     -- ================================================
+    WITH
+    -- 포유개시용 자돈 증감 사전 집계 (BUN_DT 기준)
+    JADON_POGAE_AGG AS (
+        SELECT /*+ INDEX(JT IX_TB_MODON_JADON_TRANS_01) */
+               JT.FARM_NO, JT.PIG_NO, JT.BUN_DT,
+               SUM(CASE WHEN JT.GUBUN_CD = '160001' THEN NVL(JT.DUSU,0)+NVL(JT.DUSU_SU,0) ELSE 0 END) AS PS_DS,
+               SUM(CASE WHEN JT.GUBUN_CD = '160003' THEN NVL(JT.DUSU,0)+NVL(JT.DUSU_SU,0) ELSE 0 END) AS JI_DS,
+               SUM(CASE WHEN JT.GUBUN_CD = '160004' THEN NVL(JT.DUSU,0)+NVL(JT.DUSU_SU,0) ELSE 0 END) AS JC_DS
+        FROM TB_MODON_JADON_TRANS JT
+        WHERE JT.FARM_NO = P_FARM_NO
+          AND JT.USE_YN = 'Y'
+        GROUP BY JT.FARM_NO, JT.PIG_NO, JT.BUN_DT
+    )
     SELECT /*+ LEADING(A B) USE_NL(B) INDEX(A IX_TB_MODON_WK_01) */
         COUNT(*),
         NVL(SUM(NVL(B.SILSAN,0) + NVL(B.SASAN,0) + NVL(B.MILA,0)), 0),
         NVL(SUM(NVL(B.SILSAN, 0)), 0),
         NVL(SUM(NVL(B.SASAN, 0)), 0),
         NVL(SUM(NVL(B.MILA, 0)), 0),
-        -- 포유개시 합계: SUM(SILSAN - 폐사(160001) + 양자전입(160003) - 양자전출(160004))
+        -- 포유개시 합계: SUM(SILSAN - 폐사 + 양자전입 - 양자전출) - WITH절 사전 집계 사용
         NVL(SUM(
             NVL(B.SILSAN, 0)
-            - NVL((SELECT SUM(NVL(DUSU,0)+NVL(DUSU_SU,0)) FROM TB_MODON_JADON_TRANS WHERE FARM_NO=A.FARM_NO AND PIG_NO=A.PIG_NO AND BUN_DT=A.WK_DT AND GUBUN_CD='160001' AND USE_YN='Y'), 0)
-            + NVL((SELECT SUM(NVL(DUSU,0)+NVL(DUSU_SU,0)) FROM TB_MODON_JADON_TRANS WHERE FARM_NO=A.FARM_NO AND PIG_NO=A.PIG_NO AND BUN_DT=A.WK_DT AND GUBUN_CD='160003' AND USE_YN='Y'), 0)
-            - NVL((SELECT SUM(NVL(DUSU,0)+NVL(DUSU_SU,0)) FROM TB_MODON_JADON_TRANS WHERE FARM_NO=A.FARM_NO AND PIG_NO=A.PIG_NO AND BUN_DT=A.WK_DT AND GUBUN_CD='160004' AND USE_YN='Y'), 0)
+            - NVL(PO.PS_DS, 0)
+            + NVL(PO.JI_DS, 0)
+            - NVL(PO.JC_DS, 0)
         ), 0),
         NVL(ROUND(AVG(NVL(B.SILSAN,0) + NVL(B.SASAN,0) + NVL(B.MILA,0)), 1), 0),
         NVL(ROUND(AVG(NVL(B.SILSAN, 0)), 1), 0),
         NVL(ROUND(AVG(NVL(B.SASAN, 0)), 1), 0),
         NVL(ROUND(AVG(NVL(B.MILA, 0)), 1), 0),
-        -- 포유개시 평균
+        -- 포유개시 평균 - WITH절 사전 집계 사용
         NVL(ROUND(AVG(
             NVL(B.SILSAN, 0)
-            - NVL((SELECT SUM(NVL(DUSU,0)+NVL(DUSU_SU,0)) FROM TB_MODON_JADON_TRANS WHERE FARM_NO=A.FARM_NO AND PIG_NO=A.PIG_NO AND BUN_DT=A.WK_DT AND GUBUN_CD='160001' AND USE_YN='Y'), 0)
-            + NVL((SELECT SUM(NVL(DUSU,0)+NVL(DUSU_SU,0)) FROM TB_MODON_JADON_TRANS WHERE FARM_NO=A.FARM_NO AND PIG_NO=A.PIG_NO AND BUN_DT=A.WK_DT AND GUBUN_CD='160003' AND USE_YN='Y'), 0)
-            - NVL((SELECT SUM(NVL(DUSU,0)+NVL(DUSU_SU,0)) FROM TB_MODON_JADON_TRANS WHERE FARM_NO=A.FARM_NO AND PIG_NO=A.PIG_NO AND BUN_DT=A.WK_DT AND GUBUN_CD='160004' AND USE_YN='Y'), 0)
+            - NVL(PO.PS_DS, 0)
+            + NVL(PO.JI_DS, 0)
+            - NVL(PO.JC_DS, 0)
         ), 1), 0)
     INTO V_TOTAL_CNT, V_SUM_TOTAL, V_SUM_LIVE, V_SUM_DEAD, V_SUM_MUMMY, V_SUM_POGAE,
          V_AVG_TOTAL, V_AVG_LIVE, V_AVG_DEAD, V_AVG_MUMMY, V_AVG_POGAE
@@ -135,6 +149,9 @@ BEGIN
     INNER JOIN TB_BUNMAN B
         ON B.FARM_NO = A.FARM_NO AND B.PIG_NO = A.PIG_NO
        AND B.WK_DT = A.WK_DT AND B.WK_GUBUN = A.WK_GUBUN AND B.USE_YN = 'Y'
+    -- 포유개시용 사전 집계 JOIN
+    LEFT OUTER JOIN JADON_POGAE_AGG PO
+        ON PO.FARM_NO = A.FARM_NO AND PO.PIG_NO = A.PIG_NO AND PO.BUN_DT = A.WK_DT
     WHERE A.FARM_NO = P_FARM_NO
       AND A.WK_GUBUN = 'B'
       AND A.USE_YN = 'Y'

@@ -7,14 +7,15 @@ interface SchedulePopupProps {
     onClose: () => void;
     data: SchedulePopupData;
     title: string;
+    id?: string;
 }
 
-export const SchedulePopup: React.FC<SchedulePopupProps> = ({ isOpen, onClose, data, title }) => {
+export const SchedulePopup: React.FC<SchedulePopupProps> = ({ isOpen, onClose, data, title, id }) => {
     // 합계 계산 (count가 undefined일 수 있음)
     const totalCount = data.events.reduce((sum, event) => sum + (event.count || 0), 0);
 
     return (
-        <PopupContainer isOpen={isOpen} onClose={onClose} title={title} subtitle={`${data.date} 기준`}>
+        <PopupContainer isOpen={isOpen} onClose={onClose} title={title} subtitle={`${data.date} 기준`} id={id}>
             <>
                 {/* 단위 표시 */}
                 <div className="popup-section-desc justify-end">

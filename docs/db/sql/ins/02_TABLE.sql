@@ -408,21 +408,22 @@ CREATE TABLE TS_INS_WEEK_SUB (
     VAL_15           NUMBER(10,2) DEFAULT 0,             -- 값6
 
     -- 문자형 데이터 (라벨, 명칭 등 - 최대 15개)
-    STR_1           VARCHAR2(100),                      -- 문자열1
-    STR_2           VARCHAR2(100),                      -- 문자열2
-    STR_3           VARCHAR2(100),                      -- 문자열3
-    STR_4           VARCHAR2(100),                      -- 문자열4
-    STR_5           VARCHAR2(100),                      -- 문자열5
-    STR_6           VARCHAR2(100),                      -- 문자열6
-    STR_7           VARCHAR2(100),                      -- 문자열7
-    STR_8           VARCHAR2(100),                      -- 문자열8
-    STR_9           VARCHAR2(100),                      -- 문자열9
-    STR_10          VARCHAR2(100),                      -- 문자열10
-    STR_11          VARCHAR2(100),                      -- 문자열11
-    STR_12          VARCHAR2(100),                      -- 문자열12
-    STR_13          VARCHAR2(100),                      -- 문자열13
-    STR_14          VARCHAR2(100),                      -- 문자열14
-    STR_15          VARCHAR2(100),                      -- 문자열15
+    -- VARCHAR2(500): LISTAGG 결과 등 긴 문자열 저장 가능
+    STR_1           VARCHAR2(1000),                     -- 문자열1
+    STR_2           VARCHAR2(1000),                     -- 문자열2
+    STR_3           VARCHAR2(1000),                     -- 문자열3
+    STR_4           VARCHAR2(1000),                     -- 문자열4
+    STR_5           VARCHAR2(1000),                     -- 문자열5
+    STR_6           VARCHAR2(1000),                     -- 문자열6
+    STR_7           VARCHAR2(1000),                     -- 문자열7
+    STR_8           VARCHAR2(1000),                     -- 문자열8
+    STR_9           VARCHAR2(1000),                     -- 문자열9
+    STR_10          VARCHAR2(1000),                     -- 문자열10
+    STR_11          VARCHAR2(1000),                     -- 문자열11
+    STR_12          VARCHAR2(1000),                     -- 문자열12
+    STR_13          VARCHAR2(1000),                     -- 문자열13
+    STR_14          VARCHAR2(1000),                     -- 문자열14
+    STR_15          VARCHAR2(1000),                     -- 문자열15
 
     -- 관리 컬럼
     LOG_INS_DT      DATE DEFAULT SYSDATE,              -- 생성일 (UTC)

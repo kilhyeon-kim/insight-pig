@@ -129,6 +129,21 @@ export interface CalendarGridData {
   eu: (number | null)[];           // 이유
   vaccine: (number | null)[];      // 모돈백신
   ship: number;                    // 출하 (병합 셀)
+  // 산출기준 도움말 (TB_PLAN_MODON 기반)
+  help?: ScheduleHelpData;
+}
+
+/**
+ * 작업예정 산출기준 도움말 데이터
+ * @see SP_INS_WEEK_SCHEDULE_POPUP (GUBUN='SCHEDULE', SUB_GUBUN='HELP')
+ */
+export interface ScheduleHelpData {
+  mating: string;        // 교배 산출기준 (예: "이유후교배(7일),사고후교배(0일)")
+  farrowing: string;     // 분만 산출기준 (예: "분만예정(115일)")
+  weaning: string;       // 이유 산출기준 (예: "이유예정(21일)")
+  vaccine: string;       // 백신 산출기준 (예: "분만전백신(-7일)")
+  shipment: string;      // 출하 산출기준 (예: "이유일+(180-21)=159일")
+  checking: string;      // 재발확인 산출기준 (고정: "교배일+21일/28일")
 }
 
 export interface KPIData {
@@ -354,6 +369,14 @@ export interface ShipmentPopupData {
     avgBackfat: number; // 평균 등지방(mm)
     farmPrice: number; // 내농장가 (별도 소스)
     nationalPrice: number; // 전국평균가 (별도 소스)
+  };
+  // 육성율 산출기준 설정값 (툴팁용)
+  rearingConfig?: {
+    shipDay: number;     // 기준출하일령 (기본 180일)
+    weanPeriod: number;  // 평균포유기간 (기본 21일)
+    euDays: number;      // 역산일 (shipDay - weanPeriod)
+    euDateFrom: string;  // 이유일 FROM (MM.DD)
+    euDateTo: string;    // 이유일 TO (MM.DD)
   };
   // 등급 분포 차트 (가로 막대)
   gradeChart: ShipmentGradeChartItem[];

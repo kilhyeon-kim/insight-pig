@@ -10,6 +10,7 @@
 --   - TS_INS_WEEK_SUB (GUBUN='SCHEDULE', SUB_GUBUN='BM'): 분만예정 팝업 상세
 --   - TS_INS_WEEK_SUB (GUBUN='SCHEDULE', SUB_GUBUN='EU'): 이유예정 팝업 상세
 --   - TS_INS_WEEK_SUB (GUBUN='SCHEDULE', SUB_GUBUN='VACCINE'): 백신예정 팝업 상세
+--   - TS_INS_WEEK_SUB (GUBUN='SCHEDULE', SUB_GUBUN='HELP'): 산출기준 도움말 (1ROW)
 --
 -- DB 컬럼 매핑 (SUB_GUBUN='-'):
 --   - CNT_1: GB_SUM (교배예정 합계)
@@ -17,7 +18,7 @@
 --   - CNT_3: BM_SUM (분만예정 합계)
 --   - CNT_4: EU_SUM (이유예정 합계)
 --   - CNT_5: VACCINE_SUM (모돈백신 합계)
---   - CNT_6: SHIP_SUM (출하예정 합계) - 미구현
+--   - CNT_6: SHIP_SUM (출하예정 두수)
 --   - STR_1: PERIOD_FROM (시작일 MM.DD)
 --   - STR_2: PERIOD_TO (종료일 MM.DD)
 --   - CNT_7: WEEK_NUM (주차)
@@ -28,16 +29,31 @@
 --   - CNT_1~CNT_7: 월~일 예정 복수
 --   - SORT_NO: 1=GB, 2=BM, 3=IMSIN_3W, 4=IMSIN_4W, 5=EU, 6=VACCINE
 --
+-- DB 컬럼 매핑 (SUB_GUBUN='HELP'):
+--   - STR_1: 교배 산출기준 (예: "이유후교배(7일),사고후교배(0일)")
+--   - STR_2: 분만 산출기준 (예: "분만예정(115일)")
+--   - STR_3: 이유 산출기준 (예: "이유예정(21일)")
+--   - STR_4: 백신 산출기준 (예: "분만전백신(-7일)")
+--   - STR_5: 출하 산출기준 (예: "이유일+(180-21)=159일")
+--   - STR_6: 재발확인 산출기준 (고정: "교배일+21일/28일")
+--
 -- [예정작업 기준]
 -- - 교배예정 (150005): 후보돈(010001) + 이유돈(010005) + 사고돈(010006, 010007)
 -- - 분만예정 (150002): 임신돈(010002)
 -- - 이유예정 (150003): 포유돈(010003) + 대리모돈(010004)
 -- - 백신예정 (150004): 전체 모돈
+-- - 출하예정: TB_EU 이유두수 기준, 이유일 + (기준출하일령 - 평균포유기간) = 출하예정일
 --
 -- [재발확인 기준]
 -- - 마지막 작업이 교배(G)인 모돈
 -- - 3주령: 교배 후 18~24일 (21일 ± 3일)
 -- - 4주령: 교배 후 25~31일 (28일 ± 3일)
+--
+-- [출하예정 산출 기준]
+-- - TC_FARM_CONFIG 참조: 140005(기준출하일령, 기본 180) - 140003(평균포유기간, 기본 21)
+-- - 이유일 + (기준출하일령 - 평균포유기간) = 출하예정일
+-- - 예: 이유일 + (180 - 21) = 이유일 + 159일 = 출하예정일
+-- - 출하예정 두수 = 이유두수 * 90% (육성율)
 -- ============================================================
 
 CREATE OR REPLACE PROCEDURE SP_INS_WEEK_SCHEDULE_POPUP (
@@ -70,6 +86,12 @@ CREATE OR REPLACE PROCEDURE SP_INS_WEEK_SCHEDULE_POPUP (
     V_VACCINE_SUM   INTEGER := 0;
     V_SHIP_SUM      INTEGER := 0;
 
+    -- 출하예정 계산용 농장 설정값
+    V_SHIP_DAY      INTEGER := 180;  -- 기준출하일령 (140005)
+    V_WEAN_PERIOD   INTEGER := 21;   -- 평균포유기간 (140003)
+    V_SHIP_OFFSET   INTEGER := 159;  -- 이유→출하 경과일 (V_SHIP_DAY - V_WEAN_PERIOD)
+    V_REARING_RATE  NUMBER := 85;    -- 육성율 (CONFIG에서 조회)
+
     -- 요일별 날짜 배열 (월~일)
     TYPE T_DATE_ARR IS TABLE OF DATE INDEX BY PLS_INTEGER;
     V_DATES         T_DATE_ARR;
@@ -94,6 +116,28 @@ BEGIN
     -- FN_MD_SCHEDULE_BSE_2020용 날짜 포맷 (yyyy-MM-dd)
     V_SDT := SUBSTR(P_DT_FROM, 1, 4) || '-' || SUBSTR(P_DT_FROM, 5, 2) || '-' || SUBSTR(P_DT_FROM, 7, 2);
     V_EDT := SUBSTR(P_DT_TO, 1, 4) || '-' || SUBSTR(P_DT_TO, 5, 2) || '-' || SUBSTR(P_DT_TO, 7, 2);
+
+    -- ================================================
+    -- 농장 설정값 조회 (SP_INS_WEEK_CONFIG에서 저장한 값)
+    -- ★ TC_CODE_SYS/TC_FARM_CONFIG 직접 조회 제거
+    --    → TS_INS_WEEK_SUB (GUBUN='CONFIG')에서 조회
+    -- ================================================
+    BEGIN
+        SELECT NVL(CNT_3, 180),  -- 기준출하일령
+               NVL(CNT_2, 21),   -- 평균포유기간
+               NVL(VAL_1, 85)    -- 육성율 (6개월 평균)
+        INTO V_SHIP_DAY, V_WEAN_PERIOD, V_REARING_RATE
+        FROM TS_INS_WEEK_SUB
+        WHERE MASTER_SEQ = P_MASTER_SEQ
+          AND FARM_NO = P_FARM_NO
+          AND GUBUN = 'CONFIG';
+    EXCEPTION
+        WHEN OTHERS THEN
+            V_SHIP_DAY := 180;
+            V_WEAN_PERIOD := 21;
+            V_REARING_RATE := 85;
+    END;
+    V_SHIP_OFFSET := V_SHIP_DAY - V_WEAN_PERIOD;
 
     -- 주차 정보 (ISO 주차 기준)
     V_WEEK_NUM := TO_NUMBER(TO_CHAR(V_DT_FROM, 'IW'));
@@ -269,7 +313,23 @@ BEGIN
     END LOOP;
 
     -- ================================================
-    -- 7. 요약 INSERT (GUBUN='SCHEDULE', SUB_GUBUN='-')
+    -- 7. 출하예정 (TB_EU 이유두수 기반)
+    --    이유일 + (기준출하일령 - 평균포유기간) = 출하예정일
+    --    출하예정 두수 = 이유두수 * 육성율 (CONFIG에서 이미 조회됨)
+    -- ================================================
+    -- ★ 최적화: 좌측 컬럼 가공 제거 → WK_DT 인덱스 활용 가능
+    -- 기존: TO_DATE(E.WK_DT) + V_SHIP_OFFSET BETWEEN V_DT_FROM AND V_DT_TO
+    -- 변환: E.WK_DT BETWEEN TO_CHAR(V_DT_FROM - V_SHIP_OFFSET) AND TO_CHAR(V_DT_TO - V_SHIP_OFFSET)
+    SELECT NVL(ROUND(SUM(NVL(E.DUSU, 0) + NVL(E.DUSU_SU, 0)) * (V_REARING_RATE / 100)), 0)
+    INTO V_SHIP_SUM
+    FROM TB_EU E
+    WHERE E.FARM_NO = P_FARM_NO
+      AND E.USE_YN = 'Y'
+      AND E.WK_DT BETWEEN TO_CHAR(V_DT_FROM - V_SHIP_OFFSET, 'YYYYMMDD')
+                      AND TO_CHAR(V_DT_TO - V_SHIP_OFFSET, 'YYYYMMDD');
+
+    -- ================================================
+    -- 8. 요약 INSERT (GUBUN='SCHEDULE', SUB_GUBUN='-')
     -- ================================================
     INSERT INTO TS_INS_WEEK_SUB (
         MASTER_SEQ, FARM_NO, GUBUN, SUB_GUBUN, SORT_NO,
@@ -282,7 +342,7 @@ BEGIN
         V_BM_SUM,       -- CNT_3: 분만예정 합계
         V_EU_SUM,       -- CNT_4: 이유예정 합계
         V_VACCINE_SUM,  -- CNT_5: 백신예정 합계
-        V_SHIP_SUM,     -- CNT_6: 출하예정 합계 (미구현)
+        V_SHIP_SUM,     -- CNT_6: 출하예정 두수
         V_WEEK_NUM,     -- CNT_7: 주차
         V_PERIOD_FROM,  -- STR_1: 시작일
         V_PERIOD_TO     -- STR_2: 종료일
@@ -291,10 +351,10 @@ BEGIN
     V_PROC_CNT := 1;
 
     -- ================================================
-    -- 8. 캘린더 그리드 INSERT (GUBUN='SCHEDULE', SUB_GUBUN='CAL')
+    -- 9. 캘린더 그리드 INSERT (GUBUN='SCHEDULE', SUB_GUBUN='CAL')
     -- ================================================
 
-    -- 8.1 교배 (SORT_NO=1)
+    -- 9.1 교배 (SORT_NO=1)
     INSERT INTO TS_INS_WEEK_SUB (
         MASTER_SEQ, FARM_NO, GUBUN, SUB_GUBUN, SORT_NO, CODE_1,
         STR_1, STR_2, STR_3, STR_4, STR_5, STR_6, STR_7,
@@ -308,7 +368,7 @@ BEGIN
         V_GB_ARR(5), V_GB_ARR(6), V_GB_ARR(7)
     );
 
-    -- 8.2 분만 (SORT_NO=2)
+    -- 9.2 분만 (SORT_NO=2)
     INSERT INTO TS_INS_WEEK_SUB (
         MASTER_SEQ, FARM_NO, GUBUN, SUB_GUBUN, SORT_NO, CODE_1,
         STR_1, STR_2, STR_3, STR_4, STR_5, STR_6, STR_7,
@@ -322,7 +382,7 @@ BEGIN
         V_BM_ARR(5), V_BM_ARR(6), V_BM_ARR(7)
     );
 
-    -- 8.3 재발확인 3주 (SORT_NO=3)
+    -- 9.3 재발확인 3주 (SORT_NO=3)
     INSERT INTO TS_INS_WEEK_SUB (
         MASTER_SEQ, FARM_NO, GUBUN, SUB_GUBUN, SORT_NO, CODE_1,
         STR_1, STR_2, STR_3, STR_4, STR_5, STR_6, STR_7,
@@ -336,7 +396,7 @@ BEGIN
         V_IMSIN3W_ARR(5), V_IMSIN3W_ARR(6), V_IMSIN3W_ARR(7)
     );
 
-    -- 8.4 재발확인 4주 (SORT_NO=4)
+    -- 9.4 재발확인 4주 (SORT_NO=4)
     INSERT INTO TS_INS_WEEK_SUB (
         MASTER_SEQ, FARM_NO, GUBUN, SUB_GUBUN, SORT_NO, CODE_1,
         STR_1, STR_2, STR_3, STR_4, STR_5, STR_6, STR_7,
@@ -350,7 +410,7 @@ BEGIN
         V_IMSIN4W_ARR(5), V_IMSIN4W_ARR(6), V_IMSIN4W_ARR(7)
     );
 
-    -- 8.5 이유 (SORT_NO=5)
+    -- 9.5 이유 (SORT_NO=5)
     INSERT INTO TS_INS_WEEK_SUB (
         MASTER_SEQ, FARM_NO, GUBUN, SUB_GUBUN, SORT_NO, CODE_1,
         STR_1, STR_2, STR_3, STR_4, STR_5, STR_6, STR_7,
@@ -364,7 +424,7 @@ BEGIN
         V_EU_ARR(5), V_EU_ARR(6), V_EU_ARR(7)
     );
 
-    -- 8.6 백신 (SORT_NO=6)
+    -- 9.6 백신 (SORT_NO=6)
     INSERT INTO TS_INS_WEEK_SUB (
         MASTER_SEQ, FARM_NO, GUBUN, SUB_GUBUN, SORT_NO, CODE_1,
         STR_1, STR_2, STR_3, STR_4, STR_5, STR_6, STR_7,
@@ -381,7 +441,7 @@ BEGIN
     V_PROC_CNT := V_PROC_CNT + 6;
 
     -- ================================================
-    -- 9. 팝업 상세 데이터 INSERT (GUBUN='SCHEDULE', SUB_GUBUN='GB/BM/EU/VACCINE')
+    -- 10. 팝업 상세 데이터 INSERT (GUBUN='SCHEDULE', SUB_GUBUN='GB/BM/EU/VACCINE')
     --    TB_PLAN_MODON 설정의 WK_NM(작업명)별로 그룹화하여 대상복수 + 요일별 분포 저장
     --    경과일은 TB_PLAN_MODON에 설정된 PASS_DAY 사용 (실제 경과일 아님)
     --    컬럼 매핑:
@@ -394,7 +454,7 @@ BEGIN
     --      - CNT_2~CNT_8: 요일별 분포 (월~일)
     -- ================================================
 
-    -- 9.1 교배예정 팝업 (GUBUN='SCHEDULE', SUB_GUBUN='GB')
+    -- 10.1 교배예정 팝업 (GUBUN='SCHEDULE', SUB_GUBUN='GB')
     --     TB_PLAN_MODON 기준으로 LEFT JOIN하여 데이터 없어도 작업 정보 표시
     INSERT INTO TS_INS_WEEK_SUB (
         MASTER_SEQ, FARM_NO, GUBUN, SUB_GUBUN, SORT_NO,
@@ -433,7 +493,7 @@ BEGIN
 
     V_PROC_CNT := V_PROC_CNT + SQL%ROWCOUNT;
 
-    -- 9.2 분만예정 팝업 (GUBUN='SCHEDULE', SUB_GUBUN='BM')
+    -- 10.2 분만예정 팝업 (GUBUN='SCHEDULE', SUB_GUBUN='BM')
     --     TB_PLAN_MODON 기준으로 LEFT JOIN하여 데이터 없어도 작업 정보 표시
     INSERT INTO TS_INS_WEEK_SUB (
         MASTER_SEQ, FARM_NO, GUBUN, SUB_GUBUN, SORT_NO,
@@ -471,7 +531,7 @@ BEGIN
 
     V_PROC_CNT := V_PROC_CNT + SQL%ROWCOUNT;
 
-    -- 9.3 이유예정 팝업 (GUBUN='SCHEDULE', SUB_GUBUN='EU')
+    -- 10.3 이유예정 팝업 (GUBUN='SCHEDULE', SUB_GUBUN='EU')
     --     TB_PLAN_MODON 기준으로 LEFT JOIN하여 데이터 없어도 작업 정보 표시
     INSERT INTO TS_INS_WEEK_SUB (
         MASTER_SEQ, FARM_NO, GUBUN, SUB_GUBUN, SORT_NO,
@@ -509,7 +569,7 @@ BEGIN
 
     V_PROC_CNT := V_PROC_CNT + SQL%ROWCOUNT;
 
-    -- 9.4 백신예정 팝업 (GUBUN='SCHEDULE', SUB_GUBUN='VACCINE')
+    -- 10.4 백신예정 팝업 (GUBUN='SCHEDULE', SUB_GUBUN='VACCINE')
     --     TB_PLAN_MODON 기준으로 LEFT JOIN + ARTICLE_NM(백신명)
     INSERT INTO TS_INS_WEEK_SUB (
         MASTER_SEQ, FARM_NO, GUBUN, SUB_GUBUN, SORT_NO,
@@ -549,7 +609,43 @@ BEGIN
     V_PROC_CNT := V_PROC_CNT + SQL%ROWCOUNT;
 
     -- ================================================
-    -- 10. TS_INS_WEEK 메인 테이블 UPDATE
+    -- 11. 작업 산출기준 HELP 정보 INSERT (GUBUN='SCHEDULE', SUB_GUBUN='HELP')
+    --     TB_PLAN_MODON 설정 기반으로 작업명(경과일) 형태로 요약
+    --     STR_1: 교배 산출기준 (예: "이유후교배(7일),사고후교배(0일)")
+    --     STR_2: 분만 산출기준 (예: "분만예정(115일)")
+    --     STR_3: 이유 산출기준 (예: "이유예정(21일)")
+    --     STR_4: 백신 산출기준 (예: "분만전백신(-7일)")
+    --     STR_5: 출하 산출기준 (산출식: "이유일+(기준출하일령-평균포유기간)")
+    --     STR_6: 재발확인 산출기준 (고정: "교배일+21일/28일")
+    -- ================================================
+    INSERT INTO TS_INS_WEEK_SUB (
+        MASTER_SEQ, FARM_NO, GUBUN, SUB_GUBUN, SORT_NO,
+        STR_1, STR_2, STR_3, STR_4, STR_5, STR_6
+    )
+    SELECT P_MASTER_SEQ, P_FARM_NO, 'SCHEDULE', 'HELP', 1,
+           -- STR_1: 교배 산출기준
+           (SELECT LISTAGG(WK_NM || '(' || PASS_DAY || '일)', ',') WITHIN GROUP (ORDER BY WK_NM)
+            FROM TB_PLAN_MODON WHERE FARM_NO = P_FARM_NO AND JOB_GUBUN_CD = '150005' AND USE_YN = 'Y'),
+           -- STR_2: 분만 산출기준
+           (SELECT LISTAGG(WK_NM || '(' || PASS_DAY || '일)', ',') WITHIN GROUP (ORDER BY WK_NM)
+            FROM TB_PLAN_MODON WHERE FARM_NO = P_FARM_NO AND JOB_GUBUN_CD = '150002' AND USE_YN = 'Y'),
+           -- STR_3: 이유 산출기준
+           (SELECT LISTAGG(WK_NM || '(' || PASS_DAY || '일)', ',') WITHIN GROUP (ORDER BY WK_NM)
+            FROM TB_PLAN_MODON WHERE FARM_NO = P_FARM_NO AND JOB_GUBUN_CD = '150003' AND USE_YN = 'Y'),
+           -- STR_4: 백신 산출기준
+           (SELECT LISTAGG(WK_NM || '(' || PASS_DAY || '일)', ',') WITHIN GROUP (ORDER BY WK_NM)
+            FROM TB_PLAN_MODON WHERE FARM_NO = P_FARM_NO AND JOB_GUBUN_CD = '150004' AND USE_YN = 'Y'),
+           -- STR_5: 출하 산출기준 (계산식)
+           '이유일 산정기준 => 이유일 + ' || V_SHIP_OFFSET || '일 (출하일령 ' || V_SHIP_DAY || '일 - 포유기간 ' || V_WEAN_PERIOD || '일)' || CHR(10) ||
+           '육성율 : ' || V_REARING_RATE || '% (6개월간 평균육성율), 출하정보 없는경우 85% 적용',
+           -- STR_6: 재발확인 산출기준 (고정)
+           '(고정)교배후 3주(21일~27일), 4주(28일~35일) 대상모돈'
+    FROM DUAL;
+
+    V_PROC_CNT := V_PROC_CNT + 1;
+
+    -- ================================================
+    -- 12. TS_INS_WEEK 메인 테이블 UPDATE
     -- ================================================
     UPDATE TS_INS_WEEK
     SET THIS_GB_SUM = V_GB_SUM,

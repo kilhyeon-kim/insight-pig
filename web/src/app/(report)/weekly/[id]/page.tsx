@@ -289,6 +289,7 @@ export default function WeeklyDetailPage({ params }: WeeklyDetailPageProps) {
                     onClose={handlePopupClose}
                     data={data.scheduleData.gb}
                     title="교배 예정"
+                    id="pop-schedule-gb"
                 />
             )}
 
@@ -298,6 +299,7 @@ export default function WeeklyDetailPage({ params }: WeeklyDetailPageProps) {
                     onClose={handlePopupClose}
                     data={data.scheduleData.bm}
                     title="분만 예정"
+                    id="pop-schedule-bm"
                 />
             )}
 
@@ -307,6 +309,7 @@ export default function WeeklyDetailPage({ params }: WeeklyDetailPageProps) {
                     onClose={handlePopupClose}
                     data={data.scheduleData.eu}
                     title="이유 예정"
+                    id="pop-schedule-eu"
                 />
             )}
 
@@ -317,6 +320,7 @@ export default function WeeklyDetailPage({ params }: WeeklyDetailPageProps) {
                     data={data.scheduleData.vaccine}
                     title="백신 예정"
                     showVaccineName={true}
+                    id="pop-schedule-vaccine"
                 />
             )}
 

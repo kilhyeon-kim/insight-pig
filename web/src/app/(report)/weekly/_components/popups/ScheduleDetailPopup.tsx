@@ -48,8 +48,9 @@ export const ScheduleDetailPopup: React.FC<ScheduleDetailPopupProps> = ({
             id={id}
         >
             <>
-                {/* 단위 표시 */}
-                <div className="popup-section-desc justify-end">
+                {/* 안내 및 단위 표시 */}
+                <div className="popup-section-desc justify-between">
+                    <span style={{ color: 'var(--rp-text-tertiary)', fontSize: '11px' }}>작업리스트 클릭시 일별 현황확인</span>
                     <span>단위: 복</span>
                 </div>
 

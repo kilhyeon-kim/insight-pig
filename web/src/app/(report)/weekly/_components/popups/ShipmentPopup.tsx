@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import ReactECharts from 'echarts-for-react';
 import { ShipmentPopupData } from '@/types/weekly';
 import { PopupContainer } from './PopupContainer';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faTable, faChartLine, faCircle } from '@fortawesome/free-solid-svg-icons';
+import { faTable, faChartLine, faCircle, faCircleQuestion, faXmark } from '@fortawesome/free-solid-svg-icons';
 import { useChartResponsive } from './useChartResponsive';
 import { useTheme } from '@/contexts/ThemeContext';
 import { formatNumber } from '@/utils/format';
@@ -23,6 +23,8 @@ interface ShipmentPopupProps {
  */
 export const ShipmentPopup: React.FC<ShipmentPopupProps> = ({ isOpen, onClose, data }) => {
     const [activeTab, setActiveTab] = useState<'summary' | 'analysis' | 'carcass'>('summary');
+    const [showTooltip, setShowTooltip] = useState(false);
+    const tooltipRef = useRef<HTMLDivElement>(null);
     const chartSizes = useChartResponsive();
     const { theme } = useTheme();
 
@@ -33,10 +35,34 @@ export const ShipmentPopup: React.FC<ShipmentPopupProps> = ({ isOpen, onClose, d
     const dataLabelColor = isDark ? '#ffd700' : '#333';  // 다크모드: 골드 (확 뜨는 색상)
     const subLabelColor = isDark ? '#66d9ef' : '#666';   // 다크모드: 시안 (보조 라벨용)
 
-    const { metrics, gradeChart, table, analysisChart, carcassChart } = data;
+    const { metrics, gradeChart, table, analysisChart, carcassChart, rearingConfig } = data;
+
+    // 육성율 산출기준 설정값 (기본값 적용)
+    const shipDay = rearingConfig?.shipDay ?? 180;
+    const weanPeriod = rearingConfig?.weanPeriod ?? 21;
+    const euDays = rearingConfig?.euDays ?? (shipDay - weanPeriod);
+    const euDateFrom = rearingConfig?.euDateFrom || '';
+    const euDateTo = rearingConfig?.euDateTo || '';
     const total = gradeChart.reduce((sum, d) => sum + d.value, 0) || 1; // 0으로 나누기 방지
     const priceDiff = metrics.farmPrice - metrics.nationalPrice;
     const priceColor = priceDiff >= 0 ? '#28a745' : '#dc3545';
+
+    // 툴팁 외부 클릭 감지
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (tooltipRef.current && !tooltipRef.current.contains(event.target as Node)) {
+                setShowTooltip(false);
+            }
+        };
+
+        if (showTooltip) {
+            document.addEventListener('mousedown', handleClickOutside);
+        }
+
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [showTooltip]);
 
     // 등급 분포 가로 막대 차트 옵션
     const gradeChartOption = {
@@ -543,7 +569,54 @@ export const ShipmentPopup: React.FC<ShipmentPopupProps> = ({ isOpen, onClose, d
                                     return (
                                         <tr key={idx} style={getRowStyle(row.highlight)}>
                                             {row.colspan ? (
-                                                <td colSpan={2} className="label">{row.category}</td>
+                                                <td colSpan={2} className="label">
+                                                    {row.category}
+                                                    {/* 육성율(idx===2) 툴팁 */}
+                                                    {idx === 2 && (
+                                                        <div style={{ display: 'inline-block', marginLeft: '6px', position: 'relative', verticalAlign: 'middle' }} ref={tooltipRef}>
+                                                            <FontAwesomeIcon
+                                                                icon={faCircleQuestion}
+                                                                className="clickable"
+                                                                style={{ color: '#aaa', cursor: 'pointer' }}
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    setShowTooltip(!showTooltip);
+                                                                }}
+                                                            />
+                                                            {showTooltip && (
+                                                                <div className="help-tooltip" style={{ width: '340px', left: '20px', top: '-10px', textAlign: 'left', zIndex: 100 }}>
+                                                                    <div className="help-tooltip-header">
+                                                                        <span>육성율 산출기준</span>
+                                                                        <button className="close-btn" onClick={() => setShowTooltip(false)}>
+                                                                            <FontAwesomeIcon icon={faXmark} />
+                                                                        </button>
+                                                                    </div>
+                                                                    <div className="help-tooltip-body">
+                                                                        <div className="help-item" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '2px' }}>
+                                                                            <span className="label">공식</span>
+                                                                            <span className="desc">(출하두수 ÷ 과거이유두수) × 100</span>
+                                                                        </div>
+                                                                        <div className="help-item" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '2px' }}>
+                                                                            <span className="label">과거이유두수</span>
+                                                                            <span className="desc">
+                                                                                출하일 기준 역산된 날짜의 이유두수 합계<br />
+                                                                                <span style={{ fontSize: '0.85em', color: 'var(--rp-text-tertiary)' }}>
+                                                                                    * 이유일 = 출하일 - (기준출하일령 {shipDay}일 - 평균포유기간 {weanPeriod}일)<br />
+                                                                                    (설정값: {shipDay} - {weanPeriod} = {euDays}일 전)
+                                                                                </span>
+                                                                                {euDateFrom && euDateTo && (
+                                                                                    <span style={{ display: 'block', marginTop: '4px', fontSize: '0.85em', color: 'var(--rp-text-secondary)' }}>
+                                                                                        * 산출된 이유일: {euDateFrom} ~ {euDateTo}
+                                                                                    </span>
+                                                                                )}
+                                                                            </span>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                </td>
                                             ) : (
                                                 <>
                                                     <td className="label">{row.category}</td>

@@ -157,6 +157,9 @@ BEGIN
     -- 각 프로시저 호출
     -- ================================================
 
+    -- 농장 설정값 저장 (프론트엔드 info-note 표시용)
+    SP_INS_WEEK_CONFIG(P_MASTER_SEQ, P_JOB_NM, P_FARM_NO, V_LOCALE);
+
     -- 관리대상 모돈 팝업
     SP_INS_WEEK_ALERT_POPUP(P_MASTER_SEQ, P_JOB_NM, P_FARM_NO, V_LOCALE, P_DT_FROM, P_DT_TO);
 

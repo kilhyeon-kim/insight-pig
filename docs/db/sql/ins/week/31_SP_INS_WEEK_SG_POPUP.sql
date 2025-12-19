@@ -66,11 +66,30 @@ BEGIN
     -- 2. 지난주 원인별 사고복수 + 평균경과일 INSERT (GUBUN='SG', SUB_GUBUN='STAT', SORT_NO=1)
     --    한 번의 SQL로 8개 사고구분 동시 집계 + 비율 계산 + 평균경과일
     --    평균경과일: 임돈전출/판매 제외
+    --    ★ 성능 최적화: 스칼라 서브쿼리 → WITH절 사전 집계로 변경
     -- ================================================
     INSERT INTO TS_INS_WEEK_SUB (
         MASTER_SEQ, FARM_NO, GUBUN, SUB_GUBUN, SORT_NO,
         CNT_1, CNT_2, CNT_3, CNT_4, CNT_5, CNT_6, CNT_7, CNT_8,
         VAL_1, VAL_2, VAL_3, VAL_4, VAL_5, VAL_6, VAL_7, VAL_8, VAL_9
+    )
+    WITH
+    -- 마지막 교배일 사전 계산 (스칼라 서브쿼리 제거)
+    LAST_GB AS (
+        SELECT /*+ INDEX(WK IX_TB_MODON_WK_01) */
+               WK.FARM_NO, WK.PIG_NO, WK.WK_DT AS SAGO_WK_DT,
+               MAX(GB.WK_DT) AS LAST_GB_DT
+        FROM TB_MODON_WK WK
+        LEFT OUTER JOIN TB_MODON_WK GB
+            ON GB.FARM_NO = WK.FARM_NO AND GB.PIG_NO = WK.PIG_NO
+           AND GB.WK_GUBUN = 'G' AND GB.USE_YN = 'Y'
+           AND GB.WK_DT < WK.WK_DT
+        WHERE WK.FARM_NO = P_FARM_NO
+          AND WK.WK_GUBUN = 'F'
+          AND WK.USE_YN = 'Y'
+          AND WK.WK_DT >= P_DT_FROM
+          AND WK.WK_DT <= P_DT_TO
+        GROUP BY WK.FARM_NO, WK.PIG_NO, WK.WK_DT
     )
     SELECT
         P_MASTER_SEQ, P_FARM_NO, 'SG', 'STAT', 1,
@@ -95,19 +114,10 @@ BEGIN
             NVL(SUM(CASE WHEN S.SAGO_GUBUN_CD = '050005' THEN 1 ELSE 0 END), 0) AS CNT_7,  -- 임돈전출
             NVL(SUM(CASE WHEN S.SAGO_GUBUN_CD = '050006' THEN 1 ELSE 0 END), 0) AS CNT_8,  -- 임돈판매
             NVL(COUNT(*), 0) AS TOTAL_CNT,
-            -- 평균 경과일 (임돈전출/판매 제외)
+            -- 평균 경과일 (임돈전출/판매 제외) - WITH절 사전 집계 사용
             NVL(ROUND(AVG(
                 CASE WHEN S.SAGO_GUBUN_CD NOT IN ('050005', '050006') THEN
-                    TO_DATE(A.WK_DT, 'YYYYMMDD') - NVL(
-                        (SELECT MAX(TO_DATE(GB.WK_DT, 'YYYYMMDD'))
-                         FROM TB_MODON_WK GB
-                         WHERE GB.FARM_NO = A.FARM_NO
-                           AND GB.PIG_NO = A.PIG_NO
-                           AND GB.WK_GUBUN = 'G'
-                           AND GB.USE_YN = 'Y'
-                           AND GB.WK_DT < A.WK_DT),
-                        MD.LAST_WK_DT
-                    )
+                    TO_DATE(A.WK_DT, 'YYYYMMDD') - NVL(TO_DATE(LG.LAST_GB_DT, 'YYYYMMDD'), MD.LAST_WK_DT)
                 END
             ), 1), 0) AS AVG_GYUNGIL
         FROM TB_MODON_WK A
@@ -116,6 +126,8 @@ BEGIN
            AND S.WK_DT = A.WK_DT AND S.WK_GUBUN = A.WK_GUBUN AND S.USE_YN = 'Y'
         INNER JOIN TB_MODON MD
             ON MD.FARM_NO = A.FARM_NO AND MD.PIG_NO = A.PIG_NO
+        LEFT OUTER JOIN LAST_GB LG
+            ON LG.FARM_NO = A.FARM_NO AND LG.PIG_NO = A.PIG_NO AND LG.SAGO_WK_DT = A.WK_DT
         WHERE A.FARM_NO = P_FARM_NO
           AND A.WK_GUBUN = 'F'
           AND A.USE_YN = 'Y'
@@ -127,11 +139,30 @@ BEGIN
     -- ================================================
     -- 3. 최근1개월 원인별 사고복수 + 당해년도 누계 + 평균경과일 INSERT (GUBUN='SG', SUB_GUBUN='STAT', SORT_NO=2)
     --    한 번의 SQL로 최근1개월(CNT_1~CNT_8) + 당해년도 누계(CNT_9) + 당해년도 평균경과일(VAL_9)
+    --    ★ 성능 최적화: 스칼라 서브쿼리 → WITH절 사전 집계로 변경
     -- ================================================
     INSERT INTO TS_INS_WEEK_SUB (
         MASTER_SEQ, FARM_NO, GUBUN, SUB_GUBUN, SORT_NO,
         CNT_1, CNT_2, CNT_3, CNT_4, CNT_5, CNT_6, CNT_7, CNT_8, CNT_9,
         VAL_1, VAL_2, VAL_3, VAL_4, VAL_5, VAL_6, VAL_7, VAL_8, VAL_9
+    )
+    WITH
+    -- 마지막 교배일 사전 계산 (스칼라 서브쿼리 제거) - 당해년도 범위
+    LAST_GB AS (
+        SELECT /*+ INDEX(WK IX_TB_MODON_WK_01) */
+               WK.FARM_NO, WK.PIG_NO, WK.WK_DT AS SAGO_WK_DT,
+               MAX(GB.WK_DT) AS LAST_GB_DT
+        FROM TB_MODON_WK WK
+        LEFT OUTER JOIN TB_MODON_WK GB
+            ON GB.FARM_NO = WK.FARM_NO AND GB.PIG_NO = WK.PIG_NO
+           AND GB.WK_GUBUN = 'G' AND GB.USE_YN = 'Y'
+           AND GB.WK_DT < WK.WK_DT
+        WHERE WK.FARM_NO = P_FARM_NO
+          AND WK.WK_GUBUN = 'F'
+          AND WK.USE_YN = 'Y'
+          AND WK.WK_DT >= V_YEAR_FROM
+          AND WK.WK_DT <= P_DT_TO
+        GROUP BY WK.FARM_NO, WK.PIG_NO, WK.WK_DT
     )
     SELECT
         P_MASTER_SEQ, P_FARM_NO, 'SG', 'STAT', 2,
@@ -160,19 +191,10 @@ BEGIN
             NVL(COUNT(*), 0) AS CNT_9,
             -- 최근1개월 합계 (비율 계산용)
             NVL(SUM(CASE WHEN A.WK_DT >= V_MONTH_FROM THEN 1 ELSE 0 END), 0) AS TOTAL_CNT,
-            -- 당해년도 평균 경과일 (임돈전출/판매 제외)
+            -- 당해년도 평균 경과일 (임돈전출/판매 제외) - WITH절 사전 집계 사용
             NVL(ROUND(AVG(
                 CASE WHEN S.SAGO_GUBUN_CD NOT IN ('050005', '050006') THEN
-                    TO_DATE(A.WK_DT, 'YYYYMMDD') - NVL(
-                        (SELECT MAX(TO_DATE(GB.WK_DT, 'YYYYMMDD'))
-                         FROM TB_MODON_WK GB
-                         WHERE GB.FARM_NO = A.FARM_NO
-                           AND GB.PIG_NO = A.PIG_NO
-                           AND GB.WK_GUBUN = 'G'
-                           AND GB.USE_YN = 'Y'
-                           AND GB.WK_DT < A.WK_DT),
-                        MD.LAST_WK_DT
-                    )
+                    TO_DATE(A.WK_DT, 'YYYYMMDD') - NVL(TO_DATE(LG.LAST_GB_DT, 'YYYYMMDD'), MD.LAST_WK_DT)
                 END
             ), 1), 0) AS AVG_GYUNGIL
         FROM TB_MODON_WK A
@@ -181,6 +203,8 @@ BEGIN
            AND S.WK_DT = A.WK_DT AND S.WK_GUBUN = A.WK_GUBUN AND S.USE_YN = 'Y'
         INNER JOIN TB_MODON MD
             ON MD.FARM_NO = A.FARM_NO AND MD.PIG_NO = A.PIG_NO
+        LEFT OUTER JOIN LAST_GB LG
+            ON LG.FARM_NO = A.FARM_NO AND LG.PIG_NO = A.PIG_NO AND LG.SAGO_WK_DT = A.WK_DT
         WHERE A.FARM_NO = P_FARM_NO
           AND A.WK_GUBUN = 'F'
           AND A.USE_YN = 'Y'
@@ -194,10 +218,29 @@ BEGIN
     --    임돈전출/판매 제외
     --    경과일 = 사고일 - 마지막 교배일 (사고 이전 가장 최근 교배)
     --    이전 교배 기록이 없으면 TB_MODON.LAST_WK_DT 사용
+    --    ★ 성능 최적화: 스칼라 서브쿼리 → WITH절 사전 집계로 변경
     -- ================================================
     INSERT INTO TS_INS_WEEK_SUB (
         MASTER_SEQ, FARM_NO, GUBUN, SUB_GUBUN, SORT_NO,
         CNT_1, CNT_2, CNT_3, CNT_4, CNT_5, CNT_6, CNT_7, CNT_8
+    )
+    WITH
+    -- 마지막 교배일 사전 계산 (스칼라 서브쿼리 제거)
+    LAST_GB AS (
+        SELECT /*+ INDEX(WK IX_TB_MODON_WK_01) */
+               WK.FARM_NO, WK.PIG_NO, WK.WK_DT AS SAGO_WK_DT, WK.WK_DATE AS SAGO_WK_DATE,
+               MAX(GB.WK_DATE) AS LAST_GB_DATE
+        FROM TB_MODON_WK WK
+        LEFT OUTER JOIN TB_MODON_WK GB
+            ON GB.FARM_NO = WK.FARM_NO AND GB.PIG_NO = WK.PIG_NO
+           AND GB.WK_GUBUN = 'G' AND GB.USE_YN = 'Y'
+           AND GB.WK_DATE < WK.WK_DATE
+        WHERE WK.FARM_NO = P_FARM_NO
+          AND WK.WK_GUBUN = 'F'
+          AND WK.USE_YN = 'Y'
+          AND WK.WK_DT >= P_DT_FROM
+          AND WK.WK_DT <= P_DT_TO
+        GROUP BY WK.FARM_NO, WK.PIG_NO, WK.WK_DT, WK.WK_DATE
     )
     SELECT
         P_MASTER_SEQ, P_FARM_NO, 'SG', 'CHART', 1,
@@ -211,28 +254,14 @@ BEGIN
         NVL(SUM(CASE WHEN GYUNGIL >= 46 THEN 1 ELSE 0 END), 0)
     FROM (
         SELECT
-            WK.WK_DATE - NVL(
-                (SELECT MAX(GB.WK_DATE)
-                 FROM TB_MODON_WK GB
-                 WHERE GB.FARM_NO = WK.FARM_NO
-                   AND GB.PIG_NO = WK.PIG_NO
-                   AND GB.WK_GUBUN = 'G'
-                   AND GB.USE_YN = 'Y'
-                   AND GB.WK_DATE < WK.WK_DATE),
-                MD.LAST_WK_DT
-            ) AS GYUNGIL
-        FROM TB_MODON_WK WK
+            LG.SAGO_WK_DATE - NVL(LG.LAST_GB_DATE, MD.LAST_WK_DT) AS GYUNGIL
+        FROM LAST_GB LG
         INNER JOIN TB_SAGO S
-            ON S.FARM_NO = WK.FARM_NO AND S.PIG_NO = WK.PIG_NO
-           AND S.WK_DT = WK.WK_DT AND S.WK_GUBUN = WK.WK_GUBUN AND S.USE_YN = 'Y'
+            ON S.FARM_NO = LG.FARM_NO AND S.PIG_NO = LG.PIG_NO
+           AND S.WK_DT = LG.SAGO_WK_DT AND S.WK_GUBUN = 'F' AND S.USE_YN = 'Y'
         INNER JOIN TB_MODON MD
-            ON MD.FARM_NO = WK.FARM_NO AND MD.PIG_NO = WK.PIG_NO
-        WHERE WK.FARM_NO = P_FARM_NO
-          AND WK.WK_GUBUN = 'F'
-          AND WK.USE_YN = 'Y'
-          AND WK.WK_DT >= P_DT_FROM
-          AND WK.WK_DT <= P_DT_TO
-          AND S.SAGO_GUBUN_CD NOT IN ('050005', '050006')
+            ON MD.FARM_NO = LG.FARM_NO AND MD.PIG_NO = LG.PIG_NO
+        WHERE S.SAGO_GUBUN_CD NOT IN ('050005', '050006')
     ) SG
     WHERE SG.GYUNGIL IS NOT NULL;
     V_PROC_CNT := V_PROC_CNT + 1;
