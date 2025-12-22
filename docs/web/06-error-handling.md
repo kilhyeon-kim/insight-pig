@@ -1,7 +1,7 @@
 # 에러 관리 가이드 (Error Handling)
 
-**대상**: Backend/Frontend 개발자, LLM  
-**최종 업데이트**: 2025-12-11
+**대상**: Backend/Frontend 개발자, LLM
+**최종 업데이트**: 2025-12-22
 
 ---
 
@@ -16,16 +16,17 @@ api/src/common/err/          # Backend 에러 관리
 └── index.ts                 # 모듈 export
 
 web/src/err/                 # Frontend 에러 관리
-├── error-types.ts           # 에러 타입 enum 및 인터페이스
-├── error-messages.ts        # 에러 메시지 상수
-├── error-utils.ts           # 에러 파싱/포맷팅 유틸리티
+├── error-types.ts           # ErrorType, ErrorCode enum 및 인터페이스
+├── error-messages.ts        # 에러 타입별/코드별 메시지 상수
+├── error-utils.ts           # 에러 감지/파싱/포맷팅 유틸리티
 └── index.ts                 # 모듈 export
 ```
 
 ---
 
-## 2. 에러 타입 분류
+## 2. 에러 체계
 
+### 2.1 ErrorType (에러 타입)
 | 에러 타입 | 설명 | HTTP 상태 | 발생 위치 |
 |----------|------|-----------|----------|
 | `DB` | 데이터베이스 오류 | 500 | Backend |
@@ -37,6 +38,19 @@ web/src/err/                 # Frontend 에러 관리
 | `FORBIDDEN` | 권한 오류 | 403 | Backend |
 | `FRONTEND` | 프론트엔드 오류 | - | Frontend |
 | `NETWORK` | 네트워크 연결 오류 | - | Frontend |
+
+### 2.2 ErrorCode (상세 에러 코드)
+| 코드 그룹 | 코드 예시 | 설명 |
+|----------|----------|------|
+| `AUTH_xxx` | AUTH_001 ~ AUTH_005 | 인증 관련 (로그인 실패, 토큰 만료, 세션 만료 등) |
+| `NET_xxx` | NET_001 ~ NET_004 | 네트워크 관련 (연결 실패, 타임아웃, 오프라인 등) |
+| `CORS_xxx` | CORS_001 ~ CORS_002 | CORS 정책 위반, Origin 불허용 |
+| `SSL_xxx` | SSL_001 ~ SSL_003 | SSL 인증서 오류, 혼합 콘텐츠 차단 |
+| `SRV_xxx` | SRV_001 ~ SRV_004 | 서버 관련 (내부 오류, 점검 중, 과부하 등) |
+| `REQ_xxx` | REQ_001 ~ REQ_003 | 요청 관련 (형식 오류, 파라미터 누락 등) |
+| `DATA_xxx` | DATA_001 ~ DATA_003 | 데이터 관련 (없음, 중복, 형식 오류) |
+| `PERM_xxx` | PERM_001 ~ PERM_002 | 권한 관련 (접근/작업 권한 없음) |
+| `ETC_xxx` | ETC_001 ~ ETC_002 | 기타 (알 수 없는 오류, 파싱 오류) |
 
 ---
 
@@ -101,57 +115,76 @@ const errorType = getErrorTypeByStatus(status);
 
 ## 4. Frontend 에러 처리
 
-### 4.1 에러 유틸리티 사용
+### 4.1 에러 코드 기반 처리 (권장)
 
 ```typescript
-import { parseApiError, parseFetchError } from '@/err';
+import { ErrorCode, detectErrorCode, detectErrorCodeByStatus, getErrorMessage } from '@/err';
 
-async function fetchData() {
+// 로그인 예시 (AuthContext.tsx)
+const login = async (memberId: string, password: string) => {
   try {
-    const res = await fetch(url);
-    
-    // HTTP 에러 체크
-    if (!res.ok) {
-      const errorData = await res.json();
-      const errorInfo = parseApiError(errorData);
-      alert(errorInfo.message);  // [DB 에러] 데이터베이스 오류가 발생했습니다.
-      return;
+    const response = await fetch(`${API_URL}/api/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ memberId, password }),
+    });
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        const code = ErrorCode.AUTH_INVALID_CREDENTIALS;
+        return { success: false, error: getErrorMessage(code), code };
+      }
+      const code = detectErrorCodeByStatus(response.status);
+      return { success: false, error: getErrorMessage(code), code };
     }
-    
-    // 정상 처리
-    const data = await res.json();
-    return data;
-    
+
+    const data = await response.json();
+    return { success: true, data };
   } catch (error) {
-    // 네트워크 에러 또는 파싱 에러
-    const errorInfo = parseFetchError(error);
-    alert(errorInfo.message);  // [네트워크 에러] 네트워크 연결에 실패했습니다.
+    // 네트워크/CORS/SSL 에러 자동 감지
+    const code = detectErrorCode(error);
+    return { success: false, error: getErrorMessage(code), code };
+  }
+};
+```
+
+### 4.2 API 서비스 공통 에러 처리
+
+```typescript
+import { ApiError } from '@/services/api';
+import { ErrorCode } from '@/err';
+
+try {
+  const data = await weeklyApi.getList();
+} catch (error) {
+  if (error instanceof ApiError) {
+    console.log(error.code);       // ErrorCode.NET_CONNECTION_FAILED
+    console.log(error.message);    // "서버에 연결할 수 없습니다..."
+    console.log(error.statusCode); // 502
   }
 }
 ```
 
-### 4.2 에러 정보 구조
+### 4.3 에러 감지 함수
+
+```typescript
+import { detectErrorCode, detectErrorCodeByStatus } from '@/err';
+
+// fetch 에러에서 자동 감지 (CORS, SSL, 네트워크 등)
+const code = detectErrorCode(error);
+
+// HTTP 상태 코드에서 감지
+const code = detectErrorCodeByStatus(response.status, responseBody);
+```
+
+### 4.4 에러 정보 구조
 
 ```typescript
 interface ErrorInfo {
   type: ErrorType;           // 에러 타입
-  message: string;           // 포맷된 메시지 ([에러타입] 메시지)
-  details?: any;             // 원본 에러 데이터
+  message: string;           // 사용자 메시지
+  details?: any;             // 원본 에러 데이터 (code 포함)
 }
-```
-
-### 4.3 에러 메시지 포맷팅
-
-```typescript
-import { formatErrorMessage, ErrorType } from '@/err';
-
-// 자동 포맷팅
-const message = formatErrorMessage(ErrorType.DB, '연결 실패');
-// 결과: "[DB 에러] 연결 실패"
-
-// 기본 메시지 사용
-const message = formatErrorMessage(ErrorType.NETWORK);
-// 결과: "[네트워크 에러] 네트워크 연결에 실패했습니다.\n서버가 실행 중인지 확인하세요."
 ```
 
 ---
@@ -181,15 +214,20 @@ export const ErrorMessages = {
 **위치**: `web/src/err/error-messages.ts`
 
 ```typescript
+// 에러 타입별 메시지 (기존 호환)
 export const ErrorMessages = {
-  DB: {
-    title: 'DB 에러',
-    default: '데이터베이스 오류가 발생했습니다.\n관리자에게 문의하세요.',
-  },
-  NETWORK: {
-    title: '네트워크 에러',
-    default: '네트워크 연결에 실패했습니다.\n서버가 실행 중인지 확인하세요.',
-  },
+  DB: { title: 'DB 에러', default: '데이터베이스 오류가 발생했습니다.' },
+  NETWORK: { title: '네트워크 에러', default: '네트워크 연결에 실패했습니다.' },
+  // ...
+};
+
+// 에러 코드별 사용자 메시지 (신규)
+export const ErrorCodeMessages: Record<ErrorCode, string> = {
+  [ErrorCode.AUTH_INVALID_CREDENTIALS]: '아이디 또는 비밀번호가 일치하지 않습니다.',
+  [ErrorCode.NET_CONNECTION_FAILED]: '서버에 연결할 수 없습니다. 네트워크 상태를 확인해주세요.',
+  [ErrorCode.NET_OFFLINE]: '인터넷 연결이 없습니다. 네트워크 연결을 확인해주세요.',
+  [ErrorCode.CORS_BLOCKED]: '보안 정책으로 인해 요청이 차단되었습니다.',
+  [ErrorCode.SSL_CERT_ERROR]: '보안 인증서 오류가 발생했습니다.',
   // ...
 };
 ```

@@ -1,7 +1,7 @@
 # 배포 및 운영 가이드 (Docker 기반)
 
-**대상**: DevOps, 배포 담당자  
-**최종 업데이트**: 2025-12-19  
+**대상**: DevOps, 배포 담당자
+**최종 업데이트**: 2025-12-22
 **주요 내용**: Docker Compose를 이용한 이중화 환경 배포 및 운영 가이드
 
 ---
@@ -77,11 +77,20 @@ sudo curl -L "https://github.com/docker/compose/releases/download/v2.24.5/docker
 sudo chmod +x /usr/local/bin/docker-compose
 ```
 
-### 3.2 소스 코드 배포 (SFTP)
-VS Code의 SFTP 확장을 사용하여 이중화 서버에 동시 배포합니다.
-*   **설정 파일**: `.vscode/sftp.json`
+### 3.2 소스 코드 배포 (deploy.sh)
+프로젝트 루트의 `deploy.sh` 스크립트를 사용하여 이중화 서버에 배포합니다.
+
+```bash
+# 사용법
+./deploy.sh              # 커밋되지 않은 변경 파일만 배포
+./deploy.sh -last        # 마지막 1개 커밋 변경 파일 배포
+./deploy.sh -last 3      # 최근 3개 커밋 변경 파일 배포
+./deploy.sh -all         # 전체 프로젝트 배포
+```
+
+*   **설정 파일**: `deploy.sh` (SSH 키 경로, 서버 IP 등)
 *   **대상 경로**: `/data/insightPig`
-*   **방법**: `Ctrl + Shift + P` -> `SFTP: Upload Project` 실행 (38번, 99번 서버 각각 수행)
+*   **대상 서버**: 10.4.38.10, 10.4.99.10 (자동 이중화 배포)
 
 ### 3.3 환경 변수 설정 (`.env`)
 각 서버의 `/data/insightPig/.env` 파일에 실제 DB 접속 정보를 설정합니다.
@@ -129,7 +138,8 @@ docker-compose up -d --build
 
 ## 6. 주의 사항 및 팁
 
-1.  **이중화 동기화**: 소스 코드 수정 시 반드시 두 서버(38, 99) 모두에 업로드 및 재빌드를 수행해야 합니다.
+1.  **이중화 동기화**: `deploy.sh` 스크립트 사용 시 자동으로 두 서버에 배포됩니다.
 2.  **AWS 설정**: AWS 보안 그룹에서 **8002 포트**가 인바운드 허용되어야 하며, ALB 리스너 규칙에 `ins.pigplan.io`가 등록되어야 합니다. (상세 내용은 `docs/aws.md` 참조)
-3.  **접속 주소**: `http://ins.pigplan.io` (ALB 연동으로 포트 번호 생략 가능)
+3.  **접속 주소**: `https://ins.pigplan.io` (ALB 연동, HTTPS)
 4.  **권한 문제**: `docker-compose` 실행 시 권한 에러가 발생하면 `sudo chmod 666 /var/run/docker.sock`을 다시 실행하십시오.
+5.  **컨테이너 충돌**: 기존 컨테이너가 남아있으면 `docker rm -f inspig-api inspig-web inspig-nginx` 후 재빌드
