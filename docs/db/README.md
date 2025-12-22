@@ -3,6 +3,13 @@
 > inspig 주간/월간 리포트 DB 설계 문서
 
 ---
+## 폴더 구조
+ -- gitpush
+ -- deploy.sh
+ --38번 서버 (10.4.38.10)
+ssh -i "E:/ssh key/sshkey/aws/ProdPigplanKey.pem" pigplan@10.4.38.10 "cd /data/insightPig && docker-compose down && docker-compose up -d --build"
+ --99번 서버 (10.4.99.10)
+ssh -i "E:/ssh key/sshkey/aws/ProdPigplanKey.pem" pigplan@10.4.99.10 "cd /data/insightPig && docker-compose down && docker-compose up -d --build"
 
 ## 폴더 구조
 
@@ -119,3 +126,10 @@ EXEC SP_INS_WEEK_MAIN('WEEK', NULL, 4, 'Y');
 |------|------|---------|------|
 | ref/ | 운영 DB 참조 문서 | X | md 문서만 |
 | sql/ins/ | INS 신규 객체 | O | SQL 파일 |
+
+## 운영서버 
+ -- 시스템 서버
+ ssh -i "E:/ssh key/sshkey/aws/ProdPigplanKey.pem" pigplan@10.4.38.10
+ ssh -i "E:/ssh key/sshkey/aws/ProdPigplanKey.pem" pigplan@10.4.99.10
+
+ -- Python ETL 서버

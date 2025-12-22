@@ -127,12 +127,31 @@ docker-compose up -d --build
 
 ---
 
-## 5. [차후 과제] Python ETL 전환 계획
+## 5. Python ETL 서버
 
-향후 데이터 처리의 유연성을 위해 Oracle Job을 파이썬 스크립트로 전환할 예정입니다.
-*   **실행 환경**: 기존 파이썬 서비스 서버(CentOS 7) 내 독립 가상환경(`venv`)
-*   **주요 라이브러리**: `python-oracledb` (Thin mode), `pandas`
-*   **배포 방식**: `etl/` 폴더 내 스크립트 배치 및 `crontab` 등록
+Web/API 서비스와 별도로 Python ETL 전용 서버가 구성되어 있습니다.
+
+### 5.1 서버 구성
+| 서버 | IP 주소 | 역할 | Python | 상태 |
+|------|---------|------|--------|------|
+| **ETL 서버** | 10.4.35.10 | Python ETL (권장) | 3.8.5 (Anaconda) | ✅ 운영 중 |
+| ELK 서버 | 10.4.66.11 | Elasticsearch/Logstash | 3.6.8 | ETL 비권장 |
+
+### 5.2 ETL 서버 환경 (10.4.35.10)
+*   **OS**: CentOS 7.7.1908
+*   **Python**: 3.8.5 (Anaconda)
+*   **Oracle**: cx_Oracle 8.3.0 + Instant Client 12.2
+*   **스케줄러**: Crontab / APScheduler 3.11.0
+*   **DB 연결**: RDS Oracle (pigclouddb.xxx.rds.amazonaws.com)
+*   **기존 ETL**: consulting-report-etl, farm_performance_scheduler 등 운영 중
+
+### 5.3 ETL 단독 운영 이유
+ETL 작업은 이중화 없이 **단일 서버에서만 실행**합니다.
+*   중복 실행 방지 (데이터 중복 INSERT 방지)
+*   배치 작업은 한 서버로 충분
+*   로그/모니터링 집중 관리
+
+> **상세 가이드**: [Python ETL 전환 가이드](05-python-etl.md)
 
 ---
 
