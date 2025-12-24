@@ -7,6 +7,9 @@ import {
     parseFetchError
 } from '@/err';
 import Header from '@/components/common/Header';
+import { Sidebar } from '@/components/layout/Sidebar';
+import Footer from '@/components/layout/Footer';
+import ScrollToTop from '@/components/common/ScrollToTop';
 import { WeeklyHeader } from '../_components/WeeklyHeader';
 import { AlertCard } from '../_components/AlertCard';
 import { LastWeekSection } from '../_components/LastWeekSection';
@@ -75,6 +78,7 @@ export default function WeeklyDetailPage({ params }: WeeklyDetailPageProps) {
     const [expired, setExpired] = useState(false);
     const [activePopup, setActivePopup] = useState<string | null>(null);
     const [isLoginAccess, setIsLoginAccess] = useState(false);
+    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
     useEffect(() => {
         const fetchReport = async () => {
@@ -195,7 +199,16 @@ export default function WeeklyDetailPage({ params }: WeeklyDetailPageProps) {
     return (
         <div className="report-page-wrapper">
             {/* Main Header - CI + 사용자정보/로그인버튼 */}
-            <Header isLoginAccess={isLoginAccess} showMenu={false} />
+            <Header
+                isLoginAccess={isLoginAccess}
+                showMenu={isLoginAccess}
+                onMenuToggle={() => setIsSidebarOpen(true)}
+            />
+
+            {/* Sidebar - 로그인 접속시만 */}
+            {isLoginAccess && (
+                <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
+            )}
 
             {/* Report Header - 주간리포트 제목 + 농장정보 */}
             <WeeklyHeader data={headerData} />
@@ -351,6 +364,12 @@ export default function WeeklyDetailPage({ params }: WeeklyDetailPageProps) {
                     data={data.weather}
                 />
             )}
+
+            {/* Footer - 로그인 접속시만 */}
+            {isLoginAccess && <Footer />}
+
+            {/* ScrollToTop - 항상 표시 */}
+            <ScrollToTop />
         </div>
     );
 }
