@@ -6,6 +6,7 @@ import {
     parseApiError,
     parseFetchError
 } from '@/err';
+import Header from '@/components/common/Header';
 import { WeeklyHeader } from '../_components/WeeklyHeader';
 import { AlertCard } from '../_components/AlertCard';
 import { LastWeekSection } from '../_components/LastWeekSection';
@@ -82,8 +83,8 @@ export default function WeeklyDetailPage({ params }: WeeklyDetailPageProps) {
                 setError(null);
                 setExpired(false);
 
-                // 로그인 토큰 가져오기
-                const token = sessionStorage.getItem('token');
+                // 로그인 토큰 가져오기 (localStorage의 accessToken)
+                const token = localStorage.getItem('accessToken');
                 const headers: HeadersInit = {};
                 if (token) {
                     headers['Authorization'] = `Bearer ${token}`;
@@ -193,7 +194,10 @@ export default function WeeklyDetailPage({ params }: WeeklyDetailPageProps) {
 
     return (
         <div className="report-page-wrapper">
-            {/* Header */}
+            {/* Main Header - CI + 사용자정보/로그인버튼 */}
+            <Header isLoginAccess={isLoginAccess} showMenu={false} />
+
+            {/* Report Header - 주간리포트 제목 + 농장정보 */}
             <WeeklyHeader data={headerData} />
 
             {/* Content */}

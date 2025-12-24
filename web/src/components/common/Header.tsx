@@ -5,9 +5,13 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { Icon } from '@/components/common';
 import { useAuth } from '@/contexts/AuthContext';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faSignInAlt } from '@fortawesome/free-solid-svg-icons';
 
 interface HeaderProps {
   onMenuToggle?: () => void;
+  isLoginAccess?: boolean;
+  showMenu?: boolean;
 }
 
 interface ServiceInfo {
@@ -20,7 +24,7 @@ interface ServiceInfo {
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
-export default function Header({ onMenuToggle }: HeaderProps) {
+export default function Header({ onMenuToggle, isLoginAccess = true, showMenu = true }: HeaderProps) {
   const { user, getAccessToken, logout } = useAuth();
   const [showPopup, setShowPopup] = useState(false);
   const [serviceInfo, setServiceInfo] = useState<ServiceInfo | null>(null);
@@ -84,21 +88,23 @@ export default function Header({ onMenuToggle }: HeaderProps) {
   };
 
   return (
-    <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-50">
+    <header id="main-header" className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-50">
       <div className="flex items-center justify-between px-2 py-2">
         {/* 왼쪽: 햄버거 메뉴 + 로고 */}
         <div className="flex items-center gap-1">
           {/* 햄버거 메뉴 버튼 */}
-          <button
-            onClick={onMenuToggle}
-            className="p-1.5 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-            aria-label="메뉴 열기"
-          >
-            <Icon name="bars" className="text-lg" />
-          </button>
+          {showMenu && (
+            <button
+              onClick={onMenuToggle}
+              className="p-1.5 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              aria-label="메뉴 열기"
+            >
+              <Icon name="bars" className="text-lg" />
+            </button>
+          )}
 
           {/* 로고 */}
-          <Link id="btn-top-ci" href="/" className="flex items-center">
+          <Link id="btn-top-ci" href={isLoginAccess ? "/" : "/login"} className="flex items-center">
             <Image
               src="/images/insight_ci.png"
               alt="피그플랜"
@@ -109,29 +115,30 @@ export default function Header({ onMenuToggle }: HeaderProps) {
           </Link>
         </div>
 
-        {/* 오른쪽: 사용자 정보 + 아이콘 */}
-        <div className="flex items-center gap-2 text-right relative" ref={popupRef}>
-          <div className="text-xs">
-            <div className="font-medium text-gray-900 dark:text-white">
-              {user?.name || '-'}
+        {/* 오른쪽: 사용자 정보 또는 로그인 버튼 */}
+        {isLoginAccess ? (
+          <div id="sec-user-info" className="flex items-center gap-2 text-right relative" ref={popupRef}>
+            <div className="text-xs">
+              <div className="font-medium text-gray-900 dark:text-white">
+                {user?.name || '-'}
+              </div>
+              <div className="text-gray-500 dark:text-gray-400 text-[11px]">
+                {user?.farmNm || user?.farmNo || '-'}
+              </div>
             </div>
-            <div className="text-gray-500 dark:text-gray-400 text-[11px]">
-              {user?.farmNm || user?.farmNo || '-'}
-            </div>
-          </div>
 
-          {/* 사용자 아이콘 버튼 */}
-          <button
-            id="btn-user-menu"
-            onClick={handleUserIconClick}
-            className="w-8 h-8 flex items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors"
-            aria-label="사용자 정보"
-          >
-            <Icon name="user" className="text-sm" />
-          </button>
+            {/* 사용자 아이콘 버튼 */}
+            <button
+              id="btn-user-menu"
+              onClick={handleUserIconClick}
+              className="w-8 h-8 flex items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors"
+              aria-label="사용자 정보"
+            >
+              <Icon name="user" className="text-sm" />
+            </button>
 
-          {/* 사용자 정보 팝업 */}
-          {showPopup && (
+            {/* 사용자 정보 팝업 */}
+            {showPopup && (
             <div
               id="pop-user-menu"
               className="absolute top-full right-0 mt-2 w-64 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50"
@@ -199,8 +206,18 @@ export default function Header({ onMenuToggle }: HeaderProps) {
                 </button>
               </div>
             </div>
-          )}
-        </div>
+            )}
+          </div>
+        ) : (
+          <Link
+            id="btn-report-login"
+            href="/login"
+            className="flex items-center gap-1 px-3 py-1.5 text-sm text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
+          >
+            <FontAwesomeIcon icon={faSignInAlt} />
+            <span>로그인</span>
+          </Link>
+        )}
       </div>
     </header>
   );

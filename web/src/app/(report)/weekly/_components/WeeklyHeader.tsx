@@ -1,7 +1,6 @@
 "use client";
 
 import React from 'react';
-import Image from 'next/image';
 import { WeeklyHeader as WeeklyHeaderType } from '@/types/weekly';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCalendarAlt } from '@fortawesome/free-solid-svg-icons';
@@ -35,16 +34,7 @@ export const WeeklyHeader: React.FC<WeeklyHeaderProps> = ({ data }) => {
     return (
         <div className="report-header">
             <div className="report-header-top">
-                <h1>
-                    <Image
-                        src="/images/insight_ci.png"
-                        alt="피그플랜"
-                        width={120}
-                        height={32}
-                        className="brightness-0 invert"
-                    />
-                    <span className="ml-2">주간 리포트</span>
-                </h1>
+                <h1>주간 리포트</h1>
                 <ThemeToggle variant="button" />
             </div>
             <div className="report-header-info">

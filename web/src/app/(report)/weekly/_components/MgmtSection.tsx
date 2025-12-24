@@ -29,7 +29,7 @@ export const MgmtSection: React.FC<MgmtSectionProps> = ({ data }) => {
             </div>
             <div className="mgmt-cards">
                 {/* 중점사항 카드 */}
-                <div className="mgmt-card highlight">
+                <div id="card-mgmt-highlight" className="mgmt-card highlight">
                     <div className="card-header">
                         <div className="card-icon">
                             <FontAwesomeIcon icon={faStar} />
@@ -52,7 +52,7 @@ export const MgmtSection: React.FC<MgmtSectionProps> = ({ data }) => {
                 </div>
 
                 {/* 추천 학습 자료 카드 */}
-                <div className="mgmt-card recommend">
+                <div id="card-mgmt-recommend" className="mgmt-card recommend">
                     <div className="card-header">
                         <div className="card-icon">
                             <FontAwesomeIcon icon={faBook} />
