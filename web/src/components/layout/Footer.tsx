@@ -44,6 +44,7 @@ export default function Footer() {
       <div className="flex justify-between items-center max-w-lg mx-auto">
         {/* 좌측: 뒤로가기 */}
         <button
+          id="btn-footer-back"
           onClick={() => router.back()}
           className="flex flex-col items-center gap-0.5 text-gray-500 dark:text-gray-400 hover:text-[#2a5298] dark:hover:text-blue-400 transition-colors p-2"
         >
@@ -53,7 +54,8 @@ export default function Footer() {
 
         {/* 가운데: 홈 */}
         <button
-          onClick={() => router.push('/weekly')}
+          id="btn-footer-home"
+          onClick={() => router.push('/')}
           className="flex flex-col items-center gap-0.5 text-gray-500 dark:text-gray-400 hover:text-[#2a5298] dark:hover:text-blue-400 transition-colors p-2"
         >
           <Icon name="home" className="text-xl" />
@@ -62,6 +64,7 @@ export default function Footer() {
 
         {/* 우측: 설정 */}
         <button
+          id="btn-footer-settings"
           onClick={() => router.push('/settings')}
           className="flex flex-col items-center gap-0.5 text-gray-500 dark:text-gray-400 hover:text-[#2a5298] dark:hover:text-blue-400 transition-colors p-2"
         >

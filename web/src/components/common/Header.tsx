@@ -98,7 +98,7 @@ export default function Header({ onMenuToggle }: HeaderProps) {
           </button>
 
           {/* 로고 */}
-          <Link href="/weekly" className="flex items-center">
+          <Link id="btn-top-ci" href="/" className="flex items-center">
             <Image
               src="/images/insight_ci.png"
               alt="피그플랜"
