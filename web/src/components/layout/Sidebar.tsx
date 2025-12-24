@@ -18,8 +18,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     const { logout } = useAuth();
 
     const menuItems = [
-        { name: 'Weekly 보고서', path: '/weekly', icon: faCalendarAlt },
-        { name: 'Monthly 보고서', path: '/monthly', icon: faChartPie },
+        { name: '주간 보고서', path: '/weekly', icon: faCalendarAlt },
+        { name: '월간 보고서', path: '/monthly', icon: faChartPie },
         { name: '분기 보고서', path: '/quarterly', icon: faChartBar },
         { name: '환경설정', path: '/settings', icon: faCog },
     ];

@@ -2,7 +2,7 @@ import React from 'react';
 import { LastWeekData } from '@/types/weekly';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faClipboardList, faArrowUpRightFromSquare, faCaretUp, faCaretDown } from '@fortawesome/free-solid-svg-icons';
-import { formatNumber } from '@/utils/format';
+import { formatNumber, formatDecimal } from '@/utils/format';
 
 interface LastWeekSectionProps {
     data: LastWeekData;
@@ -58,16 +58,15 @@ export const LastWeekSection: React.FC<LastWeekSectionProps> = ({ data, onPopupO
                     <div className="cell empty"></div>
 
                     <div className="cell sub">상시모돈</div>
-                    <div className="cell count lastweek">
-                        <span>{formatNumber(data.modon.sangsiCnt)}</span>
+                    <div className="cell count lastweek span-2">
+                        <span>{formatDecimal(data.modon.sangsiCnt, 2)}</span>
                         {data.modon.sangsiCntChange !== undefined && data.modon.sangsiCntChange !== 0 && (
                             <span className={`change-wrap ${data.modon.sangsiCntChange > 0 ? 'up' : 'down'}`}>
                                 <FontAwesomeIcon icon={data.modon.sangsiCntChange > 0 ? faCaretUp : faCaretDown} />
-                                {Math.abs(data.modon.sangsiCntChange)}
+                                {Math.abs(data.modon.sangsiCntChange).toFixed(2)}
                             </span>
                         )}
                     </div>
-                    <div className="cell empty lastweek"></div>
                     <div className="cell empty"></div>
                     <div className="cell empty"></div>
 

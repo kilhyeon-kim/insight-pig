@@ -366,6 +366,18 @@
     color: #34d399;
 }
 
+/* N/A 셀 스타일 (일별 육성율 등 해당없음 표시) */
+.popup-table-02.shipment-table tbody td.na-cell {
+    background: rgba(0, 0, 0, 0.03);
+    color: var(--rp-text-tertiary);
+    font-style: italic;
+}
+
+.dark .popup-table-02.shipment-table tbody td.na-cell {
+    background: rgba(255, 255, 255, 0.03);
+    color: var(--rp-text-tertiary);
+}
+
 .popup-table-02 tbody td.total {
     font-weight: 600;
     color: var(--rp-accent-primary);

@@ -22,12 +22,17 @@ export const COM_SQL = {
   `,
 
   /**
-   * TC_CODE_JOHAP 전체 조회 (캐싱용)
+   * TC_CODE_JOHAP 조회 (캐싱용 - ETL/WEB에서 사용하는 PCODE만)
    * - 농장별 코드성 데이터 (품종, 도폐사원인 등)
+   *
+   * 사용 PCODE:
+   *   - '031': 도폐사원인 (OUT_REASON_CD)
+   *   - '041': 품종
+   *
    * @returns PCODE, CODE, CNAME, LANGUAGE_CD
    */
   getAllCodeJohap: `
-    /* com.com.getAllCodeJohap : 조합코드 전체 조회 */
+    /* com.com.getAllCodeJohap : 조합코드 조회 (ETL/WEB 사용분) */
     SELECT
         PCODE,
         CODE,
@@ -35,24 +40,37 @@ export const COM_SQL = {
         LANGUAGE_CD
     FROM TC_CODE_JOHAP
     WHERE USE_YN = 'Y'
+      AND PCODE IN ('031', '041')
     ORDER BY PCODE, SORT_NO
   `,
 
   /**
-   * TC_CODE_SYS 전체 조회 (캐싱용)
+   * TC_CODE_SYS 조회 (캐싱용 - ETL/WEB에서 사용하는 PCODE만)
    * - 시스템 코드성 데이터 (모돈상태, 작업구분 등)
-   * @returns PCODE, CODE, CNAME, CVALUE, LANGUAGE_CD
+   * - HELP_MSG: 툴팁 정보 (JSON 형식, 생산성 통계코드 031~035 등에서 사용)
+   *
+   * 사용 PCODE:
+   *   - '01': 모돈상태 (STATUS_CD)
+   *   - '02': 기준작업코드 (STD_CD)
+   *   - '08': 도폐사구분 (OUT_GUBUN_CD)
+   *   - '031'~'035': 생산성 통계코드 (교배/분만/이유/번식주기/농장회전율)
+   *   - '941': 국가코드 → 언어그룹코드
+   *   - '942': 언어그룹코드 → 언어코드
+   *
+   * @returns PCODE, CODE, CNAME, CVALUE, HELP_MSG, LANGUAGE_CD
    */
   getAllCodeSys: `
-    /* com.com.getAllCodeSys : 시스템코드 전체 조회 */
+    /* com.com.getAllCodeSys : 시스템코드 조회 (ETL/WEB 사용분) */
     SELECT
         PCODE,
         CODE,
         CNAME,
         CVALUE,
+        HELP_MSG,
         LANGUAGE_CD
     FROM TC_CODE_SYS
     WHERE USE_YN = 'Y'
+      AND PCODE IN ('01', '02', '08', '031', '032', '033', '034', '035', '941', '942')
     ORDER BY PCODE, SORT_NO
   `,
 

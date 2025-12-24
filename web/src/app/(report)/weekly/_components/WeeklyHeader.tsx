@@ -37,7 +37,7 @@ export const WeeklyHeader: React.FC<WeeklyHeaderProps> = ({ data }) => {
             <div className="report-header-top">
                 <h1>
                     <Image
-                        src="/images/logo.png"
+                        src="/images/insight_ci.png"
                         alt="피그플랜"
                         width={120}
                         height={32}

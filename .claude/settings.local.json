@@ -57,7 +57,18 @@
       "Bash(do echo \"=== Testing farm $farm_no ===\")",
       "Bash(done)",
       "Bash(dir /b \"c:\\\\Projects\\\\inspig\\\\docs\\\\db\\\\sql\\\\ins\\\\month\")",
-      "Bash(dir /b \"c:\\\\Projects\\\\inspig\\\\docs\\\\db\\\\sql\\\\ins\\\\quarter\")"
+      "Bash(dir /b \"c:\\\\Projects\\\\inspig\\\\docs\\\\db\\\\sql\\\\ins\\\\quarter\")",
+      "Bash(python -m pytest:*)",
+      "Bash(python:*)",
+      "Bash(dir:*)",
+      "Bash(timeout 120 ./venv/Scripts/python.exe:*)",
+      "Bash(./deploy-etl.sh)",
+      "Bash(timeout 180 ./venv/Scripts/python.exe:*)",
+      "Bash(timeout 60 ./venv/Scripts/python.exe:*)",
+      "Bash(timeout 300 ./venv/Scripts/python.exe -c:*)",
+      "Bash(del \"c:\\\\Projects\\\\inspig-etl\\\\compare_45_51.py\")",
+      "Bash(del \"c:\\\\Projects\\\\inspig-etl\\\\test_productivity_api.py\")",
+      "Bash(iconv:*)"
     ],
     "deny": [],
     "ask": []

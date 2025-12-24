@@ -64,10 +64,12 @@ CREATE OR REPLACE PROCEDURE SP_INS_WEEK_MODON_POPUP (
     V_BASE_DT       DATE;               -- 기준일
     V_BASE_DT_STR   VARCHAR2(8);        -- 기준일 문자열 (YYYYMMDD)
     V_TOTAL_CNT     INTEGER := 0;       -- 현재모돈 합계두수 (후보돈 제외)
-    V_SANGSI_CNT    INTEGER := 0;       -- 상시모돈 합계두수 (후보돈 포함)
+    V_SANGSI_CNT    NUMBER(10,2) := 0;  -- 상시모돈 (TS_PRODUCTIVITY.C001, 소수점 2자리)
     V_PREV_MASTER   NUMBER;             -- 이전 주차 MASTER_SEQ
     V_PREV_TOTAL    INTEGER := 0;       -- 이전 주차 현재모돈 합계두수
-    V_PREV_SANGSI   INTEGER := 0;       -- 이전 주차 상시모돈 합계두수
+    V_PREV_SANGSI   NUMBER(10,2) := 0;  -- 이전 주차 상시모돈 (소수점 2자리)
+    V_REPORT_YEAR   NUMBER(4);          -- 리포트 년도
+    V_REPORT_WEEK   NUMBER(2);          -- 리포트 주차
     V_HAS_PREV_DATA BOOLEAN := FALSE;   -- 이전 주차 데이터 존재 여부
 
 BEGIN
@@ -271,14 +273,36 @@ BEGIN
       AND CODE_1 <> '후보돈';  -- 후보돈 제외
 
     -- ================================================
-    -- 상시모돈 합계두수 계산 (후보돈 포함, 전체)
+    -- 상시모돈: TS_PRODUCTIVITY에서 조회 (PCODE='035', C001)
+    -- 방식 2: ETL에서 수집한 생산성 API 데이터 사용
     -- ================================================
-    SELECT NVL(SUM(CNT_1 + CNT_2 + CNT_3 + CNT_4 + CNT_5), 0)
-    INTO V_SANGSI_CNT
-    FROM TS_INS_WEEK_SUB
+    -- 리포트 년도/주차 조회
+    SELECT REPORT_YEAR, REPORT_WEEK_NO
+    INTO V_REPORT_YEAR, V_REPORT_WEEK
+    FROM TS_INS_WEEK
     WHERE MASTER_SEQ = P_MASTER_SEQ
-      AND FARM_NO = P_FARM_NO
-      AND GUBUN = 'MODON';
+      AND FARM_NO = P_FARM_NO;
+
+    -- TS_PRODUCTIVITY에서 상시모돈 조회 (PCODE='035', C001=상시모돈수)
+    BEGIN
+        SELECT NVL(C001, 0)
+        INTO V_SANGSI_CNT
+        FROM TS_PRODUCTIVITY
+        WHERE FARM_NO = P_FARM_NO
+          AND PCODE = '035'
+          AND STAT_YEAR = V_REPORT_YEAR
+          AND PERIOD = 'W'
+          AND PERIOD_NO = V_REPORT_WEEK;
+    EXCEPTION
+        WHEN NO_DATA_FOUND THEN
+            -- TS_PRODUCTIVITY 데이터 없으면 기존 방식 (MODON SUB 합계)
+            SELECT NVL(SUM(CNT_1 + CNT_2 + CNT_3 + CNT_4 + CNT_5), 0)
+            INTO V_SANGSI_CNT
+            FROM TS_INS_WEEK_SUB
+            WHERE MASTER_SEQ = P_MASTER_SEQ
+              AND FARM_NO = P_FARM_NO
+              AND GUBUN = 'MODON';
+    END;
 
     -- ================================================
     -- 이전 주차 데이터 조회 및 증감(CNT_6) 계산

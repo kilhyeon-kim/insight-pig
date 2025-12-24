@@ -268,6 +268,7 @@ export interface FarrowingPopupData {
     stillborn: { sum: number; avg: number; rate: string };
     mummy: { sum: number; avg: number; rate: string };
     culling: { sum: number; avg: number; rate: string };
+    foster: { sum: number; avg: number; rate: string };  // 양자 (전입-전출)
     nursingStart: { sum: number; avg: number; rate: string };
   };
 }

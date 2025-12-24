@@ -630,9 +630,13 @@ export const ShipmentPopup: React.FC<ShipmentPopupProps> = ({ isOpen, onClose, d
                                                     <td className="label sub">{row.sub}</td>
                                                 </>
                                             )}
-                                            {row.data.map((v, i) => (
-                                                <td key={i}>{formatValue(v)}</td>
-                                            ))}
+                                            {row.data.map((v, i) => {
+                                                // 이유후육성율(idx===2) 일별 데이터는 빈 셀 (주간 합계 기준만 사용)
+                                                if (idx === 2) {
+                                                    return <td key={i} className="na-cell"></td>;
+                                                }
+                                                return <td key={i}>{formatValue(v)}</td>;
+                                            })}
                                             <td className="total sum">
                                                 {row.sum != null && row.sum !== 0 ? formatNumber(row.sum) : '-'}
                                             </td>

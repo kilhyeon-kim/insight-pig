@@ -112,13 +112,15 @@ export class BatchService {
         this.logger.log(`[수동 ETL] 요청: 농장=${farmNo}, 기간=${dtFrom || 'auto'}~${dtTo || 'auto'}`);
 
         // 1. 농장 존재 여부 확인
-        const farm = await this.dataSource.query(BATCH_SQL.checkFarmExists, { farmNo });
+        const farm = await this.dataSource.query(BATCH_SQL.checkFarmExists, { farmNo } as any);
         if (!farm || farm.length === 0) {
             throw new BadRequestException(`농장번호 ${farmNo}를 찾을 수 없습니다.`);
         }
 
+
+
         // 2. TS_INS_SERVICE MANUAL 등록 (없으면 생성, 있으면 MANUAL로 업데이트)
-        await this.dataSource.query(BATCH_SQL.upsertManualService, { farmNo });
+        await this.dataSource.query(BATCH_SQL.upsertManualService, { farmNo } as any);
         this.logger.log(`[수동 ETL] 서비스 등록 완료: 농장=${farmNo}, REG_TYPE=MANUAL`);
 
         // 3. Python ETL 비동기 실행

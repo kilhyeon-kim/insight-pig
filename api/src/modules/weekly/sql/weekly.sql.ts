@@ -324,4 +324,43 @@ export const WEEKLY_SQL = {
         :sancha
     ))
   `,
+
+  /**
+   * TS_PRODUCTIVITY 조회 (주간/월간/분기 공통)
+   * @param farmNo - 농장번호
+   * @param statYear - 통계년도 (YYYY)
+   * @param period - 기간구분 (W:주간, M:월간, Q:분기)
+   * @param periodNo - 기간차수 (W:1~53, M:1~12, Q:1~4)
+   * @param pcode - PCODE (NULL이면 전체, '031','032','033','034','035')
+   */
+  getProductivity: `
+    /* weekly.weekly.getProductivity : 생산성 데이터 조회 */
+    SELECT
+        P.FARM_NO,
+        P.PCODE,
+        P.STAT_YEAR,
+        P.PERIOD,
+        P.PERIOD_NO,
+        P.STAT_DATE,
+        P.C001, P.C002, P.C003, P.C004, P.C005,
+        P.C006, P.C007, P.C008, P.C009, P.C010,
+        P.C011, P.C012, P.C013, P.C014, P.C015,
+        P.C016, P.C017, P.C018, P.C019, P.C020,
+        P.C021, P.C022, P.C023, P.C024, P.C025,
+        P.C026, P.C027, P.C028, P.C029, P.C030,
+        P.C031, P.C032, P.C033, P.C034, P.C035,
+        P.C036, P.C037, P.C038, P.C039, P.C040,
+        P.C041, P.C042, P.C043
+    FROM TS_PRODUCTIVITY P
+    WHERE P.FARM_NO = :farmNo
+      AND P.STAT_YEAR = :statYear
+      AND P.PERIOD = :period
+      AND P.PERIOD_NO = :periodNo
+      AND (:pcode IS NULL OR P.PCODE = :pcode)
+    ORDER BY P.PCODE
+  `,
+
+  // getProductivitySangsi 제거됨 (방식 2 적용)
+  // - 상시모돈 데이터: ETL에서 TS_PRODUCTIVITY → TS_INS_WEEK.MODON_SANGSI_CNT 업데이트
+  // - 웹에서는 TS_INS_WEEK.MODON_SANGSI_CNT에서 직접 읽어옴 (getReportDetail 쿼리)
 };

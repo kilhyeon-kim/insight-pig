@@ -155,7 +155,7 @@ export const FarrowingPopup: React.FC<FarrowingPopupProps> = ({ isOpen, onClose,
                 {/* 그라데이션 구분선 */}
                 <div className="gradient-divider"></div>
 
-                {/* 생시도태 & 포유개시 - 내장 테이블 */}
+                {/* 생시도태, 양자, 포유개시 - 내장 테이블 */}
                 <table className="embedded-table" id="tbl-farrowing-stats">
                     <thead>
                         <tr>
@@ -171,6 +171,12 @@ export const FarrowingPopup: React.FC<FarrowingPopupProps> = ({ isOpen, onClose,
                             <td>{formatNumber(data.stats.culling.sum)}</td>
                             <td>{data.stats.culling.avg.toFixed(1)}</td>
                             <td className="text-red-600">{data.stats.culling.rate}</td>
+                        </tr>
+                        <tr>
+                            <td className="label">양자</td>
+                            <td>{formatNumber(data.stats.foster.sum)}</td>
+                            <td>{data.stats.foster.avg.toFixed(1)}</td>
+                            <td className="text-blue-600">{data.stats.foster.rate}</td>
                         </tr>
                         <tr className="row-highlight">
                             <td className="label">포유개시</td>

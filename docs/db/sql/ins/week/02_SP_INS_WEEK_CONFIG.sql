@@ -20,7 +20,7 @@
 --   - CNT_3: 140005 기준출하일령 (기본 180)
 --   - CNT_4: 140007 후보돈초교배일령 (기본 240)
 --   - CNT_5: 140008 평균재귀일 (기본 7)
---   - VAL_1: 이유후육성율 (6개월 평균, 기본 85%)
+--   - VAL_1: 이유후육성율 (6개월 평균, 기본 90%)
 --
 -- DB 컬럼 매핑 (JSON - 프론트엔드용):
 --   - STR_1: 코드 목록 (JSON 배열) - ["140002","140003",...]
@@ -64,7 +64,7 @@ CREATE OR REPLACE PROCEDURE SP_INS_WEEK_CONFIG (
     V_SHIP_DAY      INTEGER := 180;   -- 140005: 기준출하일령
     V_FIRST_GB_DAY  INTEGER := 240;   -- 140007: 후보돈초교배일령
     V_AVG_RETURN    INTEGER := 7;     -- 140008: 평균재귀일
-    V_REARING_RATE  NUMBER := 85;     -- 이유후육성율 (6개월 평균)
+    V_REARING_RATE  NUMBER := 90;     -- 이유후육성율 (6개월 평균)
     V_SHIP_OFFSET   INTEGER := 159;   -- 출하→이유 역산일 (V_SHIP_DAY - V_WEAN_PERIOD)
     V_RATE_FROM     VARCHAR2(10);     -- 이유후육성율 계산 시작월 (YY.MM)
     V_RATE_TO       VARCHAR2(10);     -- 이유후육성율 계산 종료월 (YY.MM)
@@ -187,11 +187,11 @@ BEGIN
         FROM MONTHLY_STATS;
     EXCEPTION
         WHEN OTHERS THEN
-            V_REARING_RATE := 85;
+            V_REARING_RATE := 90;
     END;
 
     IF V_REARING_RATE IS NULL THEN
-        V_REARING_RATE := 85;
+        V_REARING_RATE := 90;
     END IF;
 
     -- 이유후육성율 계산 기간 설정 (최근 6개월, 당월 제외)

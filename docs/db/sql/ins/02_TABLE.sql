@@ -245,8 +245,8 @@ CREATE TABLE TS_INS_WEEK (
     -- 모돈 현황 (lastWeek.modon)
     MODON_REG_CNT   INTEGER DEFAULT 0,                  -- 현재모돈(등록모돈수)
     MODON_REG_CHG   INTEGER DEFAULT 0,                  -- 현재모돈 증감 (전주 대비)
-    MODON_SANGSI_CNT INTEGER DEFAULT 0,                 -- 상시모돈수
-    MODON_SANGSI_CHG INTEGER DEFAULT 0,                 -- 상시모돈 증감 (전주 대비)
+    MODON_SANGSI_CNT NUMBER(10,2) DEFAULT 0,            -- 상시모돈수 (소수점 2자리)
+    MODON_SANGSI_CHG NUMBER(10,2) DEFAULT 0,            -- 상시모돈 증감 (전주 대비, 소수점 2자리)
 
     -- 관리대상 모돈 요약 (alertMd)
     ALERT_TOTAL     INTEGER DEFAULT 0,                  -- 관리대상 합계

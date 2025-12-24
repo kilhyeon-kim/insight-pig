@@ -266,6 +266,10 @@ export class WeeklyService {
         auctionPopupData = await this.getAuctionPopupData(dtFrom, dtTo);
       }
 
+      // 6. 상시모돈 데이터: TS_INS_WEEK.MODON_SANGSI_CNT 사용 (방식 2)
+      // ETL에서 TS_PRODUCTIVITY → TS_INS_WEEK.MODON_SANGSI_CNT 업데이트
+      // 웹에서는 TS_INS_WEEK에서 직접 읽어옴 (362라인의 sangsiCnt: week.MODON_SANGSI_CNT)
+
       return { ...reportData, popupData, auction: auctionPopupData };
     } catch (error) {
       this.logger.error('DB 조회 실패', error.message);
@@ -1054,11 +1058,15 @@ export class WeeklyService {
    *   - CNT_5: 미라 합계
    *   - CNT_6: 포유개시 합계
    *   - CNT_7: 분만복수 (예정)
+   *   - CNT_8: 생시도태 합계
+   *   - CNT_9: 양자 합계 (전입-전출)
    *   - VAL_1: 총산 평균
    *   - VAL_2: 실산 평균
    *   - VAL_3: 사산 평균
    *   - VAL_4: 미라 평균
    *   - VAL_5: 포유개시 평균
+   *   - VAL_6: 생시도태 평균
+   *   - VAL_7: 양자 평균
    *
    * @returns FarrowingPopupData 형식
    */
@@ -1071,7 +1079,10 @@ export class WeeklyService {
     const rate = planned > 0 ? ((actual / planned) * 100).toFixed(1) + '%' : '-';
 
     const totalBornSum = statSub?.cnt2 || 0;
+    const bornAliveSum = statSub?.cnt3 || 0;
     const calcRate = (val: number) => (totalBornSum > 0 ? ((val / totalBornSum) * 100).toFixed(1) + '%' : '-');
+    // 생시도태, 양자 비율은 실산 대비로 계산
+    const calcRateVsLive = (val: number) => (bornAliveSum > 0 ? ((val / bornAliveSum) * 100).toFixed(1) + '%' : '-');
 
     return {
       planned,
@@ -1083,9 +1094,9 @@ export class WeeklyService {
           avg: statSub?.val1 || 0,
         },
         bornAlive: {
-          sum: statSub?.cnt3 || 0,
+          sum: bornAliveSum,
           avg: statSub?.val2 || 0,
-          rate: calcRate(statSub?.cnt3 || 0),
+          rate: calcRate(bornAliveSum),
         },
         stillborn: {
           sum: statSub?.cnt4 || 0,
@@ -1098,9 +1109,14 @@ export class WeeklyService {
           rate: calcRate(statSub?.cnt5 || 0),
         },
         culling: {
-          sum: 0, // 도태 데이터 없음
-          avg: 0,
-          rate: '-',
+          sum: statSub?.cnt8 || 0,  // CNT_8: 생시도태 합계
+          avg: statSub?.val6 || 0,  // VAL_6: 생시도태 평균
+          rate: calcRateVsLive(statSub?.cnt8 || 0),
+        },
+        foster: {
+          sum: statSub?.cnt9 || 0,  // CNT_9: 양자 합계 (전입-전출)
+          avg: statSub?.val7 || 0,  // VAL_7: 양자 평균
+          rate: calcRateVsLive(statSub?.cnt9 || 0),
         },
         nursingStart: {
           sum: statSub?.cnt6 || 0,
@@ -1741,5 +1757,74 @@ export class WeeklyService {
 
   getInsights() {
     return mockData.operationSummaryData.insights;
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // TS_PRODUCTIVITY 조회 (주간/월간/분기 공통)
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  /**
+   * 생산성 데이터 조회 (TS_PRODUCTIVITY)
+   * @param farmNo - 농장번호
+   * @param statYear - 통계년도 (YYYY)
+   * @param period - 기간구분 (W:주간, M:월간, Q:분기)
+   * @param periodNo - 기간차수 (W:1~53, M:1~12, Q:1~4)
+   * @param pcode - PCODE (optional, 031~035)
+   */
+  async getProductivity(
+    farmNo: number,
+    statYear: number,
+    period: string,
+    periodNo: number,
+    pcode?: string,
+  ) {
+    try {
+      const results = await this.dataSource.query(
+        WEEKLY_SQL.getProductivity,
+        params({ farmNo, statYear, period, periodNo, pcode: pcode || null }),
+      );
+
+      if (!results || results.length === 0) {
+        return null;
+      }
+
+      // PCODE별로 그룹화
+      const grouped: Record<string, any> = {};
+      for (const row of results) {
+        const code = row.PCODE;
+        grouped[code] = this.mapProductivityRow(row);
+      }
+
+      return grouped;
+    } catch (error) {
+      this.logger.error(`생산성 데이터 조회 실패: ${error.message}`);
+      return null;
+    }
+  }
+
+  // getProductivitySangsi 제거됨 (방식 2 적용)
+  // - 상시모돈 데이터는 ETL에서 TS_PRODUCTIVITY → TS_INS_WEEK.MODON_SANGSI_CNT로 업데이트
+  // - 웹에서는 TS_INS_WEEK.MODON_SANGSI_CNT에서 직접 읽어옴
+
+  /**
+   * TS_PRODUCTIVITY row를 객체로 변환
+   */
+  private mapProductivityRow(row: any) {
+    const result: Record<string, number | string | null> = {
+      farmNo: row.FARM_NO,
+      pcode: row.PCODE,
+      statYear: row.STAT_YEAR,
+      period: row.PERIOD,
+      periodNo: row.PERIOD_NO,
+      statDate: row.STAT_DATE,
+    };
+
+    // C001 ~ C043 매핑
+    for (let i = 1; i <= 43; i++) {
+      const col = `C${String(i).padStart(3, '0')}`;
+      result[col] = row[col] !== undefined ? Number(row[col]) : null;
+    }
+
+    return result;
   }
 }

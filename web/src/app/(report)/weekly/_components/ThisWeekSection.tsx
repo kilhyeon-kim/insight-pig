@@ -10,9 +10,8 @@ import {
     faPersonBreastfeeding,
     faSyringe,
     faTruck,
-    faCircleInfo,
-    faXmark,
-    faChevronDown
+    faLightbulb,
+    faXmark
 } from '@fortawesome/free-solid-svg-icons';
 
 interface ThisWeekSectionProps {
@@ -69,8 +68,8 @@ export const ThisWeekSection: React.FC<ThisWeekSectionProps> = ({ data, onPopupO
                 </div>
                 <div className="legend">
                     <div className="info-note-wrap" ref={tooltipRef} style={{ marginRight: 'auto' }}>
-                        <div id="btn-schedule-help" className="info-note clickable" onClick={() => setShowHelpTooltip(!showHelpTooltip)}>
-                            <FontAwesomeIcon icon={faCircleInfo} /> 산출기준 <FontAwesomeIcon icon={faChevronDown} style={{ fontSize: '10px', marginLeft: '2px', opacity: 0.7 }} />
+                        <div id="btn-schedule-help" className="info-note clickable lightbulb" onClick={() => setShowHelpTooltip(!showHelpTooltip)}>
+                            산출기준 <span className="icon-circle"><FontAwesomeIcon icon={faLightbulb} /></span>
                         </div>
                         {showHelpTooltip && (
                             <div className="help-tooltip">
@@ -198,13 +197,10 @@ export const ThisWeekSection: React.FC<ThisWeekSectionProps> = ({ data, onPopupO
                             );
                         })}
 
-                        {/* 재발확인 - row-span-4로 4행 차지 */}
-                        <div className="calendar-section row-span-4">
-                            <span className="section-label">재발<br />확인</span>
+                        {/* 재발확인(3주) */}
+                        <div className="calendar-section">
+                            <span className="section-label">재발<br />확인<br /><span className="section-sub">(3주)</span></span>
                         </div>
-                        {/* 3주 라벨 - span 7 */}
-                        <div className="calendar-row-label">3주</div>
-                        {/* 3주 셀들 */}
                         {weekDays.map((_, i) => {
                             const count = grid?.imsin3w?.[i];
                             return (
@@ -213,9 +209,11 @@ export const ThisWeekSection: React.FC<ThisWeekSectionProps> = ({ data, onPopupO
                                 </div>
                             );
                         })}
-                        {/* 4주 라벨 - span 7 */}
-                        <div className="calendar-row-label">4주</div>
-                        {/* 4주 셀들 */}
+
+                        {/* 임신진단(4주) */}
+                        <div className="calendar-section">
+                            <span className="section-label">임신<br />진단<br /><span className="section-sub">(4주)</span></span>
+                        </div>
                         {weekDays.map((_, i) => {
                             const count = grid?.imsin4w?.[i];
                             return (

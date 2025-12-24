@@ -100,7 +100,7 @@ export default function Header({ onMenuToggle }: HeaderProps) {
           {/* 로고 */}
           <Link href="/weekly" className="flex items-center">
             <Image
-              src="/images/logo.png"
+              src="/images/insight_ci.png"
               alt="피그플랜"
               width={100}
               height={28}

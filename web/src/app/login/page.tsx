@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { useAuth } from '@/contexts/AuthContext';
 
 // 테스트 계정 목록
@@ -12,6 +13,7 @@ const TEST_ACCOUNTS = [
   { label: '용암축산', id: 'csc2005', pw: 'rose2088' },
   { label: '비흥농장', id: '비흥', pw: '1' },
   { label: '여리', id: '여리', pw: '0' },
+   { label: '서해농장', id: 'west001', pw: 'tjgoshdwkd1' },
 ];
 
 export default function LoginPage() {
@@ -79,34 +81,24 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-900">
-      <div className="bg-gray-800 p-8 rounded-xl shadow-2xl w-full max-w-md border border-gray-700">
-        <div className="text-center mb-8">
-          {/* 돼지 로고 */}
-          <div className="flex justify-center mb-4">
-            <svg className="w-20 h-20" viewBox="0 0 100 100">
-              {/* 돼지 얼굴 */}
-              <circle cx="50" cy="50" r="35" fill="#22c55e" />
-              {/* 귀 */}
-              <ellipse cx="25" cy="25" rx="12" ry="15" fill="#22c55e" />
-              <ellipse cx="75" cy="25" rx="12" ry="15" fill="#22c55e" />
-              <ellipse cx="25" cy="25" rx="8" ry="10" fill="#16a34a" />
-              <ellipse cx="75" cy="25" rx="8" ry="10" fill="#16a34a" />
-              {/* 코 */}
-              <ellipse cx="50" cy="58" rx="18" ry="14" fill="#16a34a" />
-              <circle cx="43" cy="58" r="4" fill="#1f2937" />
-              <circle cx="57" cy="58" r="4" fill="#1f2937" />
-              {/* 눈 */}
-              <circle cx="35" cy="42" r="6" fill="#1f2937" />
-              <circle cx="65" cy="42" r="6" fill="#1f2937" />
-              <circle cx="37" cy="40" r="2" fill="white" />
-              <circle cx="67" cy="40" r="2" fill="white" />
-            </svg>
-          </div>
-          <h1 className="text-2xl font-bold text-white">인사이트피그플랜</h1>
-          <p className="text-gray-400 mt-2">스마트 양돈 관리 시스템</p>
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-900 p-4">
+      {/* CI 로고 및 타이틀 - 카드 바깥 */}
+      <div className="text-center mb-8">
+        <div className="flex justify-center mb-4">
+          <Image
+            src="/images/insight_ci.png"
+            alt="인사이트피그"
+            width={200}
+            height={60}
+            className="brightness-0 invert"
+          />
         </div>
+        <h1 className="text-2xl font-bold text-white">인사이트피그플랜</h1>
+        <p className="text-gray-400 mt-2">스마트 양돈 관리 시스템</p>
+      </div>
 
+      {/* 로그인 카드 */}
+      <div className="bg-gray-800 p-8 rounded-xl shadow-2xl w-full max-w-md border border-gray-700">
         {error && (
           <div className="mb-4 p-3 bg-red-900/30 border border-red-700 rounded-lg text-red-300 text-sm">
             {error}
@@ -179,11 +171,21 @@ export default function LoginPage() {
           >
             {isSubmitting ? '로그인 중...' : '로그인'}
           </button>
-        </form>
 
-        <div className="mt-6 text-center">
-          <p className="text-gray-500 text-sm">© 2024 PigPlan. All rights reserved.</p>
-        </div>
+          <p className="text-center text-gray-300 text-sm mt-4">
+            피그플랜(pigplan.io) 계정으로 로그인 하십시요
+          </p>
+        </form>
+      </div>
+
+      {/* 푸터 - 카드 바깥 */}
+      <div className="mt-8 text-center space-y-1 max-w-md px-4">
+        <p className="text-gray-400 text-sm">(콜센터)TEL : 031-421-3414</p>
+        <p className="text-gray-500 text-xs leading-relaxed">
+          본 사이트의 모든 콘텐츠는 저작권법의 보호를 받습니다.<br />
+          무단전재, 복사, 배포 등을 금합니다.
+        </p>
+        <p className="text-gray-500 text-xs">copyright © wiselake. All rights reserved.</p>
       </div>
     </div>
   );

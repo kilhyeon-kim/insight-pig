@@ -16,6 +16,11 @@ const cacheKey = (pcode: string, code: string, lang: string) => `${pcode}:${code
 const cvalueKey = (pcode: string, code: string, lang: string) => `V:${pcode}:${code}:${lang}`;
 
 /**
+ * HELP_MSG 캐시 키 생성 (031~035 생산성 통계코드 툴팁용)
+ */
+const helpMsgKey = (pcode: string, code: string, lang: string) => `H:${pcode}:${code}:${lang}`;
+
+/**
  * Named parameter를 TypeORM query에 전달하기 위한 헬퍼
  */
 const params = (obj: Record<string, unknown>): any => obj;
@@ -48,6 +53,9 @@ export class ComService implements OnModuleInit {
 
   // CVALUE 캐시 저장소: Map<'V:PCODE:CODE:LANG', 'CVALUE'> (941/942 언어변환용)
   private codeSysCvalueCache = new Map<string, string>();
+
+  // HELP_MSG 캐시 저장소: Map<'H:PCODE:CODE:LANG', 'HELP_MSG'> (031~035 생산성 통계코드 툴팁용)
+  private codeSysHelpMsgCache = new Map<string, string>();
 
   // 농장별 언어 캐시: Map<farmNo, langCode>
   private farmLangCache = new Map<number, string>();
@@ -105,12 +113,13 @@ export class ComService implements OnModuleInit {
   }
 
   /**
-   * TC_CODE_SYS 로딩 (CNAME + CVALUE)
+   * TC_CODE_SYS 로딩 (CNAME + CVALUE + HELP_MSG)
    */
   private async loadCodeSys(): Promise<void> {
     const results = await this.dataSource.query(COM_SQL.getAllCodeSys);
     this.codeSysCache.clear();
     this.codeSysCvalueCache.clear();
+    this.codeSysHelpMsgCache.clear();
 
     for (const row of results) {
       const key = cacheKey(row.PCODE, row.CODE, row.LANGUAGE_CD);
@@ -120,6 +129,12 @@ export class ComService implements OnModuleInit {
       if (row.CVALUE) {
         const vkey = cvalueKey(row.PCODE, row.CODE, row.LANGUAGE_CD);
         this.codeSysCvalueCache.set(vkey, row.CVALUE);
+      }
+
+      // HELP_MSG도 캐싱 (031~035 생산성 통계코드 툴팁용)
+      if (row.HELP_MSG) {
+        const hkey = helpMsgKey(row.PCODE, row.CODE, row.LANGUAGE_CD);
+        this.codeSysHelpMsgCache.set(hkey, row.HELP_MSG);
       }
     }
   }
@@ -210,6 +225,46 @@ export class ComService implements OnModuleInit {
   getCodeSysCvalue(pcode: string, code: string, lang: string = 'ko'): string | null {
     const key = cvalueKey(pcode, code, lang);
     return this.codeSysCvalueCache.get(key) || null;
+  }
+
+  /**
+   * TC_CODE_SYS HELP_MSG 조회 (031~035 생산성 통계코드 툴팁용)
+   * @param pcode 부모코드 (예: '031', '032', '033', '034', '035')
+   * @param code 코드값 (예: '035001')
+   * @param lang 언어코드 (생략 시 환경변수 DEFAULT_LANG 사용)
+   * @returns HELP_MSG (JSON 문자열) 또는 null
+   *
+   * @example
+   * // 035001의 툴팁 조회
+   * const helpMsg = comService.getCodeSysHelpMsg('035', '035001', 'ko');
+   * // => '{"tooltip":"후보돈을 제외한 총 웅돈수"}'
+   */
+  getCodeSysHelpMsg(pcode: string, code: string, lang?: string): string | null {
+    const key = helpMsgKey(pcode, code, lang || this.defaultLang);
+    return this.codeSysHelpMsgCache.get(key) || null;
+  }
+
+  /**
+   * TC_CODE_SYS HELP_MSG에서 tooltip 추출 (031~035 생산성 통계코드용)
+   * @param pcode 부모코드 (예: '035')
+   * @param code 코드값 (예: '035001')
+   * @param lang 언어코드 (생략 시 환경변수 DEFAULT_LANG 사용)
+   * @returns tooltip 문자열 또는 null
+   *
+   * @example
+   * const tooltip = comService.getCodeSysTooltip('035', '035001', 'ko');
+   * // => '후보돈을 제외한 총 웅돈수'
+   */
+  getCodeSysTooltip(pcode: string, code: string, lang?: string): string | null {
+    const helpMsg = this.getCodeSysHelpMsg(pcode, code, lang);
+    if (!helpMsg) return null;
+
+    try {
+      const parsed = JSON.parse(helpMsg);
+      return parsed.tooltip || null;
+    } catch {
+      return null;
+    }
   }
 
   /**
@@ -320,11 +375,12 @@ export class ComService implements OnModuleInit {
   /**
    * 캐시 통계
    */
-  getCacheStats(): { johap: number; sys: number; sysCvalue: number; farmLang: number; loaded: boolean } {
+  getCacheStats(): { johap: number; sys: number; sysCvalue: number; sysHelpMsg: number; farmLang: number; loaded: boolean } {
     return {
       johap: this.codeJohapCache.size,
       sys: this.codeSysCache.size,
       sysCvalue: this.codeSysCvalueCache.size,
+      sysHelpMsg: this.codeSysHelpMsgCache.size,
       farmLang: this.farmLangCache.size,
       loaded: this.isLoaded,
     };
