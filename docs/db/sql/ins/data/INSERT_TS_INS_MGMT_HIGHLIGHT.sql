@@ -17,11 +17,11 @@ INSERT INTO TS_INS_MGMT (
 
 * 레규메이트 급여 종료 3~7일 사이 발정유도를 위해 PG600 투여
   (가능하면 교배 예정일의 5~6일 이전에 투여를 권장합니다)',
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    'Y'
+    NULL,                           -- LINK_URL
+    NULL,                           -- LINK_TARGET
+    NULL,                           -- POST_FROM (무제한)
+    NULL,                           -- POST_TO (무제한)
+    'Y'                             -- USE_YN
 );
 
 COMMIT;

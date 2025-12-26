@@ -15,11 +15,11 @@ INSERT INTO TS_INS_MGMT (
     '''생산성 확보'' 한목소리… 한돈산업 발전방안 포럼 성료',
     NULL,           -- CONTENT (외부 링크이므로 상세내용 불필요)
     'https://www.pignpork.com/news/articleView.html?idxno=17030',
-    'DIRECT',       -- 새 탭에서 직접 열기
-    '20251226',     -- POST_FROM
-    '20260331',     -- POST_TO
-    'Y',            -- USE_YN
-    SYSDATE         -- REG_DT
+    'DIRECT',                         -- 새 탭에서 직접 열기
+    TO_DATE('20251226', 'YYYYMMDD'),  -- POST_FROM
+    TO_DATE('20260331', 'YYYYMMDD'),  -- POST_TO
+    'Y',                              -- USE_YN
+    SYSDATE                           -- REG_DT
 );
 
 -- 2. ASF 방역 행정명령
@@ -33,11 +33,11 @@ INSERT INTO TS_INS_MGMT (
     'ASF 방역을 위한 권역화 방역관리 관련 행정명령(개정)',
     NULL,           -- CONTENT (외부 링크이므로 상세내용 불필요)
     'https://www.pigpeople.net/news/article.html?no=18205',
-    'DIRECT',       -- 새 탭에서 직접 열기
-    '20251226',     -- POST_FROM
-    '20260331',     -- POST_TO
-    'Y',            -- USE_YN
-    SYSDATE         -- REG_DT
+    'DIRECT',                         -- 새 탭에서 직접 열기
+    TO_DATE('20251226', 'YYYYMMDD'),  -- POST_FROM
+    TO_DATE('20260331', 'YYYYMMDD'),  -- POST_TO
+    'Y',                              -- USE_YN
+    SYSDATE                           -- REG_DT
 );
 
 COMMIT;

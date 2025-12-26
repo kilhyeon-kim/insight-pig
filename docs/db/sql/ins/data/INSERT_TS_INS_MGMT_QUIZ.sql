@@ -31,12 +31,12 @@ INSERT INTO TS_INS_MGMT (
 - 모돈주령별분포에서 주령별교배분포를 알 수 있습니다.
 - 교배목표달성율에서 내농장의 지수를 입력하면 균일도를 알 수 있습니다.
 - 컨설팅진단서에는 주간 교배복수와 분만복수가 그래프로 나와 있습니다.',
-    NULL,           -- LINK_URL
-    NULL,           -- LINK_TARGET
-    '20251226',     -- POST_FROM
-    '20260331',     -- POST_TO
-    'Y',            -- USE_YN
-    SYSDATE         -- REG_DT
+    NULL,                           -- LINK_URL
+    NULL,                           -- LINK_TARGET
+    TO_DATE('20251226', 'YYYYMMDD'),  -- POST_FROM
+    TO_DATE('20260331', 'YYYYMMDD'),  -- POST_TO
+    'Y',                            -- USE_YN
+    SYSDATE                         -- REG_DT
 );
 
 COMMIT;
