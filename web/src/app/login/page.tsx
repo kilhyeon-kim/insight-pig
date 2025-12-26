@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { useAuth } from '@/contexts/AuthContext';
@@ -15,10 +15,10 @@ const TEST_ACCOUNTS = [
  { label: '세원농장', id: 'xogus9', pw: '0000' }, // 1013
 ];
 
-export default function LoginPage() {
+function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { login, isAuthenticated, isLoading } = useAuth();
+  const { login, isLoading } = useAuth();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -27,13 +27,6 @@ export default function LoginPage() {
 
   // 개발 모드: ?dev=1 쿼리 파라미터가 있을 때만 테스트 계정 UI 표시
   const isDevMode = searchParams.get('dev') === '1';
-
-  // 이미 로그인된 경우 리다이렉트 (주석 처리 - 수동 로그아웃 후 재로그인 허용)
-  // useEffect(() => {
-  //   if (!isLoading && isAuthenticated) {
-  //     router.push('/weekly');
-  //   }
-  // }, [isAuthenticated, isLoading, router]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -195,5 +188,22 @@ export default function LoginPage() {
         <p className="text-gray-500 text-xs">copyright © wiselake. All rights reserved.</p>
       </div>
     </div>
+  );
+}
+
+// 로딩 폴백 컴포넌트
+function LoginFallback() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-900">
+      <div className="text-gray-400">로딩 중...</div>
+    </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<LoginFallback />}>
+      <LoginContent />
+    </Suspense>
   );
 }
