@@ -2143,12 +2143,8 @@
     font-size: 11px;
 }
 
-.mgmt-badge.quiz {
-    background: linear-gradient(135deg, #f59e0b, #d97706);
-}
-
-.mgmt-badge.highlight {
-    background: linear-gradient(135deg, #667eea, #764ba2);
+.mgmt-badge.quiz-info {
+    background: linear-gradient(135deg, #f59e0b, #ea580c);
 }
 
 .mgmt-badge.news {
