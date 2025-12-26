@@ -77,8 +77,8 @@ export const MgmtSection: React.FC<MgmtSectionProps> = ({ data }) => {
     // 카드에 표시할 아이템 수 (최대 3개)
     const maxDisplayItems = 3;
 
-    // 칩 텍스트 자르기 (20자)
-    const truncateText = (text: string, maxLength: number = 20) => {
+    // 칩 텍스트 자르기 (40자)
+    const truncateText = (text: string, maxLength: number = 40) => {
         if (text.length <= maxLength) return text;
         return text.substring(0, maxLength) + '…';
     };
