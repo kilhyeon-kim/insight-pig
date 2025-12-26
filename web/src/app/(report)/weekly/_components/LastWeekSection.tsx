@@ -58,7 +58,7 @@ export const LastWeekSection: React.FC<LastWeekSectionProps> = ({ data, onPopupO
                     <div className="cell empty"></div>
 
                     <div className="cell sub">상시모돈</div>
-                    <div className="cell count lastweek span-2">
+                    <div className="cell count lastweek">
                         <span>{formatNumber(Math.floor(data.modon.sangsiCnt))}</span>
                         {data.modon.sangsiCntChange !== undefined && data.modon.sangsiCntChange !== 0 && (
                             <span className={`change-wrap ${data.modon.sangsiCntChange > 0 ? 'up' : 'down'}`}>
@@ -67,6 +67,7 @@ export const LastWeekSection: React.FC<LastWeekSectionProps> = ({ data, onPopupO
                             </span>
                         )}
                     </div>
+                    <div className="cell empty lastweek"></div>
                     <div className="cell empty"></div>
                     <div className="cell empty"></div>
 
