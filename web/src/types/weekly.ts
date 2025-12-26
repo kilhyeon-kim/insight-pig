@@ -481,9 +481,23 @@ export interface WeatherPopupData {
 }
 
 /**
+ * 첨부파일 정보 (TL_ATTACH_FILE)
+ */
+export interface AttachFile {
+  fileSeq: number;         // 파일 일련번호
+  fileNm: string;          // 저장 파일명
+  fileOrgnlNm: string;     // 원본 파일명
+  fileUrl: string;         // 다운로드 URL
+  fileSize: number;        // 파일 크기 (bytes)
+  fileExt: string;         // 파일 확장자
+  mimeType: string | null; // MIME 타입
+}
+
+/**
  * 관리포인트 아이템 (퀴즈/중점사항/추천학습자료)
  */
 export interface MgmtItem {
+  seq: number;             // 일련번호 (첨부파일 조회용)
   title: string;           // 카드에 표시될 제목 (한줄)
   content: string | null;  // 상세 내용 (팝업에 표시)
   link: string | null;     // 링크 URL
@@ -491,6 +505,7 @@ export interface MgmtItem {
   videoUrl: string | null; // 동영상 URL
   postFrom: string | null; // 게시 시작일 (YYYYMMDD)
   postTo: string | null;   // 게시 종료일 (YYYYMMDD)
+  attachFiles?: AttachFile[];  // 첨부파일 목록
 }
 
 /**

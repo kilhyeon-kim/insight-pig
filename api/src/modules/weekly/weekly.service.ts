@@ -233,7 +233,7 @@ export class WeeklyService {
 
       // 3. 관리포인트 조회 (TS_INS_MGMT) - 독립 테이블, 파라미터 불필요
       const mgmtRows = await this.dataSource.query(WEEKLY_SQL.getMgmtList);
-      const mgmtData = this.extractMgmtData(mgmtRows);
+      const mgmtData = await this.extractMgmtData(mgmtRows);
 
       // 4. 데이터 변환
       const reportData = this.transformToReportDetailFromRow(week, subs, mgmtData);
@@ -309,17 +309,40 @@ export class WeeklyService {
    * 관리포인트 데이터 추출 (TS_INS_MGMT)
    * 3개 유형: QUIZ(퀴즈), HIGHLIGHT(중점사항), RECOMMEND(추천학습자료)
    */
-  private extractMgmtData(mgmtRows: any[]): {
-    quizList: { title: string; content: string | null; link: string | null; linkTarget: string | null; videoUrl: string | null; postFrom: string | null; postTo: string | null }[];
-    highlightList: { title: string; content: string | null; link: string | null; linkTarget: string | null; videoUrl: string | null; postFrom: string | null; postTo: string | null }[];
-    recommendList: { title: string; content: string | null; link: string | null; linkTarget: string | null; videoUrl: string | null; postFrom: string | null; postTo: string | null }[];
-  } {
+  private async extractMgmtData(mgmtRows: any[]): Promise<{
+    quizList: { seq: number; title: string; content: string | null; link: string | null; linkTarget: string | null; videoUrl: string | null; postFrom: string | null; postTo: string | null; attachFiles?: any[] }[];
+    highlightList: { seq: number; title: string; content: string | null; link: string | null; linkTarget: string | null; videoUrl: string | null; postFrom: string | null; postTo: string | null; attachFiles?: any[] }[];
+    recommendList: { seq: number; title: string; content: string | null; link: string | null; linkTarget: string | null; videoUrl: string | null; postFrom: string | null; postTo: string | null; attachFiles?: any[] }[];
+  }> {
     const quizList: any[] = [];
     const highlightList: any[] = [];
     const recommendList: any[] = [];
 
     for (const row of mgmtRows) {
+      // 첨부파일 조회
+      let attachFiles: any[] = [];
+      if (row.SEQ) {
+        try {
+          const files = await this.dataSource.query(
+            WEEKLY_SQL.getAttachFiles,
+            params({ refTable: 'TS_INS_MGMT', refSeq: row.SEQ }),
+          );
+          attachFiles = files.map((f: any) => ({
+            fileSeq: f.FILE_SEQ,
+            fileNm: f.FILE_NM,
+            fileOrgnlNm: f.FILE_ORGNL_NM,
+            fileUrl: f.FILE_URL,
+            fileSize: f.FILE_SIZE || 0,
+            fileExt: f.FILE_EXT,
+            mimeType: f.MIME_TYPE || null,
+          }));
+        } catch {
+          // 첨부파일 테이블이 없을 수 있음 (무시)
+        }
+      }
+
       const item = {
+        seq: row.SEQ || 0,
         title: row.TITLE || row.CONTENT || '',
         content: row.CONTENT || null,
         link: row.LINK_URL || null,
@@ -327,6 +350,7 @@ export class WeeklyService {
         videoUrl: row.VIDEO_URL || null,
         postFrom: row.POST_FROM || null,
         postTo: row.POST_TO || null,
+        attachFiles: attachFiles.length > 0 ? attachFiles : undefined,
       };
       if (row.MGMT_TYPE === 'QUIZ') {
         quizList.push(item);
@@ -347,9 +371,9 @@ export class WeeklyService {
     week: any,
     subRows: any[],
     mgmtData?: {
-      quizList: { title: string; content: string | null; link: string | null; linkTarget: string | null; videoUrl: string | null; postFrom: string | null; postTo: string | null }[];
-      highlightList: { title: string; content: string | null; link: string | null; linkTarget: string | null; videoUrl: string | null; postFrom: string | null; postTo: string | null }[];
-      recommendList: { title: string; content: string | null; link: string | null; linkTarget: string | null; videoUrl: string | null; postFrom: string | null; postTo: string | null }[];
+      quizList: { seq: number; title: string; content: string | null; link: string | null; linkTarget: string | null; videoUrl: string | null; postFrom: string | null; postTo: string | null; attachFiles?: any[] }[];
+      highlightList: { seq: number; title: string; content: string | null; link: string | null; linkTarget: string | null; videoUrl: string | null; postFrom: string | null; postTo: string | null; attachFiles?: any[] }[];
+      recommendList: { seq: number; title: string; content: string | null; link: string | null; linkTarget: string | null; videoUrl: string | null; postFrom: string | null; postTo: string | null; attachFiles?: any[] }[];
     },
   ) {
     const subs = subRows.map((row) => this.mapRowToWeekSub(row));

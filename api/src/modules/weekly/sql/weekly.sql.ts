@@ -395,4 +395,44 @@ export const WEEKLY_SQL = {
         END,
         SORT_NO
   `,
+
+  /**
+   * 첨부파일 조회 (TL_ATTACH_FILE)
+   * @param refTable - 참조 테이블명 (TS_INS_MGMT 등)
+   * @param refSeq - 참조 테이블의 PK
+   */
+  getAttachFiles: `
+    /* weekly.weekly.getAttachFiles : 첨부파일 조회 */
+    SELECT
+        FILE_SEQ,
+        REF_TABLE,
+        REF_SEQ,
+        REF_TYPE,
+        FILE_NM,
+        FILE_ORGNL_NM,
+        FILE_PATH,
+        FILE_URL,
+        FILE_SIZE,
+        FILE_EXT,
+        MIME_TYPE,
+        SORT_NO,
+        DOWN_CNT
+    FROM TL_ATTACH_FILE
+    WHERE REF_TABLE = :refTable
+      AND REF_SEQ = :refSeq
+      AND NVL(USE_YN, 'Y') = 'Y'
+    ORDER BY SORT_NO
+  `,
+
+  /**
+   * 첨부파일 다운로드 카운트 증가
+   * @param fileSeq - 파일 일련번호
+   */
+  updateDownloadCount: `
+    /* weekly.weekly.updateDownloadCount : 다운로드 카운트 증가 */
+    UPDATE TL_ATTACH_FILE
+    SET DOWN_CNT = NVL(DOWN_CNT, 0) + 1,
+        UPD_DT = SYSDATE
+    WHERE FILE_SEQ = :fileSeq
+  `,
 };

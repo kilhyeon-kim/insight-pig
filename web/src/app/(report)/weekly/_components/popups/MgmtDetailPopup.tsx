@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faExternalLinkAlt, faCalendarAlt, faPlayCircle, faTimes } from '@fortawesome/free-solid-svg-icons';
+import { faExternalLinkAlt, faCalendarAlt, faPlayCircle, faTimes, faDownload, faFile } from '@fortawesome/free-solid-svg-icons';
 import { PopupContainer } from './PopupContainer';
 import { MgmtItem } from '@/types/weekly';
 
@@ -122,6 +122,37 @@ export const MgmtDetailPopup: React.FC<MgmtDetailPopupProps> = ({
                         <FontAwesomeIcon icon={faExternalLinkAlt} />
                         {item.linkTarget === 'DIRECT' ? '새 탭에서 열기' : '자세히 보기'}
                     </button>
+                )}
+
+                {/* 첨부파일 목록 */}
+                {item.attachFiles && item.attachFiles.length > 0 && (
+                    <div className="mgmt-attach-files">
+                        <div className="mgmt-attach-header">
+                            <FontAwesomeIcon icon={faFile} />
+                            <span>첨부파일 ({item.attachFiles.length})</span>
+                        </div>
+                        <ul className="mgmt-attach-list">
+                            {item.attachFiles.map((file) => (
+                                <li key={file.fileSeq} className="mgmt-attach-item">
+                                    <a
+                                        href={file.fileUrl}
+                                        download={file.fileOrgnlNm}
+                                        className="mgmt-attach-link"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                    >
+                                        <span className="mgmt-attach-name">{file.fileOrgnlNm}</span>
+                                        <span className="mgmt-attach-size">
+                                            {file.fileSize > 1024 * 1024
+                                                ? `${(file.fileSize / 1024 / 1024).toFixed(1)}MB`
+                                                : `${Math.round(file.fileSize / 1024)}KB`}
+                                        </span>
+                                        <FontAwesomeIcon icon={faDownload} className="mgmt-attach-icon" />
+                                    </a>
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
                 )}
 
                 {/* 게시 기간 */}

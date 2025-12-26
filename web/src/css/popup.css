@@ -2478,6 +2478,101 @@
     display: block;
 }
 
+/* 첨부파일 목록 */
+.mgmt-attach-files {
+    margin: 16px 0;
+    padding: 12px;
+    background: var(--rp-bg-secondary, #f8f9fa);
+    border-radius: 8px;
+}
+
+.dark .mgmt-attach-files {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.mgmt-attach-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--rp-text-secondary, #666);
+    margin-bottom: 10px;
+}
+
+.dark .mgmt-attach-header {
+    color: #9ca3af;
+}
+
+.mgmt-attach-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.mgmt-attach-item {
+    margin-bottom: 6px;
+}
+
+.mgmt-attach-item:last-child {
+    margin-bottom: 0;
+}
+
+.mgmt-attach-link {
+    display: flex;
+    align-items: center;
+    padding: 10px 12px;
+    background: #fff;
+    border: 1px solid var(--rp-border-light, #e5e7eb);
+    border-radius: 6px;
+    text-decoration: none;
+    color: var(--rp-text-primary, #333);
+    transition: all 0.15s ease;
+}
+
+.dark .mgmt-attach-link {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.1);
+    color: #e6edf3;
+}
+
+.mgmt-attach-link:hover {
+    background: var(--rp-accent-primary, #667eea);
+    border-color: var(--rp-accent-primary, #667eea);
+    color: #fff;
+}
+
+.mgmt-attach-name {
+    flex: 1;
+    font-size: 13px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.mgmt-attach-size {
+    font-size: 11px;
+    color: var(--rp-text-tertiary, #999);
+    margin-right: 10px;
+}
+
+.dark .mgmt-attach-size {
+    color: #6b7280;
+}
+
+.mgmt-attach-link:hover .mgmt-attach-size {
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.mgmt-attach-icon {
+    font-size: 12px;
+    opacity: 0.6;
+}
+
+.mgmt-attach-link:hover .mgmt-attach-icon {
+    opacity: 1;
+}
+
 /* 데스크탑 (769px+) */
 @media (min-width: 769px) {
     .mgmt-list-item {
