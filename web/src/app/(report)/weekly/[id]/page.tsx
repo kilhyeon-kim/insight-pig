@@ -112,13 +112,21 @@ export default function WeeklyDetailPage({ params }: WeeklyDetailPageProps) {
                     return;
                 }
 
+                // 농장 불일치: 다른 농장의 리포트를 로그인 상태로 보려고 할 때
+                // 보안상 로그인 세션을 클리어하고 다이렉트 접속으로 처리
+                if (result.farmMismatch) {
+                    localStorage.removeItem('accessToken');
+                    localStorage.removeItem('testFarmNo');
+                    console.log('[Weekly] Farm mismatch detected - session cleared');
+                }
+
                 // 성공: 세션 토큰 저장 (후속 API 호출용)
                 if (result.sessionToken) {
                     sessionStorage.setItem('shareSessionToken', result.sessionToken);
                 }
 
                 setData(result.data);
-                setIsLoginAccess(result.isLoginAccess);
+                setIsLoginAccess(result.isLoginAccess); // farmMismatch면 false
             } catch (err) {
                 setError(err instanceof Error ? err.message : '알 수 없는 오류가 발생했습니다.');
             } finally {

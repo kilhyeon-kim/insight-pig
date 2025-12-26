@@ -125,6 +125,10 @@ export class WeeklyController {
    * 언어 결정 우선순위:
    * 1. 로그인 사용자: JWT에 포함된 농장 언어코드 (lang)
    * 2. 직접 접속: 브라우저 Accept-Language 헤더
+   *
+   * 농장 검증:
+   * - 로그인 사용자의 farmNo와 리포트의 farmNo가 다르면 다이렉트 접속으로 처리
+   * - farmMismatch: true 플래그 반환 → 프론트에서 세션 클리어
    */
   @Get('view/:token')
   async getView(
@@ -139,6 +143,7 @@ export class WeeklyController {
 
     let skipExpiryCheck = false;
     let lang: string | undefined;
+    let loginFarmNo: number | null = null;
 
     // 로그인 여부 확인 (Authorization 헤더)
     if (authHeader && authHeader.startsWith('Bearer ')) {
@@ -149,6 +154,7 @@ export class WeeklyController {
         // 로그인 토큰인 경우 (sub가 존재하거나 type이 login 등)
         if (payload) {
           skipExpiryCheck = true;
+          loginFarmNo = payload.farmNo || null;
           // 로그인 사용자: JWT의 lang 사용 (농장 언어)
           lang = payload.lang || this.comService.getDefaultLang();
         }
@@ -173,12 +179,35 @@ export class WeeklyController {
       };
     }
 
+    // 농장 불일치 체크: 로그인한 사용자의 farmNo와 리포트의 farmNo가 다르면
+    // 다이렉트 접속으로 처리 (보안상 다른 농장 정보를 로그인 상태로 보면 안됨)
+    const reportFarmNo = result.data.header.farmNo;
+    let farmMismatch = false;
+    let isLoginAccess = skipExpiryCheck;
+
+    if (skipExpiryCheck && loginFarmNo !== null && loginFarmNo !== reportFarmNo) {
+      // 농장이 다르면 다이렉트 접속으로 처리
+      farmMismatch = true;
+      isLoginAccess = false;
+      // 만료 체크를 다시 해야 함 (다이렉트 접속이므로)
+      const recheck = await this.weeklyService.getReportByShareTokenWithExpiry(token, false);
+      if (!recheck.success) {
+        return {
+          success: false,
+          expired: recheck.expired,
+          message: recheck.message,
+          data: null,
+          farmMismatch: true,
+        };
+      }
+    }
+
     // 세션 토큰 발급 (공유 접속일 경우 필요, 로그인 접속이어도 팝업 등을 위해 발급 가능)
     const sessionToken = this.jwtService.sign(
       {
         type: 'share_session',
         shareToken: token,
-        farmNo: result.data.header.farmNo,
+        farmNo: reportFarmNo,
         masterSeq: result.data.header.masterSeq || null,
         lang,
       },
@@ -189,7 +218,8 @@ export class WeeklyController {
       success: true,
       data: result.data,
       sessionToken,
-      isLoginAccess: skipExpiryCheck,
+      isLoginAccess,
+      farmMismatch, // 농장 불일치 시 true → 프론트에서 세션 클리어
       lang, // 언어코드 (ko/en/vi)
     };
   }
