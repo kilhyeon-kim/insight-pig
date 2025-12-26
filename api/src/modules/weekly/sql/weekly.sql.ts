@@ -397,7 +397,7 @@ export const WEEKLY_SQL = {
   `,
 
   /**
-   * 첨부파일 조회 (TL_ATTACH_FILE)
+   * 첨부파일 조회 (TL_ATTACH_FILE_NEW)
    * @param refTable - 참조 테이블명 (TS_INS_MGMT 등)
    * @param refSeq - 참조 테이블의 PK
    */
@@ -417,7 +417,7 @@ export const WEEKLY_SQL = {
         MIME_TYPE,
         SORT_NO,
         DOWN_CNT
-    FROM TL_ATTACH_FILE
+    FROM TL_ATTACH_FILE_NEW
     WHERE REF_TABLE = :refTable
       AND REF_SEQ = :refSeq
       AND NVL(USE_YN, 'Y') = 'Y'
@@ -430,7 +430,7 @@ export const WEEKLY_SQL = {
    */
   updateDownloadCount: `
     /* weekly.weekly.updateDownloadCount : 다운로드 카운트 증가 */
-    UPDATE TL_ATTACH_FILE
+    UPDATE TL_ATTACH_FILE_NEW
     SET DOWN_CNT = NVL(DOWN_CNT, 0) + 1,
         UPD_DT = SYSDATE
     WHERE FILE_SEQ = :fileSeq
