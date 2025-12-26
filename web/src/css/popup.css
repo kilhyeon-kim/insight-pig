@@ -2068,8 +2068,9 @@
     margin: 8px 0 0 0;
     font-size: 13px;
     color: var(--rp-text-secondary, #666);
-    line-height: 1.6;
+    line-height: 1.8;
     word-break: keep-all;
+    white-space: pre-wrap;
 }
 
 .dark .mgmt-popup-item-content {
@@ -2095,108 +2096,136 @@
 }
 
 /* ============================================
-   관리포인트 섹션 카드 스타일 (.mgmt-cards-3)
-   - 3개 카드 레이아웃
+   관리포인트 섹션 V2 - 컴팩트 칩 스타일
    ============================================ */
 
-/* 3개 카드 그리드 */
-.mgmt-cards.mgmt-cards-3 {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
+/* 섹션 컨테이너 */
+.mgmt-section-v2 {
+    display: flex;
+    flex-direction: column;
     gap: 12px;
 }
 
-/* 모바일: 세로 배열 */
-@media (max-width: 768px) {
-    .mgmt-cards.mgmt-cards-3 {
-        grid-template-columns: 1fr;
-        gap: 10px;
-    }
+/* 카드 */
+.mgmt-card-v2 {
+    background: var(--rp-card-bg, #fff);
+    border-radius: 12px;
+    padding: 16px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
-/* 카드 공통 - 클릭 가능 스타일 */
-.mgmt-card .card-header {
-    cursor: pointer;
-    transition: background 0.15s ease;
+.dark .mgmt-card-v2 {
+    background: var(--rp-card-bg-dark, #2d2d2d);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
-.mgmt-card .card-header:hover {
-    background: rgba(102, 126, 234, 0.08);
+/* 카드 헤더 */
+.mgmt-card-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
 }
 
-.dark .mgmt-card .card-header:hover {
-    background: rgba(102, 126, 234, 0.15);
-}
-
-/* 더보기 아이콘 */
-.mgmt-card .card-more {
-    margin-left: auto;
-    color: var(--rp-text-tertiary, #999);
+/* 배지 */
+.mgmt-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    border-radius: 20px;
     font-size: 12px;
-    transition: transform 0.15s ease;
+    font-weight: 600;
+    color: #fff;
 }
 
-.mgmt-card .card-header:hover .card-more {
-    transform: translateX(3px);
-    color: var(--rp-accent-primary, #667eea);
+.mgmt-badge svg {
+    font-size: 11px;
 }
 
-/* 카드 리스트 아이템 - 클릭 가능 */
-.mgmt-card .card-list li {
-    cursor: pointer;
-    padding: 8px 12px;
-    border-radius: 6px;
-    transition: background 0.15s ease;
-}
-
-.mgmt-card .card-list li:hover {
-    background: rgba(102, 126, 234, 0.08);
-}
-
-.dark .mgmt-card .card-list li:hover {
-    background: rgba(102, 126, 234, 0.15);
-}
-
-/* 아이템 제목 (한 줄 말줄임) */
-.mgmt-card .card-list .item-title {
-    display: block;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    font-size: 13px;
-    color: var(--rp-text-primary, #1d1d1f);
-}
-
-.dark .mgmt-card .card-list .item-title {
-    color: #e6edf3;
-}
-
-/* 빈 항목 스타일 */
-.mgmt-card .card-list .empty-item {
-    cursor: default;
-    color: var(--rp-text-tertiary, #999);
-    font-size: 12px;
-    font-style: italic;
-}
-
-.mgmt-card .card-list .empty-item:hover {
-    background: transparent;
-}
-
-/* 퀴즈 카드 아이콘 색상 */
-.mgmt-card.quiz .card-icon {
-    color: #f59e0b;
-}
-
-.mgmt-card.quiz .card-header::before {
+.mgmt-badge.quiz {
     background: linear-gradient(135deg, #f59e0b, #d97706);
 }
 
-/* 태블릿 반응형 (481px~768px) */
-@media (min-width: 481px) and (max-width: 768px) {
-    .mgmt-cards.mgmt-cards-3 {
-        grid-template-columns: 1fr;
-    }
+.mgmt-badge.highlight {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+}
+
+.mgmt-badge.news {
+    background: linear-gradient(135deg, #10b981, #059669);
+}
+
+/* 더보기 */
+.mgmt-more {
+    margin-left: auto;
+    font-size: 12px;
+    color: var(--rp-accent-primary, #667eea);
+    cursor: pointer;
+    transition: color 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.mgmt-more:hover {
+    color: #764ba2;
+}
+
+.mgmt-more svg {
+    font-size: 10px;
+    transition: transform 0.15s;
+}
+
+.mgmt-more:hover svg {
+    transform: translateX(2px);
+}
+
+/* 칩 컨테이너 */
+.mgmt-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+/* 칩 */
+.mgmt-chip {
+    padding: 8px 14px;
+    background: var(--rp-bg-secondary, #f8f9fa);
+    border-radius: 20px;
+    font-size: 13px;
+    color: var(--rp-text-primary, #333);
+    cursor: pointer;
+    transition: all 0.15s;
+    max-width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.dark .mgmt-chip {
+    background: rgba(255, 255, 255, 0.1);
+    color: #e6edf3;
+}
+
+.mgmt-chip:hover {
+    background: var(--rp-accent-primary, #667eea);
+    color: #fff;
+}
+
+.dark .mgmt-chip:hover {
+    background: var(--rp-accent-primary, #667eea);
+    color: #fff;
+}
+
+/* 빈 메시지 */
+.mgmt-empty {
+    color: var(--rp-text-tertiary, #999);
+    font-size: 13px;
+    font-style: italic;
+}
+
+.dark .mgmt-empty {
+    color: #6b7280;
 }
 
 /* 데스크탑 (769px+) */
@@ -2219,11 +2248,184 @@
         font-size: 13px;
     }
 
-    .mgmt-cards.mgmt-cards-3 {
-        gap: 16px;
+    .mgmt-card-v2 {
+        padding: 18px 20px;
     }
 
-    .mgmt-card .card-list .item-title {
+    .mgmt-badge {
+        padding: 6px 14px;
+        font-size: 13px;
+    }
+
+    .mgmt-chip {
         font-size: 14px;
+        padding: 9px 16px;
+    }
+}
+
+/* ============================================
+   관리포인트 리스트 팝업
+   ============================================ */
+
+.mgmt-list-popup-content {
+    padding: 0;
+}
+
+.mgmt-list-empty {
+    padding: 32px 16px;
+    text-align: center;
+    color: var(--rp-text-tertiary, #999);
+    font-size: 14px;
+}
+
+.mgmt-list-items {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.mgmt-list-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--rp-border-light, #f0f0f0);
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.mgmt-list-item:last-child {
+    border-bottom: none;
+}
+
+.mgmt-list-item:hover {
+    background: var(--rp-bg-secondary, #f9fafb);
+}
+
+.dark .mgmt-list-item:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.mgmt-list-item-num {
+    width: 24px;
+    height: 24px;
+    background: var(--rp-bg-secondary, #f3f4f6);
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--rp-text-secondary, #666);
+    flex-shrink: 0;
+}
+
+.dark .mgmt-list-item-num {
+    background: rgba(255, 255, 255, 0.1);
+    color: #9ca3af;
+}
+
+.mgmt-list-item-title {
+    flex: 1;
+    font-size: 14px;
+    color: var(--rp-text-primary, #333);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.dark .mgmt-list-item-title {
+    color: #e6edf3;
+}
+
+.mgmt-list-item-arrow {
+    color: var(--rp-text-tertiary, #999);
+    font-size: 12px;
+    transition: transform 0.15s;
+}
+
+.mgmt-list-item:hover .mgmt-list-item-arrow {
+    transform: translateX(3px);
+    color: var(--rp-accent-primary, #667eea);
+}
+
+.mgmt-list-item-link {
+    color: var(--rp-accent-primary, #667eea);
+    font-size: 12px;
+}
+
+/* ============================================
+   관리포인트 상세 팝업
+   ============================================ */
+
+.mgmt-detail-content {
+    padding: 16px;
+}
+
+.mgmt-detail-body {
+    font-size: 14px;
+    color: var(--rp-text-secondary, #555);
+    line-height: 1.8;
+    white-space: pre-wrap;
+    word-break: keep-all;
+    margin-bottom: 16px;
+}
+
+.dark .mgmt-detail-body {
+    color: #c9d1d9;
+}
+
+.mgmt-detail-link-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s;
+    margin-bottom: 16px;
+}
+
+.mgmt-detail-link-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.mgmt-detail-period {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--rp-text-tertiary, #999);
+    padding-top: 12px;
+    border-top: 1px solid var(--rp-border-light, #f0f0f0);
+}
+
+.dark .mgmt-detail-period {
+    color: #6b7280;
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+/* 데스크탑 (769px+) */
+@media (min-width: 769px) {
+    .mgmt-list-item {
+        padding: 16px 20px;
+    }
+
+    .mgmt-list-item-title {
+        font-size: 15px;
+    }
+
+    .mgmt-detail-content {
+        padding: 20px;
+    }
+
+    .mgmt-detail-body {
+        font-size: 15px;
     }
 }
