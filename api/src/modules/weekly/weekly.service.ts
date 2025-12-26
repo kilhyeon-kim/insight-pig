@@ -310,9 +310,9 @@ export class WeeklyService {
    * 3개 유형: QUIZ(퀴즈), HIGHLIGHT(중점사항), RECOMMEND(추천학습자료)
    */
   private extractMgmtData(mgmtRows: any[]): {
-    quizList: { title: string; content: string | null; link: string | null; linkTarget: string | null; postFrom: string | null; postTo: string | null }[];
-    highlightList: { title: string; content: string | null; link: string | null; linkTarget: string | null; postFrom: string | null; postTo: string | null }[];
-    recommendList: { title: string; content: string | null; link: string | null; linkTarget: string | null; postFrom: string | null; postTo: string | null }[];
+    quizList: { title: string; content: string | null; link: string | null; linkTarget: string | null; videoUrl: string | null; postFrom: string | null; postTo: string | null }[];
+    highlightList: { title: string; content: string | null; link: string | null; linkTarget: string | null; videoUrl: string | null; postFrom: string | null; postTo: string | null }[];
+    recommendList: { title: string; content: string | null; link: string | null; linkTarget: string | null; videoUrl: string | null; postFrom: string | null; postTo: string | null }[];
   } {
     const quizList: any[] = [];
     const highlightList: any[] = [];
@@ -324,6 +324,7 @@ export class WeeklyService {
         content: row.CONTENT || null,
         link: row.LINK_URL || null,
         linkTarget: row.LINK_TARGET || null,
+        videoUrl: row.VIDEO_URL || null,
         postFrom: row.POST_FROM || null,
         postTo: row.POST_TO || null,
       };
@@ -346,9 +347,9 @@ export class WeeklyService {
     week: any,
     subRows: any[],
     mgmtData?: {
-      quizList: { title: string; content: string | null; link: string | null; linkTarget: string | null; postFrom: string | null; postTo: string | null }[];
-      highlightList: { title: string; content: string | null; link: string | null; linkTarget: string | null; postFrom: string | null; postTo: string | null }[];
-      recommendList: { title: string; content: string | null; link: string | null; linkTarget: string | null; postFrom: string | null; postTo: string | null }[];
+      quizList: { title: string; content: string | null; link: string | null; linkTarget: string | null; videoUrl: string | null; postFrom: string | null; postTo: string | null }[];
+      highlightList: { title: string; content: string | null; link: string | null; linkTarget: string | null; videoUrl: string | null; postFrom: string | null; postTo: string | null }[];
+      recommendList: { title: string; content: string | null; link: string | null; linkTarget: string | null; videoUrl: string | null; postFrom: string | null; postTo: string | null }[];
     },
   ) {
     const subs = subRows.map((row) => this.mapRowToWeekSub(row));

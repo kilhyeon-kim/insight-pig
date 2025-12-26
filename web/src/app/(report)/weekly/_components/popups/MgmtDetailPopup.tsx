@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faExternalLinkAlt, faCalendarAlt } from '@fortawesome/free-solid-svg-icons';
+import { faExternalLinkAlt, faCalendarAlt, faPlayCircle, faTimes } from '@fortawesome/free-solid-svg-icons';
 import { PopupContainer } from './PopupContainer';
 import { MgmtItem } from '@/types/weekly';
 
@@ -18,6 +18,8 @@ export const MgmtDetailPopup: React.FC<MgmtDetailPopupProps> = ({
     onClose,
     item
 }) => {
+    const [showVideo, setShowVideo] = useState(false);
+
     if (!item) return null;
 
     // 날짜 포맷팅 (YYYYMMDD -> YYYY.MM.DD)
@@ -45,10 +47,26 @@ export const MgmtDetailPopup: React.FC<MgmtDetailPopupProps> = ({
         }
     };
 
+    // 동영상 보기 클릭 핸들러
+    const handleVideoClick = () => {
+        setShowVideo(true);
+    };
+
+    // 동영상 닫기 핸들러
+    const handleVideoClose = () => {
+        setShowVideo(false);
+    };
+
+    // 팝업 닫힐 때 동영상도 닫기
+    const handlePopupClose = () => {
+        setShowVideo(false);
+        onClose();
+    };
+
     return (
         <PopupContainer
             isOpen={isOpen}
-            onClose={onClose}
+            onClose={handlePopupClose}
             title={item.title}
             id="popup-mgmt-detail"
             maxWidth="max-w-xl"
@@ -59,6 +77,40 @@ export const MgmtDetailPopup: React.FC<MgmtDetailPopupProps> = ({
                     <div className="mgmt-detail-body">
                         {item.content}
                     </div>
+                )}
+
+                {/* 동영상 플레이어 */}
+                {showVideo && item.videoUrl && (
+                    <div className="mgmt-video-container">
+                        <div className="mgmt-video-header">
+                            <span>동영상</span>
+                            <button
+                                onClick={handleVideoClose}
+                                className="mgmt-video-close"
+                            >
+                                <FontAwesomeIcon icon={faTimes} />
+                            </button>
+                        </div>
+                        <video
+                            controls
+                            autoPlay
+                            className="mgmt-video-player"
+                            src={item.videoUrl}
+                        >
+                            브라우저가 동영상을 지원하지 않습니다.
+                        </video>
+                    </div>
+                )}
+
+                {/* 동영상 보기 버튼 */}
+                {item.videoUrl && !showVideo && (
+                    <button
+                        onClick={handleVideoClick}
+                        className="mgmt-detail-video-btn"
+                    >
+                        <FontAwesomeIcon icon={faPlayCircle} />
+                        동영상 보기
+                    </button>
                 )}
 
                 {/* 링크 버튼 */}

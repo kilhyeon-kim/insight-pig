@@ -488,6 +488,7 @@ export interface MgmtItem {
   content: string | null;  // 상세 내용 (팝업에 표시)
   link: string | null;     // 링크 URL
   linkTarget: 'POPUP' | 'DIRECT' | null;  // 링크 열기 방식
+  videoUrl: string | null; // 동영상 URL
   postFrom: string | null; // 게시 시작일 (YYYYMMDD)
   postTo: string | null;   // 게시 종료일 (YYYYMMDD)
 }

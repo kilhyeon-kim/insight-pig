@@ -379,6 +379,7 @@ export const WEEKLY_SQL = {
         CONTENT,
         LINK_URL,
         LINK_TARGET,
+        VIDEO_URL,
         TO_CHAR(POST_FROM, 'YYYYMMDD') AS POST_FROM,
         TO_CHAR(POST_TO, 'YYYYMMDD') AS POST_TO
     FROM TS_INS_MGMT

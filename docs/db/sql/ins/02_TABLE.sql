@@ -467,6 +467,7 @@ CREATE TABLE TS_INS_MGMT (
     CONTENT         VARCHAR2(4000),                     -- 상세 내용 (팝업 표시)
     LINK_URL        VARCHAR2(500),                      -- 링크 URL (선택)
     LINK_TARGET     VARCHAR2(10) DEFAULT 'POPUP',       -- 링크 열기 방식 (POPUP/DIRECT)
+    VIDEO_URL       VARCHAR2(500),                      -- 동영상 URL (선택)
     POST_FROM       DATE,                               -- 게시 시작일
     POST_TO         DATE,                               -- 게시 종료일
     USE_YN          CHAR(1) DEFAULT 'Y',                -- 사용여부
@@ -492,6 +493,7 @@ COMMENT ON COLUMN TS_INS_MGMT.TITLE IS '카드에 표시될 제목 (한줄)';
 COMMENT ON COLUMN TS_INS_MGMT.CONTENT IS '상세 내용 (팝업에 표시)';
 COMMENT ON COLUMN TS_INS_MGMT.LINK_URL IS '링크 URL';
 COMMENT ON COLUMN TS_INS_MGMT.LINK_TARGET IS '링크 열기 방식 (POPUP: 팝업, DIRECT: 새탭)';
+COMMENT ON COLUMN TS_INS_MGMT.VIDEO_URL IS '동영상 URL';
 COMMENT ON COLUMN TS_INS_MGMT.POST_FROM IS '게시 시작일';
 COMMENT ON COLUMN TS_INS_MGMT.POST_TO IS '게시 종료일';
 COMMENT ON COLUMN TS_INS_MGMT.USE_YN IS '사용여부 (Y/N)';
