@@ -59,11 +59,11 @@ export const LastWeekSection: React.FC<LastWeekSectionProps> = ({ data, onPopupO
 
                     <div className="cell sub">상시모돈</div>
                     <div className="cell count lastweek span-2">
-                        <span>{formatDecimal(data.modon.sangsiCnt, 2)}</span>
+                        <span>{formatNumber(Math.floor(data.modon.sangsiCnt))}</span>
                         {data.modon.sangsiCntChange !== undefined && data.modon.sangsiCntChange !== 0 && (
                             <span className={`change-wrap ${data.modon.sangsiCntChange > 0 ? 'up' : 'down'}`}>
                                 <FontAwesomeIcon icon={data.modon.sangsiCntChange > 0 ? faCaretUp : faCaretDown} />
-                                {Math.abs(data.modon.sangsiCntChange).toFixed(2)}
+                                {Math.floor(Math.abs(data.modon.sangsiCntChange))}
                             </span>
                         )}
                     </div>
