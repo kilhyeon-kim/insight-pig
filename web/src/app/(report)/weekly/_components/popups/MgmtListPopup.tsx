@@ -14,7 +14,8 @@ interface MgmtListPopupProps {
 
 /**
  * 관리포인트 전체 리스트 팝업
- * - 리스트 아이템 클릭 시 상세 팝업으로 이동
+ * - 링크가 있는 아이템: 바로 링크 열기
+ * - 링크가 없는 아이템: 상세 팝업으로 이동
  */
 export const MgmtListPopup: React.FC<MgmtListPopupProps> = ({
     isOpen,
@@ -23,6 +24,29 @@ export const MgmtListPopup: React.FC<MgmtListPopupProps> = ({
     items,
     onItemClick
 }) => {
+    // 아이템 클릭 핸들러
+    const handleItemClick = (item: MgmtItem) => {
+        // 링크가 있으면 바로 열기
+        if (item.link) {
+            if (item.linkTarget === 'DIRECT') {
+                window.open(item.link, '_blank', 'noopener,noreferrer');
+            } else {
+                const width = 800;
+                const height = 600;
+                const left = (window.screen.width - width) / 2;
+                const top = (window.screen.height - height) / 2;
+                window.open(
+                    item.link,
+                    'mgmt_popup',
+                    `width=${width},height=${height},left=${left},top=${top},scrollbars=yes,resizable=yes`
+                );
+            }
+            return;
+        }
+        // 링크가 없으면 상세 팝업
+        onItemClick(item);
+    };
+
     return (
         <PopupContainer
             isOpen={isOpen}
@@ -42,7 +66,7 @@ export const MgmtListPopup: React.FC<MgmtListPopupProps> = ({
                             <li
                                 key={index}
                                 className="mgmt-list-item"
-                                onClick={() => onItemClick(item)}
+                                onClick={() => handleItemClick(item)}
                             >
                                 <span className="mgmt-list-item-num">{index + 1}</span>
                                 <span className="mgmt-list-item-title">{item.title}</span>

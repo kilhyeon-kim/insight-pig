@@ -32,8 +32,26 @@ export const MgmtSection: React.FC<MgmtSectionProps> = ({ data }) => {
         setListPopupOpen(true);
     };
 
-    // 칩/리스트 아이템 클릭 - 상세 팝업 열기
-    const openDetailPopup = (item: MgmtItem) => {
+    // 칩/리스트 아이템 클릭 핸들러
+    // - 링크가 있으면 바로 링크 열기
+    // - 링크가 없으면 상세 팝업 열기
+    const handleItemClick = (item: MgmtItem) => {
+        if (item.link) {
+            if (item.linkTarget === 'DIRECT') {
+                window.open(item.link, '_blank', 'noopener,noreferrer');
+            } else {
+                const width = 800;
+                const height = 600;
+                const left = (window.screen.width - width) / 2;
+                const top = (window.screen.height - height) / 2;
+                window.open(
+                    item.link,
+                    'mgmt_popup',
+                    `width=${width},height=${height},left=${left},top=${top},scrollbars=yes,resizable=yes`
+                );
+            }
+            return;
+        }
         setDetailItem(item);
         setDetailPopupOpen(true);
     };
@@ -84,7 +102,7 @@ export const MgmtSection: React.FC<MgmtSectionProps> = ({ data }) => {
                             <span
                                 key={index}
                                 className="mgmt-chip"
-                                onClick={() => openDetailPopup(item)}
+                                onClick={() => handleItemClick(item)}
                             >
                                 {truncateText(item.title)}
                             </span>
@@ -112,7 +130,7 @@ export const MgmtSection: React.FC<MgmtSectionProps> = ({ data }) => {
                             <span
                                 key={index}
                                 className="mgmt-chip"
-                                onClick={() => openDetailPopup(item)}
+                                onClick={() => handleItemClick(item)}
                             >
                                 {truncateText(item.title)}
                             </span>
@@ -140,7 +158,7 @@ export const MgmtSection: React.FC<MgmtSectionProps> = ({ data }) => {
                             <span
                                 key={index}
                                 className="mgmt-chip"
-                                onClick={() => openDetailPopup(item)}
+                                onClick={() => handleItemClick(item)}
                             >
                                 {truncateText(item.title)}
                             </span>
@@ -158,8 +176,10 @@ export const MgmtSection: React.FC<MgmtSectionProps> = ({ data }) => {
                 title={getListPopupTitle()}
                 items={getListPopupItems()}
                 onItemClick={(item) => {
+                    // 링크가 없는 경우만 호출됨 (링크는 MgmtListPopup 내부에서 처리)
                     setListPopupOpen(false);
-                    openDetailPopup(item);
+                    setDetailItem(item);
+                    setDetailPopupOpen(true);
                 }}
             />
 
