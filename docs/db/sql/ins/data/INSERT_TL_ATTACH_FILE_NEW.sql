@@ -31,7 +31,7 @@ INSERT INTO TL_ATTACH_FILE_NEW (
     '한돈산업과제와26년목표(안기홍월간한돈25.12월호).pdf',  -- 원본 파일명
     '/download/insitepig/file/',        -- 저장 경로
     'https://pigplan.io/download/insitepig/file/20251226-001.pdf',  -- 다운로드 URL
-    0,                                  -- 파일 크기 (실제 크기로 업데이트 필요)
+    1279590,                            -- 파일 크기 (1.22MB)
     'pdf',                              -- 확장자
     'application/pdf',                  -- MIME 타입
     1,                                  -- 정렬순서
