@@ -62,9 +62,10 @@ export const ExtraSection: React.FC<ExtraSectionProps> = ({ data, onPopupOpen })
                     부가 정보
                 </div>
                 <div className="info-accordion-preview">
-                    <span><FontAwesomeIcon icon={faGrip} /> {data.psy.zone}</span>
+                    {/* TODO: PSY/날씨 데이터 준비되면 활성화 */}
+                    {/* <span><FontAwesomeIcon icon={faGrip} /> {data.psy.zone}</span> */}
                     <span><FontAwesomeIcon icon={faWonSign} /> {data.price.avg.toLocaleString()}원</span>
-                    <span><FontAwesomeIcon icon={faCloudSun} /> {data.weather.min}°/{data.weather.max}°</span>
+                    {/* <span><FontAwesomeIcon icon={faCloudSun} /> {data.weather.min}°/{data.weather.max}°</span> */}
                 </div>
                 <div className="info-accordion-toggle">
                     <FontAwesomeIcon icon={faChevronDown} />
@@ -74,8 +75,8 @@ export const ExtraSection: React.FC<ExtraSectionProps> = ({ data, onPopupOpen })
             {/* 아코디언 바디 */}
             <div className="info-accordion-body">
                 <div className="info-accordion-grid">
-                    {/* PSY & 입력지연 카드 */}
-                    <div className="info-accordion-card" id="cardPsy">
+                    {/* PSY & 입력지연 카드 - TODO: PSY 데이터 준비되면 활성화 */}
+                    {/* <div className="info-accordion-card" id="cardPsy">
                         <div className="card-header">
                             <div className="card-title">
                                 <FontAwesomeIcon icon={faGrip} className="fa-sm" /> PSY & 입력지연
@@ -95,7 +96,7 @@ export const ExtraSection: React.FC<ExtraSectionProps> = ({ data, onPopupOpen })
                                 <div className="psy-desc">입력지연 {data.psy.delay}일</div>
                             </div>
                         </div>
-                    </div>
+                    </div> */}
 
                     {/* 경락가격 카드 */}
                     <div className="info-accordion-card" id="cardPrice">
@@ -125,8 +126,8 @@ export const ExtraSection: React.FC<ExtraSectionProps> = ({ data, onPopupOpen })
                         </div>
                     </div>
 
-                    {/* 오늘 날씨 카드 */}
-                    <div className="info-accordion-card" id="cardWeather">
+                    {/* 오늘 날씨 카드 - TODO: 날씨 데이터 준비되면 활성화 */}
+                    {/* <div className="info-accordion-card" id="cardWeather">
                         <div className="card-header">
                             <div className="card-title">
                                 <FontAwesomeIcon icon={faCloudSun} className="fa-sm" /> 오늘 날씨
@@ -151,7 +152,7 @@ export const ExtraSection: React.FC<ExtraSectionProps> = ({ data, onPopupOpen })
                                 <div className="source-value">{data.weather.region}</div>
                             </div>
                         </div>
-                    </div>
+                    </div> */}
                 </div>
             </div>
         </div>
