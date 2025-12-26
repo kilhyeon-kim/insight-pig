@@ -233,40 +233,52 @@ export class WeeklyService {
 
       // 3. 관리포인트 조회 (TS_INS_MGMT)
       // 게시기간이 지난주~금주 기간에 하루라도 겹치면 표시
-      // DT_FROM은 YY.MM.DD 형식 → YYYYMMDD로 변환하고, 7일 전이 지난주 시작일
-      const dtFromStr = week.DT_FROM; // 예: "24.12.23"
-      const dtToStr = week.DT_TO;     // 예: "24.12.29"
+      let mgmtData = { quizList: [] as any[], channelList: [] as any[], porkNewsList: [] as any[] };
 
-      // YY.MM.DD → Date 변환
-      const parseDate = (str: string): Date => {
-        const [yy, mm, dd] = str.split('.');
-        const year = parseInt(yy) + 2000;
-        return new Date(year, parseInt(mm) - 1, parseInt(dd));
-      };
+      try {
+        const dtFromStr = week.DT_FROM; // 예: "24.12.23"
+        const dtToStr = week.DT_TO;     // 예: "24.12.29"
 
-      const dtFromDate = parseDate(dtFromStr);
-      const dtToDate = parseDate(dtToStr);
+        if (dtFromStr && dtToStr) {
+          // YY.MM.DD → Date 변환
+          const parseDate = (str: string): Date => {
+            const [yy, mm, dd] = str.split('.');
+            const year = parseInt(yy) + 2000;
+            return new Date(year, parseInt(mm) - 1, parseInt(dd));
+          };
 
-      // 지난주 시작일 = 금주 시작일 - 7일
-      const prevDtFromDate = new Date(dtFromDate);
-      prevDtFromDate.setDate(prevDtFromDate.getDate() - 7);
+          const dtFromDate = parseDate(dtFromStr);
+          const dtToDate = parseDate(dtToStr);
 
-      // YYYYMMDD 포맷으로 변환
-      const formatYYYYMMDD = (d: Date): string => {
-        const yyyy = d.getFullYear();
-        const mm = String(d.getMonth() + 1).padStart(2, '0');
-        const dd = String(d.getDate()).padStart(2, '0');
-        return `${yyyy}${mm}${dd}`;
-      };
+          // 지난주 시작일 = 금주 시작일 - 7일
+          const prevDtFromDate = new Date(dtFromDate);
+          prevDtFromDate.setDate(prevDtFromDate.getDate() - 7);
 
-      const mgmtPrevDtFrom = formatYYYYMMDD(prevDtFromDate);
-      const mgmtDtTo = formatYYYYMMDD(dtToDate);
+          // YYYYMMDD 포맷으로 변환
+          const formatYYYYMMDD = (d: Date): string => {
+            const yyyy = d.getFullYear();
+            const mm = String(d.getMonth() + 1).padStart(2, '0');
+            const dd = String(d.getDate()).padStart(2, '0');
+            return `${yyyy}${mm}${dd}`;
+          };
 
-      const mgmtRows = await this.dataSource.query(
-        WEEKLY_SQL.getMgmtList,
-        params({ prevDtFrom: mgmtPrevDtFrom, dtTo: mgmtDtTo }),
-      );
-      const mgmtData = await this.extractMgmtData(mgmtRows);
+          const mgmtPrevDtFrom = formatYYYYMMDD(prevDtFromDate);
+          const mgmtDtTo = formatYYYYMMDD(dtToDate);
+
+          this.logger.debug(`getMgmtList params: prevDtFrom=${mgmtPrevDtFrom}, dtTo=${mgmtDtTo}`);
+
+          const mgmtRows = await this.dataSource.query(
+            WEEKLY_SQL.getMgmtList,
+            params({ prevDtFrom: mgmtPrevDtFrom, dtTo: mgmtDtTo }),
+          );
+
+          this.logger.debug(`getMgmtList rows: ${mgmtRows?.length || 0}`);
+
+          mgmtData = await this.extractMgmtData(mgmtRows);
+        }
+      } catch (e) {
+        this.logger.error(`getMgmtList error: ${e.message}`);
+      }
 
       // 4. 데이터 변환
       const reportData = this.transformToReportDetailFromRow(week, subs, mgmtData);

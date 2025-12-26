@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -17,12 +17,16 @@ const TEST_ACCOUNTS = [
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { login, isAuthenticated, isLoading } = useAuth();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedAccount, setSelectedAccount] = useState('');
+
+  // 개발 모드: ?dev=1 쿼리 파라미터가 있을 때만 테스트 계정 UI 표시
+  const isDevMode = searchParams.get('dev') === '1';
 
   // 이미 로그인된 경우 리다이렉트 (주석 처리 - 수동 로그아웃 후 재로그인 허용)
   // useEffect(() => {
@@ -105,31 +109,35 @@ export default function LoginPage() {
         )}
 
         <form onSubmit={handleLogin} className="space-y-5">
-          {/* 테스트 계정 콤보박스 */}
-          <div>
-            <label htmlFor="testAccount" className="block text-sm font-medium text-yellow-400 mb-2">
-              테스트 계정 (선택 시 자동 로그인)
-            </label>
-            <select
-              id="testAccount"
-              value={selectedAccount}
-              onChange={(e) => handleTestAccountSelect(e.target.value)}
-              disabled={isSubmitting}
-              className="w-full px-4 py-3 bg-gray-700 border border-yellow-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent cursor-pointer"
-            >
-              {TEST_ACCOUNTS.map((account) => (
-                <option key={account.id || 'default'} value={account.id}>
-                  {account.label}
-                </option>
-              ))}
-            </select>
-          </div>
+          {/* 테스트 계정 콤보박스 - ?dev=1 파라미터가 있을 때만 표시 */}
+          {isDevMode && (
+            <>
+              <div>
+                <label htmlFor="testAccount" className="block text-sm font-medium text-yellow-400 mb-2">
+                  테스트 계정 (선택 시 자동 로그인)
+                </label>
+                <select
+                  id="testAccount"
+                  value={selectedAccount}
+                  onChange={(e) => handleTestAccountSelect(e.target.value)}
+                  disabled={isSubmitting}
+                  className="w-full px-4 py-3 bg-gray-700 border border-yellow-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent cursor-pointer"
+                >
+                  {TEST_ACCOUNTS.map((account) => (
+                    <option key={account.id || 'default'} value={account.id}>
+                      {account.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-          <div className="relative flex items-center">
-            <div className="flex-grow border-t border-gray-600"></div>
-            <span className="flex-shrink mx-4 text-gray-500 text-sm">또는 직접 입력</span>
-            <div className="flex-grow border-t border-gray-600"></div>
-          </div>
+              <div className="relative flex items-center">
+                <div className="flex-grow border-t border-gray-600"></div>
+                <span className="flex-shrink mx-4 text-gray-500 text-sm">또는 직접 입력</span>
+                <div className="flex-grow border-t border-gray-600"></div>
+              </div>
+            </>
+          )}
 
           <div>
             <label htmlFor="username" className="block text-sm font-medium text-gray-300 mb-2">

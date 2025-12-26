@@ -2425,6 +2425,62 @@
     font-size: 12px;
 }
 
+/* 페이징 UI */
+.mgmt-list-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    padding: 16px 0 8px;
+    border-top: 1px solid var(--rp-border, #e5e7eb);
+    margin-top: 8px;
+}
+
+.dark .mgmt-list-pagination {
+    border-top-color: #30363d;
+}
+
+.mgmt-pagination-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border: 1px solid var(--rp-border, #e5e7eb);
+    border-radius: 6px;
+    background: var(--rp-bg-primary, #fff);
+    color: var(--rp-text-secondary, #666);
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.dark .mgmt-pagination-btn {
+    border-color: #30363d;
+    background: #21262d;
+    color: #9ca3af;
+}
+
+.mgmt-pagination-btn:hover:not(:disabled) {
+    background: var(--rp-accent-primary, #667eea);
+    border-color: var(--rp-accent-primary, #667eea);
+    color: #fff;
+}
+
+.mgmt-pagination-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.mgmt-pagination-info {
+    font-size: 14px;
+    color: var(--rp-text-secondary, #666);
+    font-weight: 500;
+}
+
+.dark .mgmt-pagination-info {
+    color: #9ca3af;
+}
+
 /* ============================================
    관리포인트 상세 팝업
    ============================================ */

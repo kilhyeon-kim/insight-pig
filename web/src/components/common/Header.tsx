@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import Link from 'next/link';
 import Image from 'next/image';
 import { Icon } from '@/components/common';
 import { useAuth } from '@/contexts/AuthContext';
@@ -104,7 +103,11 @@ export default function Header({ onMenuToggle, isLoginAccess = true, showMenu = 
           )}
 
           {/* 로고 */}
-          <Link id="btn-top-ci" href={isLoginAccess ? "/" : "/login"} className="flex items-center">
+          <a
+            id="btn-top-ci"
+            href={isLoginAccess ? "/" : "/login"}
+            className="flex items-center cursor-pointer"
+          >
             <Image
               src="/images/insight_ci.png"
               alt="피그플랜"
@@ -112,7 +115,7 @@ export default function Header({ onMenuToggle, isLoginAccess = true, showMenu = 
               height={28}
               className="dark:brightness-0 dark:invert"
             />
-          </Link>
+          </a>
         </div>
 
         {/* 오른쪽: 사용자 정보 또는 로그인 버튼 */}
@@ -209,14 +212,14 @@ export default function Header({ onMenuToggle, isLoginAccess = true, showMenu = 
             )}
           </div>
         ) : (
-          <Link
+          <button
             id="btn-report-login"
-            href="/login"
+            onClick={() => window.location.href = '/login'}
             className="flex items-center gap-1 px-3 py-1.5 text-sm text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
           >
             <FontAwesomeIcon icon={faSignInAlt} />
             <span>로그인</span>
-          </Link>
+          </button>
         )}
       </div>
     </header>
