@@ -427,7 +427,7 @@ BEGIN
           AND S.INSPIG_YN = 'Y'
           AND S.USE_YN = 'Y'
           AND (S.INSPIG_TO_DT IS NULL OR S.INSPIG_TO_DT >= TO_CHAR(V_TODAY, 'YYYYMMDD'))
-          AND S.INSPIG_STOP_DT IS NULL
+          AND (S.INSPIG_STOP_DT IS NULL OR S.INSPIG_STOP_DT > TO_CHAR(V_TODAY, 'YYYYMMDD'))
           -- 테스트 모드 + 농장 지정 시 해당 농장만 필터링
           AND (
               P_TEST_MODE != 'Y'

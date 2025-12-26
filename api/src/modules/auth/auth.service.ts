@@ -17,7 +17,7 @@ export class AuthService {
     private readonly dataSource: DataSource,
     private readonly jwtService: JwtService,
     private readonly comService: ComService,
-  ) {}
+  ) { }
 
   /**
    * 로그인 처리
@@ -54,12 +54,21 @@ export class AuthService {
     if (service.USE_YN !== 'Y') {
       throw new ForbiddenException('인사이트피그플랜 서비스가 비활성화 상태입니다.');
     }
-    if (service.INSPIG_STOP_DT) {
+    // INSPIG_TO_DT, INSPIG_STOP_DT는 VARCHAR(8) YYYYMMDD 형식
+    const today = new Date().toISOString().slice(0, 10).replace(/-/g, ''); // YYYYMMDD
+
+    // 유효 종료일 결정 (만료일과 중단일 중 빠른 날짜)
+    // INSPIG_STOP_DT의 기본값은 99991231
+    const toDt = service.INSPIG_TO_DT || '99991231';
+    const stopDt = service.INSPIG_STOP_DT || '99991231';
+
+    // 1. 중단일 체크 (STOP_DT가 오늘이거나 과거인 경우 차단)
+    if (stopDt <= today) {
       throw new ForbiddenException('인사이트피그플랜 서비스가 중단되었습니다.');
     }
-    // INSPIG_TO_DT는 VARCHAR(8) YYYYMMDD 형식
-    const today = new Date().toISOString().slice(0, 10).replace(/-/g, ''); // YYYYMMDD
-    if (service.INSPIG_TO_DT && service.INSPIG_TO_DT < today) {
+
+    // 2. 만료일 체크 (TO_DT가 어제거나 과거인 경우 차단)
+    if (toDt < today) {
       throw new ForbiddenException('인사이트피그플랜 서비스 기간이 만료되었습니다.');
     }
 
