@@ -28,23 +28,10 @@ export const MgmtDetailPopup: React.FC<MgmtDetailPopupProps> = ({
         return `${dateStr.substring(0, 4)}.${dateStr.substring(4, 6)}.${dateStr.substring(6, 8)}`;
     };
 
-    // 링크 클릭 핸들러
+    // 링크 클릭 핸들러 - 항상 새 탭에서 열기
     const handleLinkClick = () => {
         if (!item.link) return;
-
-        if (item.linkTarget === 'DIRECT') {
-            window.open(item.link, '_blank', 'noopener,noreferrer');
-        } else {
-            const width = 800;
-            const height = 600;
-            const left = (window.screen.width - width) / 2;
-            const top = (window.screen.height - height) / 2;
-            window.open(
-                item.link,
-                'mgmt_popup',
-                `width=${width},height=${height},left=${left},top=${top},scrollbars=yes,resizable=yes`
-            );
-        }
+        window.open(item.link, '_blank', 'noopener,noreferrer');
     };
 
     // 동영상 보기 클릭 핸들러
@@ -120,7 +107,7 @@ export const MgmtDetailPopup: React.FC<MgmtDetailPopupProps> = ({
                         className="mgmt-detail-link-btn"
                     >
                         <FontAwesomeIcon icon={faExternalLinkAlt} />
-                        {item.linkTarget === 'DIRECT' ? '새 탭에서 열기' : '자세히 보기'}
+                        자세히 보기
                     </button>
                 )}
 

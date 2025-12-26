@@ -2214,6 +2214,35 @@
     color: #fff;
 }
 
+/* 칩 아이콘 */
+.mgmt-chip-icon {
+    margin-right: 8px;
+    font-size: 12px;
+}
+
+/* QUIZ 칩 아이콘 - 오렌지 */
+.mgmt-chip-quiz .mgmt-chip-icon {
+    color: #ea580c;
+}
+
+.dark .mgmt-chip-quiz .mgmt-chip-icon {
+    color: #fb923c;
+}
+
+/* CHANNEL 칩 아이콘 - 빨강 */
+.mgmt-chip-channel .mgmt-chip-icon {
+    color: #dc2626;
+}
+
+.dark .mgmt-chip-channel .mgmt-chip-icon {
+    color: #f87171;
+}
+
+/* hover 시 아이콘 색상 흰색으로 */
+.mgmt-chip:hover .mgmt-chip-icon {
+    color: #fff;
+}
+
 /* 빈 메시지 */
 .mgmt-empty {
     color: var(--rp-text-tertiary, #999);
@@ -2301,6 +2330,51 @@
 
 .dark .mgmt-list-item:hover {
     background: rgba(255, 255, 255, 0.05);
+}
+
+/* 아이콘 스타일 (번호 대신 사용) */
+.mgmt-list-item-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    flex-shrink: 0;
+}
+
+/* QUIZ 아이콘 - 오렌지 */
+.mgmt-list-item-icon-quiz {
+    background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);
+    color: #ea580c;
+}
+
+.dark .mgmt-list-item-icon-quiz {
+    background: rgba(234, 88, 12, 0.2);
+    color: #fb923c;
+}
+
+/* CHANNEL 아이콘 - 빨강 (박사채널) */
+.mgmt-list-item-icon-channel {
+    background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+    color: #dc2626;
+}
+
+.dark .mgmt-list-item-icon-channel {
+    background: rgba(220, 38, 38, 0.2);
+    color: #f87171;
+}
+
+/* PORK-NEWS 아이콘 - 기본 */
+.mgmt-list-item-icon-pork-news {
+    background: var(--rp-bg-secondary, #f3f4f6);
+    color: var(--rp-text-secondary, #666);
+}
+
+.dark .mgmt-list-item-icon-pork-news {
+    background: rgba(255, 255, 255, 0.1);
+    color: #9ca3af;
 }
 
 .mgmt-list-item-num {

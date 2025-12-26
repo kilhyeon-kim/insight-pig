@@ -1,8 +1,17 @@
 import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faChevronRight, faExternalLinkAlt } from '@fortawesome/free-solid-svg-icons';
+import { faChevronRight, faExternalLinkAlt, faQuestionCircle, faBullhorn, faLightbulb } from '@fortawesome/free-solid-svg-icons';
 import { PopupContainer } from './PopupContainer';
 import { MgmtItem } from '@/types/weekly';
+
+// 타입별 아이콘 반환
+const getMgmtTypeIcon = (mgmtType: string) => {
+    switch (mgmtType) {
+        case 'QUIZ': return faQuestionCircle;
+        case 'CHANNEL': return faBullhorn;  // 박사채널&정보
+        default: return faLightbulb;
+    }
+};
 
 interface MgmtListPopupProps {
     isOpen: boolean;
@@ -14,8 +23,8 @@ interface MgmtListPopupProps {
 
 /**
  * 관리포인트 전체 리스트 팝업
- * - 링크가 있는 아이템: 바로 링크 열기
- * - 링크가 없는 아이템: 상세 팝업으로 이동
+ * - QUIZ/CHANNEL: 링크 있으면 새 탭, 없으면 상세 팝업
+ * - PORK-NEWS: DIRECT이면 새 탭, POPUP이면 상세 팝업
  */
 export const MgmtListPopup: React.FC<MgmtListPopupProps> = ({
     isOpen,
@@ -26,25 +35,31 @@ export const MgmtListPopup: React.FC<MgmtListPopupProps> = ({
 }) => {
     // 아이템 클릭 핸들러
     const handleItemClick = (item: MgmtItem) => {
-        // 링크가 있으면 바로 열기
-        if (item.link) {
-            if (item.linkTarget === 'DIRECT') {
+        // PORK-NEWS는 POPUP/DIRECT 구분
+        if (item.mgmtType === 'PORK-NEWS') {
+            if (item.linkTarget === 'DIRECT' && item.link) {
                 window.open(item.link, '_blank', 'noopener,noreferrer');
-            } else {
-                const width = 800;
-                const height = 600;
-                const left = (window.screen.width - width) / 2;
-                const top = (window.screen.height - height) / 2;
-                window.open(
-                    item.link,
-                    'mgmt_popup',
-                    `width=${width},height=${height},left=${left},top=${top},scrollbars=yes,resizable=yes`
-                );
+                return;
             }
+            // POPUP이거나 링크 없으면 상세 팝업
+            onItemClick(item);
             return;
         }
-        // 링크가 없으면 상세 팝업
+
+        // QUIZ/CHANNEL: 링크 있으면 새 탭, 없으면 상세 팝업
+        if (item.link) {
+            window.open(item.link, '_blank', 'noopener,noreferrer');
+            return;
+        }
         onItemClick(item);
+    };
+
+    // DIRECT 링크인지 확인 (외부 링크 아이콘 표시용)
+    const isDirectLink = (item: MgmtItem): boolean => {
+        if (item.mgmtType === 'PORK-NEWS') {
+            return item.linkTarget === 'DIRECT' && !!item.link;
+        }
+        return !!item.link;
     };
 
     return (
@@ -68,9 +83,11 @@ export const MgmtListPopup: React.FC<MgmtListPopupProps> = ({
                                 className="mgmt-list-item"
                                 onClick={() => handleItemClick(item)}
                             >
-                                <span className="mgmt-list-item-num">{index + 1}</span>
+                                <span className={`mgmt-list-item-icon mgmt-list-item-icon-${item.mgmtType?.toLowerCase() || 'quiz'}`}>
+                                    <FontAwesomeIcon icon={getMgmtTypeIcon(item.mgmtType)} />
+                                </span>
                                 <span className="mgmt-list-item-title">{item.title}</span>
-                                {item.link ? (
+                                {isDirectLink(item) ? (
                                     <FontAwesomeIcon icon={faExternalLinkAlt} className="mgmt-list-item-link" />
                                 ) : (
                                     <FontAwesomeIcon icon={faChevronRight} className="mgmt-list-item-arrow" />

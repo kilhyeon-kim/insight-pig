@@ -231,8 +231,41 @@ export class WeeklyService {
       // 2. SUB 데이터 조회
       const subs = await this.dataSource.query(WEEKLY_SQL.getReportSub, params({ masterSeq, farmNo }));
 
-      // 3. 관리포인트 조회 (TS_INS_MGMT) - 독립 테이블, 파라미터 불필요
-      const mgmtRows = await this.dataSource.query(WEEKLY_SQL.getMgmtList);
+      // 3. 관리포인트 조회 (TS_INS_MGMT)
+      // 게시기간이 지난주~금주 기간에 하루라도 겹치면 표시
+      // DT_FROM은 YY.MM.DD 형식 → YYYYMMDD로 변환하고, 7일 전이 지난주 시작일
+      const dtFromStr = week.DT_FROM; // 예: "24.12.23"
+      const dtToStr = week.DT_TO;     // 예: "24.12.29"
+
+      // YY.MM.DD → Date 변환
+      const parseDate = (str: string): Date => {
+        const [yy, mm, dd] = str.split('.');
+        const year = parseInt(yy) + 2000;
+        return new Date(year, parseInt(mm) - 1, parseInt(dd));
+      };
+
+      const dtFromDate = parseDate(dtFromStr);
+      const dtToDate = parseDate(dtToStr);
+
+      // 지난주 시작일 = 금주 시작일 - 7일
+      const prevDtFromDate = new Date(dtFromDate);
+      prevDtFromDate.setDate(prevDtFromDate.getDate() - 7);
+
+      // YYYYMMDD 포맷으로 변환
+      const formatYYYYMMDD = (d: Date): string => {
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const dd = String(d.getDate()).padStart(2, '0');
+        return `${yyyy}${mm}${dd}`;
+      };
+
+      const mgmtPrevDtFrom = formatYYYYMMDD(prevDtFromDate);
+      const mgmtDtTo = formatYYYYMMDD(dtToDate);
+
+      const mgmtRows = await this.dataSource.query(
+        WEEKLY_SQL.getMgmtList,
+        params({ prevDtFrom: mgmtPrevDtFrom, dtTo: mgmtDtTo }),
+      );
       const mgmtData = await this.extractMgmtData(mgmtRows);
 
       // 4. 데이터 변환
@@ -307,16 +340,16 @@ export class WeeklyService {
 
   /**
    * 관리포인트 데이터 추출 (TS_INS_MGMT)
-   * 3개 유형: QUIZ(퀴즈), HIGHLIGHT(중점사항), RECOMMEND(추천학습자료)
+   * 3개 유형: QUIZ(퀴즈), CHANNEL(박사채널&정보), PORK-NEWS(한돈&업계소식)
    */
   private async extractMgmtData(mgmtRows: any[]): Promise<{
-    quizList: { seq: number; title: string; content: string | null; link: string | null; linkTarget: string | null; videoUrl: string | null; postFrom: string | null; postTo: string | null; attachFiles?: any[] }[];
-    highlightList: { seq: number; title: string; content: string | null; link: string | null; linkTarget: string | null; videoUrl: string | null; postFrom: string | null; postTo: string | null; attachFiles?: any[] }[];
-    recommendList: { seq: number; title: string; content: string | null; link: string | null; linkTarget: string | null; videoUrl: string | null; postFrom: string | null; postTo: string | null; attachFiles?: any[] }[];
+    quizList: { seq: number; mgmtType: string; title: string; content: string | null; link: string | null; linkTarget: string | null; videoUrl: string | null; postFrom: string | null; postTo: string | null; attachFiles?: any[] }[];
+    channelList: { seq: number; mgmtType: string; title: string; content: string | null; link: string | null; linkTarget: string | null; videoUrl: string | null; postFrom: string | null; postTo: string | null; attachFiles?: any[] }[];
+    porkNewsList: { seq: number; mgmtType: string; title: string; content: string | null; link: string | null; linkTarget: string | null; videoUrl: string | null; postFrom: string | null; postTo: string | null; attachFiles?: any[] }[];
   }> {
     const quizList: any[] = [];
-    const highlightList: any[] = [];
-    const recommendList: any[] = [];
+    const channelList: any[] = [];
+    const porkNewsList: any[] = [];
 
     for (const row of mgmtRows) {
       // 첨부파일 조회
@@ -343,6 +376,7 @@ export class WeeklyService {
 
       const item = {
         seq: row.SEQ || 0,
+        mgmtType: row.MGMT_TYPE || 'QUIZ',
         title: row.TITLE || row.CONTENT || '',
         content: row.CONTENT || null,
         link: row.LINK_URL || null,
@@ -354,14 +388,14 @@ export class WeeklyService {
       };
       if (row.MGMT_TYPE === 'QUIZ') {
         quizList.push(item);
-      } else if (row.MGMT_TYPE === 'HIGHLIGHT') {
-        highlightList.push(item);
-      } else if (row.MGMT_TYPE === 'RECOMMEND') {
-        recommendList.push(item);
+      } else if (row.MGMT_TYPE === 'CHANNEL') {
+        channelList.push(item);
+      } else if (row.MGMT_TYPE === 'PORK-NEWS') {
+        porkNewsList.push(item);
       }
     }
 
-    return { quizList, highlightList, recommendList };
+    return { quizList, channelList, porkNewsList };
   }
 
   /**
@@ -371,9 +405,9 @@ export class WeeklyService {
     week: any,
     subRows: any[],
     mgmtData?: {
-      quizList: { seq: number; title: string; content: string | null; link: string | null; linkTarget: string | null; videoUrl: string | null; postFrom: string | null; postTo: string | null; attachFiles?: any[] }[];
-      highlightList: { seq: number; title: string; content: string | null; link: string | null; linkTarget: string | null; videoUrl: string | null; postFrom: string | null; postTo: string | null; attachFiles?: any[] }[];
-      recommendList: { seq: number; title: string; content: string | null; link: string | null; linkTarget: string | null; videoUrl: string | null; postFrom: string | null; postTo: string | null; attachFiles?: any[] }[];
+      quizList: { seq: number; mgmtType: string; title: string; content: string | null; link: string | null; linkTarget: string | null; videoUrl: string | null; postFrom: string | null; postTo: string | null; attachFiles?: any[] }[];
+      channelList: { seq: number; mgmtType: string; title: string; content: string | null; link: string | null; linkTarget: string | null; videoUrl: string | null; postFrom: string | null; postTo: string | null; attachFiles?: any[] }[];
+      porkNewsList: { seq: number; mgmtType: string; title: string; content: string | null; link: string | null; linkTarget: string | null; videoUrl: string | null; postFrom: string | null; postTo: string | null; attachFiles?: any[] }[];
     },
   ) {
     const subs = subRows.map((row) => this.mapRowToWeekSub(row));
@@ -505,7 +539,7 @@ export class WeeklyService {
         },
       },
       // 관리 포인트 (TS_INS_MGMT 테이블에서 조회)
-      mgmt: mgmtData || { quizList: [], highlightList: [], recommendList: [] },
+      mgmt: mgmtData || { quizList: [], channelList: [], porkNewsList: [] },
       // 금주 작업예정 팝업 데이터 (SCHEDULE_GB, SCHEDULE_BM, SCHEDULE_EU, SCHEDULE_VACCINE)
       scheduleData: this.extractSchedulePopupData(subs),
     };

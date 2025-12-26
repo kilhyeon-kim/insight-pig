@@ -1,5 +1,5 @@
 -- ============================================================
--- TS_INS_MGMT 안박사 채널(HIGHLIGHT) 데이터 INSERT
+-- TS_INS_MGMT 박사채널&정보(CHANNEL) 데이터 INSERT
 -- 작성일: 2025-12-26
 -- 설명: 독립 테이블 - 동영상 포함 학습자료
 -- ============================================================
@@ -10,7 +10,7 @@ INSERT INTO TS_INS_MGMT (
     LINK_URL, LINK_TARGET, VIDEO_URL, POST_FROM, POST_TO, USE_YN, REG_DT
 ) VALUES (
     SEQ_TS_INS_MGMT.NEXTVAL,
-    'HIGHLIGHT',
+    'CHANNEL',
     1,
     '동기화 레규메이트 급여(민근농장밴드에서 25.12.25)',
     '후보돈 동기화 레규메이트 급여
@@ -40,5 +40,5 @@ SELECT SEQ, MGMT_TYPE, SORT_NO, TITLE,
        VIDEO_URL,
        POST_FROM, POST_TO, USE_YN
 FROM TS_INS_MGMT
-WHERE MGMT_TYPE = 'HIGHLIGHT'
+WHERE MGMT_TYPE = 'CHANNEL'
 ORDER BY SORT_NO;

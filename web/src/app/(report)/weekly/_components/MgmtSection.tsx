@@ -1,9 +1,18 @@
 import React, { useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faLightbulb, faNewspaper, faChevronRight } from '@fortawesome/free-solid-svg-icons';
+import { faLightbulb, faNewspaper, faChevronRight, faQuestionCircle, faBullhorn } from '@fortawesome/free-solid-svg-icons';
 import { MgmtItem, MgmtData } from '@/types/weekly';
 import { MgmtListPopup } from './popups/MgmtListPopup';
 import { MgmtDetailPopup } from './popups/MgmtDetailPopup';
+
+// 타입별 아이콘 반환
+const getMgmtTypeIcon = (mgmtType: string) => {
+    switch (mgmtType) {
+        case 'QUIZ': return faQuestionCircle;
+        case 'CHANNEL': return faBullhorn;  // 박사채널&정보
+        default: return faLightbulb;
+    }
+};
 
 interface MgmtSectionProps {
     data: MgmtData;
@@ -26,10 +35,10 @@ export const MgmtSection: React.FC<MgmtSectionProps> = ({ data }) => {
     const [detailPopupOpen, setDetailPopupOpen] = useState(false);
     const [detailItem, setDetailItem] = useState<MgmtItem | null>(null);
 
-    // 퀴즈 + 안박사채널 통합 리스트
+    // 퀴즈 + 박사채널 통합 리스트
     const quizInfoList = [
         ...(data.quizList || []),
-        ...(data.highlightList || [])
+        ...(data.channelList || [])
     ];
 
     // 더보기 클릭 - 리스트 팝업 열기
@@ -39,23 +48,24 @@ export const MgmtSection: React.FC<MgmtSectionProps> = ({ data }) => {
     };
 
     // 칩/리스트 아이템 클릭 핸들러
-    // - 링크가 있으면 바로 링크 열기
-    // - 링크가 없으면 상세 팝업 열기
+    // - QUIZ/CHANNEL: 링크 있으면 새 탭에서 열기, 없으면 상세 팝업
+    // - PORK-NEWS: DIRECT이면 새 탭, POPUP이면 상세 팝업 (content + 하단 링크)
     const handleItemClick = (item: MgmtItem) => {
-        if (item.link) {
-            if (item.linkTarget === 'DIRECT') {
+        // PORK-NEWS는 POPUP/DIRECT 구분
+        if (item.mgmtType === 'PORK-NEWS') {
+            if (item.linkTarget === 'DIRECT' && item.link) {
                 window.open(item.link, '_blank', 'noopener,noreferrer');
-            } else {
-                const width = 800;
-                const height = 600;
-                const left = (window.screen.width - width) / 2;
-                const top = (window.screen.height - height) / 2;
-                window.open(
-                    item.link,
-                    'mgmt_popup',
-                    `width=${width},height=${height},left=${left},top=${top},scrollbars=yes,resizable=yes`
-                );
+                return;
             }
+            // POPUP이거나 링크 없으면 상세 팝업
+            setDetailItem(item);
+            setDetailPopupOpen(true);
+            return;
+        }
+
+        // QUIZ/CHANNEL: 링크 있으면 새 탭, 없으면 상세 팝업
+        if (item.link) {
+            window.open(item.link, '_blank', 'noopener,noreferrer');
             return;
         }
         setDetailItem(item);
@@ -73,7 +83,7 @@ export const MgmtSection: React.FC<MgmtSectionProps> = ({ data }) => {
     const getListPopupItems = (): MgmtItem[] => {
         switch (listPopupType) {
             case 'quizInfo': return quizInfoList;
-            case 'news': return data.recommendList || [];
+            case 'news': return data.porkNewsList || [];
             default: return [];
         }
     };
@@ -105,9 +115,10 @@ export const MgmtSection: React.FC<MgmtSectionProps> = ({ data }) => {
                         quizInfoList.slice(0, maxDisplayItems).map((item, index) => (
                             <span
                                 key={index}
-                                className="mgmt-chip"
+                                className={`mgmt-chip mgmt-chip-${item.mgmtType?.toLowerCase() || 'quiz'}`}
                                 onClick={() => handleItemClick(item)}
                             >
+                                <FontAwesomeIcon icon={getMgmtTypeIcon(item.mgmtType)} className="mgmt-chip-icon" />
                                 {truncateText(item.title)}
                             </span>
                         ))
@@ -129,8 +140,8 @@ export const MgmtSection: React.FC<MgmtSectionProps> = ({ data }) => {
                     </span>
                 </div>
                 <div className="mgmt-chips">
-                    {(data.recommendList || []).length > 0 ? (
-                        (data.recommendList || []).slice(0, maxDisplayItems).map((item, index) => (
+                    {(data.porkNewsList || []).length > 0 ? (
+                        (data.porkNewsList || []).slice(0, maxDisplayItems).map((item, index) => (
                             <span
                                 key={index}
                                 className="mgmt-chip"

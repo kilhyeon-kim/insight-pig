@@ -366,8 +366,11 @@ export const WEEKLY_SQL = {
 
   /**
    * 관리포인트 조회 (TS_INS_MGMT)
-   * TS_INS_MGMT는 독립 테이블 - 현재 날짜 기준 게시 기간 내 데이터 조회
-   * MGMT_TYPE: QUIZ(퀴즈), HIGHLIGHT(중점사항), RECOMMEND(추천학습자료)
+   * TS_INS_MGMT는 독립 테이블
+   * MGMT_TYPE: QUIZ(퀴즈), CHANNEL(박사채널&정보), PORK-NEWS(한돈&업계소식)
+   * 조회 조건: 게시기간(POST_FROM~POST_TO)이 주간보고서 기간(지난주 시작~금주 종료)과 하루라도 겹치면 표시
+   * @param prevDtFrom - 지난주 시작일 (YYYYMMDD)
+   * @param dtTo - 금주 종료일 (YYYYMMDD)
    */
   getMgmtList: `
     /* weekly.weekly.getMgmtList : 관리포인트 조회 */
@@ -384,13 +387,14 @@ export const WEEKLY_SQL = {
         TO_CHAR(POST_TO, 'YYYYMMDD') AS POST_TO
     FROM TS_INS_MGMT
     WHERE NVL(USE_YN, 'Y') = 'Y'
-      AND (POST_FROM IS NULL OR TRUNC(POST_FROM) <= TRUNC(SYSDATE))
-      AND (POST_TO IS NULL OR TRUNC(POST_TO) >= TRUNC(SYSDATE))
+      /* 기간 겹침 조건: POST_FROM <= 금주종료 AND POST_TO >= 지난주시작 */
+      AND (POST_FROM IS NULL OR TRUNC(POST_FROM) <= TO_DATE(:dtTo, 'YYYYMMDD'))
+      AND (POST_TO IS NULL OR TRUNC(POST_TO) >= TO_DATE(:prevDtFrom, 'YYYYMMDD'))
     ORDER BY
         CASE MGMT_TYPE
             WHEN 'QUIZ' THEN 1
-            WHEN 'HIGHLIGHT' THEN 2
-            WHEN 'RECOMMEND' THEN 3
+            WHEN 'CHANNEL' THEN 2
+            WHEN 'PORK-NEWS' THEN 3
             ELSE 9
         END,
         SORT_NO

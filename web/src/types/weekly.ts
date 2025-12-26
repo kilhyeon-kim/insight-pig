@@ -498,6 +498,7 @@ export interface AttachFile {
  */
 export interface MgmtItem {
   seq: number;             // 일련번호 (첨부파일 조회용)
+  mgmtType: 'QUIZ' | 'CHANNEL' | 'PORK-NEWS';  // 유형 (QUIZ: 퀴즈, CHANNEL: 박사채널&정보, PORK-NEWS: 한돈&업계소식)
   title: string;           // 카드에 표시될 제목 (한줄)
   content: string | null;  // 상세 내용 (팝업에 표시)
   link: string | null;     // 링크 URL
@@ -514,6 +515,6 @@ export interface MgmtItem {
  */
 export interface MgmtData {
   quizList: MgmtItem[];       // 퀴즈 목록
-  highlightList: MgmtItem[];  // 중점사항 목록
-  recommendList: MgmtItem[];  // 추천학습자료 목록
+  channelList: MgmtItem[];    // 박사채널&정보 목록
+  porkNewsList: MgmtItem[];   // 한돈&업계소식 목록
 }
