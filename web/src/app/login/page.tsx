@@ -5,15 +5,14 @@ import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { useAuth } from '@/contexts/AuthContext';
 
-// 테스트 계정 목록
+
 const TEST_ACCOUNTS = [
-  { label: '-- 테스트 계정 선택 --', id: '', pw: '' },
-  { label: 'jjin', id: 'jjin', pw: '1122' },
-  { label: '민근농장/장일농장', id: 'centauru1', pw: 'kwak88176' },
-  { label: '용암축산', id: 'csc2005', pw: 'rose2088' },
-  { label: '비흥농장', id: '비흥', pw: '1' },
-  { label: '여리', id: '여리', pw: '0' },
-   { label: '서해농장', id: 'west001', pw: 'tjgoshdwkd1' },
+ { label: '-- 테스트 계정 선택 --', id: '', pw: '' },
+ { label: 'jjin', id: 'jjin', pw: '1122' },  // 1387
+ { label: '용암축산', id: 'csc2005', pw: 'rose2088' },  // 2807
+ { label: '서해농장', id: 'west001', pw: 'tjgoshdwkd1' }, // 848
+ { label: '승현농장', id: 'ctw0309', pw: 'ctw0309' }, // 4223
+ { label: '세원농장', id: 'xogus9', pw: '0000' }, // 1013
 ];
 
 export default function LoginPage() {

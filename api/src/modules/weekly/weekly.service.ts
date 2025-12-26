@@ -231,8 +231,12 @@ export class WeeklyService {
       // 2. SUB 데이터 조회
       const subs = await this.dataSource.query(WEEKLY_SQL.getReportSub, params({ masterSeq, farmNo }));
 
-      // 3. 데이터 변환
-      const reportData = this.transformToReportDetailFromRow(week, subs);
+      // 3. 관리포인트 조회 (TS_INS_MGMT) - 독립 테이블, 파라미터 불필요
+      const mgmtRows = await this.dataSource.query(WEEKLY_SQL.getMgmtList);
+      const mgmtData = this.extractMgmtData(mgmtRows);
+
+      // 4. 데이터 변환
+      const reportData = this.transformToReportDetailFromRow(week, subs, mgmtData);
 
       // 4. 팝업 데이터 추가 (모든 팝업 데이터를 한 번에 조회)
       const popupData = await this.getAllPopupData(masterSeq, farmNo);
@@ -302,9 +306,51 @@ export class WeeklyService {
   }
 
   /**
+   * 관리포인트 데이터 추출 (TS_INS_MGMT)
+   * 3개 유형: QUIZ(퀴즈), HIGHLIGHT(중점사항), RECOMMEND(추천학습자료)
+   */
+  private extractMgmtData(mgmtRows: any[]): {
+    quizList: { title: string; content: string | null; link: string | null; linkTarget: string | null; postFrom: string | null; postTo: string | null }[];
+    highlightList: { title: string; content: string | null; link: string | null; linkTarget: string | null; postFrom: string | null; postTo: string | null }[];
+    recommendList: { title: string; content: string | null; link: string | null; linkTarget: string | null; postFrom: string | null; postTo: string | null }[];
+  } {
+    const quizList: any[] = [];
+    const highlightList: any[] = [];
+    const recommendList: any[] = [];
+
+    for (const row of mgmtRows) {
+      const item = {
+        title: row.TITLE || row.CONTENT || '',
+        content: row.CONTENT || null,
+        link: row.LINK_URL || null,
+        linkTarget: row.LINK_TARGET || null,
+        postFrom: row.POST_FROM || null,
+        postTo: row.POST_TO || null,
+      };
+      if (row.MGMT_TYPE === 'QUIZ') {
+        quizList.push(item);
+      } else if (row.MGMT_TYPE === 'HIGHLIGHT') {
+        highlightList.push(item);
+      } else if (row.MGMT_TYPE === 'RECOMMEND') {
+        recommendList.push(item);
+      }
+    }
+
+    return { quizList, highlightList, recommendList };
+  }
+
+  /**
    * Raw SQL 결과를 프론트엔드 형식으로 변환
    */
-  private transformToReportDetailFromRow(week: any, subRows: any[]) {
+  private transformToReportDetailFromRow(
+    week: any,
+    subRows: any[],
+    mgmtData?: {
+      quizList: { title: string; content: string | null; link: string | null; linkTarget: string | null; postFrom: string | null; postTo: string | null }[];
+      highlightList: { title: string; content: string | null; link: string | null; linkTarget: string | null; postFrom: string | null; postTo: string | null }[];
+      recommendList: { title: string; content: string | null; link: string | null; linkTarget: string | null; postFrom: string | null; postTo: string | null }[];
+    },
+  ) {
     const subs = subRows.map((row) => this.mapRowToWeekSub(row));
 
     return {
@@ -433,11 +479,8 @@ export class WeeklyService {
           region: mockData.operationSummaryData.weather.location,
         },
       },
-      // 관리 포인트 (Mock 데이터 사용)
-      mgmt: {
-        highlightList: mockData.operationSummaryData.insights.bad.map(text => ({ text, link: null })),
-        recommendList: mockData.operationSummaryData.insights.good.map(item => ({ text: `${item.label}: ${item.value}`, link: null })),
-      },
+      // 관리 포인트 (TS_INS_MGMT 테이블에서 조회)
+      mgmt: mgmtData || { quizList: [], highlightList: [], recommendList: [] },
       // 금주 작업예정 팝업 데이터 (SCHEDULE_GB, SCHEDULE_BM, SCHEDULE_EU, SCHEDULE_VACCINE)
       scheduleData: this.extractSchedulePopupData(subs),
     };

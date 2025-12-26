@@ -479,3 +479,25 @@ export interface WeatherPopupData {
   weatherCode: string[];
   rainProb: number[];
 }
+
+/**
+ * 관리포인트 아이템 (퀴즈/중점사항/추천학습자료)
+ */
+export interface MgmtItem {
+  title: string;           // 카드에 표시될 제목 (한줄)
+  content: string | null;  // 상세 내용 (팝업에 표시)
+  link: string | null;     // 링크 URL
+  linkTarget: 'POPUP' | 'DIRECT' | null;  // 링크 열기 방식
+  postFrom: string | null; // 게시 시작일 (YYYYMMDD)
+  postTo: string | null;   // 게시 종료일 (YYYYMMDD)
+}
+
+/**
+ * 관리포인트 데이터 (3개 유형)
+ * @see TS_INS_MGMT 테이블
+ */
+export interface MgmtData {
+  quizList: MgmtItem[];       // 퀴즈 목록
+  highlightList: MgmtItem[];  // 중점사항 목록
+  recommendList: MgmtItem[];  // 추천학습자료 목록
+}

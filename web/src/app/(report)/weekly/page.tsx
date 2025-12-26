@@ -219,8 +219,8 @@ export default function WeeklyListPage() {
 
   return (
     <div className="report-list-page p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+      <div className="mb-4">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">
           주간 리포트
         </h1>
         <p className="text-gray-600 dark:text-gray-400">
@@ -241,11 +241,11 @@ export default function WeeklyListPage() {
                   type="date"
                   value={startDate}
                   onChange={(e) => setStartDate(e.target.value)}
-                  className="pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white w-full sm:w-40"
+                  className="pl-10 pr-2 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white w-full sm:w-44"
                 />
                 <FontAwesomeIcon
                   icon={faCalendarAlt}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
                 />
               </div>
               <span className="text-gray-500">~</span>
@@ -255,28 +255,14 @@ export default function WeeklyListPage() {
                   value={endDate}
                   onChange={(e) => setEndDate(e.target.value)}
                   min={startDate}
-                  className="px-2 py-1.5 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white w-full sm:w-40"
+                  className="pl-10 pr-2 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white w-full sm:w-44"
                 />
                 <FontAwesomeIcon
                   icon={faCalendarAlt}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
                 />
               </div>
             </div>
-          </div>
-
-          {/* 테스트용 농장번호 입력 필드 (개발/테스트 환경용) */}
-          <div className="w-full sm:w-auto">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              농장 번호 (테스트)
-            </label>
-            <input
-              type="text"
-              value={testFarmNoInput}
-              onChange={(e) => handleTestFarmNoChange(e.target.value)}
-              placeholder={String(user?.farmNo || '')}
-              className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white w-full sm:w-32"
-            />
           </div>
 
           <button

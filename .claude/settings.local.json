@@ -68,7 +68,10 @@
       "Bash(timeout 300 ./venv/Scripts/python.exe -c:*)",
       "Bash(del \"c:\\\\Projects\\\\inspig-etl\\\\compare_45_51.py\")",
       "Bash(del \"c:\\\\Projects\\\\inspig-etl\\\\test_productivity_api.py\")",
-      "Bash(iconv:*)"
+      "Bash(iconv:*)",
+      "Bash(./deploy.sh:*)",
+      "Bash(del \"C:\\\\Projects\\\\pig3.1\\\\pigplan\\\\docs\\\\kakao-alimtalk.md\")",
+      "Bash(git rm:*)"
     ],
     "deny": [],
     "ask": []

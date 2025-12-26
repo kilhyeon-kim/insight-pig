@@ -363,4 +363,35 @@ export const WEEKLY_SQL = {
   // getProductivitySangsi 제거됨 (방식 2 적용)
   // - 상시모돈 데이터: ETL에서 TS_PRODUCTIVITY → TS_INS_WEEK.MODON_SANGSI_CNT 업데이트
   // - 웹에서는 TS_INS_WEEK.MODON_SANGSI_CNT에서 직접 읽어옴 (getReportDetail 쿼리)
+
+  /**
+   * 관리포인트 조회 (TS_INS_MGMT)
+   * TS_INS_MGMT는 독립 테이블 - 현재 날짜 기준 게시 기간 내 데이터 조회
+   * MGMT_TYPE: QUIZ(퀴즈), HIGHLIGHT(중점사항), RECOMMEND(추천학습자료)
+   */
+  getMgmtList: `
+    /* weekly.weekly.getMgmtList : 관리포인트 조회 */
+    SELECT
+        SEQ,
+        MGMT_TYPE,
+        SORT_NO,
+        TITLE,
+        CONTENT,
+        LINK_URL,
+        LINK_TARGET,
+        POST_FROM,
+        POST_TO
+    FROM TS_INS_MGMT
+    WHERE NVL(USE_YN, 'Y') = 'Y'
+      AND (POST_FROM IS NULL OR POST_FROM <= TO_CHAR(SYSDATE, 'YYYYMMDD'))
+      AND (POST_TO IS NULL OR POST_TO >= TO_CHAR(SYSDATE, 'YYYYMMDD'))
+    ORDER BY
+        CASE MGMT_TYPE
+            WHEN 'QUIZ' THEN 1
+            WHEN 'HIGHLIGHT' THEN 2
+            WHEN 'RECOMMEND' THEN 3
+            ELSE 9
+        END,
+        SORT_NO
+  `,
 };

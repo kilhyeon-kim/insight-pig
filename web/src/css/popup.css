@@ -1983,3 +1983,247 @@
         font-size: 16px;
     }
 }
+
+/* ============================================
+   관리포인트 팝업 (.mgmt-popup)
+   - 퀴즈, 중점사항, 추천학습자료
+   ============================================ */
+
+/* 팝업 컨텐츠 */
+.mgmt-popup-content {
+    padding: 0;
+}
+
+/* 아이템 목록 */
+.mgmt-popup-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+/* 아이템 */
+.mgmt-popup-item {
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--rp-border-light, #e5e7eb);
+    transition: background 0.15s ease;
+}
+
+.mgmt-popup-item:last-child {
+    border-bottom: none;
+}
+
+.mgmt-popup-item:hover {
+    background: var(--rp-bg-secondary, #f9fafb);
+}
+
+.dark .mgmt-popup-item:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+/* 아이템 헤더 (제목 + 링크버튼) */
+.mgmt-popup-item-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+/* 아이템 제목 */
+.mgmt-popup-item-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--rp-text-primary, #1d1d1f);
+    flex: 1;
+    line-height: 1.4;
+}
+
+.dark .mgmt-popup-item-title {
+    color: #e6edf3;
+}
+
+/* 링크 버튼 */
+.mgmt-popup-link-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border: none;
+    border-radius: 6px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: #fff;
+    font-size: 12px;
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    flex-shrink: 0;
+}
+
+.mgmt-popup-link-btn:hover {
+    transform: scale(1.1);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+/* 아이템 상세내용 */
+.mgmt-popup-item-content {
+    margin: 8px 0 0 0;
+    font-size: 13px;
+    color: var(--rp-text-secondary, #666);
+    line-height: 1.6;
+    word-break: keep-all;
+}
+
+.dark .mgmt-popup-item-content {
+    color: #9ca3af;
+}
+
+/* 게시기간 */
+.mgmt-popup-item-period {
+    margin-top: 8px;
+    font-size: 11px;
+    color: var(--rp-text-tertiary, #999);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.dark .mgmt-popup-item-period {
+    color: #6b7280;
+}
+
+.mgmt-popup-item-period svg {
+    font-size: 10px;
+}
+
+/* ============================================
+   관리포인트 섹션 카드 스타일 (.mgmt-cards-3)
+   - 3개 카드 레이아웃
+   ============================================ */
+
+/* 3개 카드 그리드 */
+.mgmt-cards.mgmt-cards-3 {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+}
+
+/* 모바일: 세로 배열 */
+@media (max-width: 768px) {
+    .mgmt-cards.mgmt-cards-3 {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+}
+
+/* 카드 공통 - 클릭 가능 스타일 */
+.mgmt-card .card-header {
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.mgmt-card .card-header:hover {
+    background: rgba(102, 126, 234, 0.08);
+}
+
+.dark .mgmt-card .card-header:hover {
+    background: rgba(102, 126, 234, 0.15);
+}
+
+/* 더보기 아이콘 */
+.mgmt-card .card-more {
+    margin-left: auto;
+    color: var(--rp-text-tertiary, #999);
+    font-size: 12px;
+    transition: transform 0.15s ease;
+}
+
+.mgmt-card .card-header:hover .card-more {
+    transform: translateX(3px);
+    color: var(--rp-accent-primary, #667eea);
+}
+
+/* 카드 리스트 아이템 - 클릭 가능 */
+.mgmt-card .card-list li {
+    cursor: pointer;
+    padding: 8px 12px;
+    border-radius: 6px;
+    transition: background 0.15s ease;
+}
+
+.mgmt-card .card-list li:hover {
+    background: rgba(102, 126, 234, 0.08);
+}
+
+.dark .mgmt-card .card-list li:hover {
+    background: rgba(102, 126, 234, 0.15);
+}
+
+/* 아이템 제목 (한 줄 말줄임) */
+.mgmt-card .card-list .item-title {
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 13px;
+    color: var(--rp-text-primary, #1d1d1f);
+}
+
+.dark .mgmt-card .card-list .item-title {
+    color: #e6edf3;
+}
+
+/* 빈 항목 스타일 */
+.mgmt-card .card-list .empty-item {
+    cursor: default;
+    color: var(--rp-text-tertiary, #999);
+    font-size: 12px;
+    font-style: italic;
+}
+
+.mgmt-card .card-list .empty-item:hover {
+    background: transparent;
+}
+
+/* 퀴즈 카드 아이콘 색상 */
+.mgmt-card.quiz .card-icon {
+    color: #f59e0b;
+}
+
+.mgmt-card.quiz .card-header::before {
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+}
+
+/* 태블릿 반응형 (481px~768px) */
+@media (min-width: 481px) and (max-width: 768px) {
+    .mgmt-cards.mgmt-cards-3 {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* 데스크탑 (769px+) */
+@media (min-width: 769px) {
+    .mgmt-popup-item {
+        padding: 16px 20px;
+    }
+
+    .mgmt-popup-item-title {
+        font-size: 15px;
+    }
+
+    .mgmt-popup-item-content {
+        font-size: 14px;
+    }
+
+    .mgmt-popup-link-btn {
+        width: 32px;
+        height: 32px;
+        font-size: 13px;
+    }
+
+    .mgmt-cards.mgmt-cards-3 {
+        gap: 16px;
+    }
+
+    .mgmt-card .card-list .item-title {
+        font-size: 14px;
+    }
+}
