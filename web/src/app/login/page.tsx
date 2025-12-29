@@ -13,6 +13,8 @@ const TEST_ACCOUNTS = [
  { label: '서해농장', id: 'west001', pw: 'tjgoshdwkd1' }, // 848
  { label: '승현농장', id: 'ctw0309', pw: 'ctw0309' }, // 4223
  { label: '세원농장', id: 'xogus9', pw: '0000' }, // 1013
+ { label: '거니양돈', id: 'kwon', pw: '1032' }, // 2319
+ { label: '민근농장/장일농장', id: 'centauru1', pw: 'kwak88176' }, //  4448
 ];
 
 function LoginContent() {
