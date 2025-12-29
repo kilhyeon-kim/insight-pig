@@ -5,6 +5,7 @@ import { TaMember } from './entities';
 import { JwtPayload, LoginResponseDto } from './dto';
 import { AUTH_SQL } from './sql';
 import { ComService } from '../com/com.service';
+import { todayKst } from '../../common/utils';
 
 /**
  * Named parameter를 TypeORM query에 전달하기 위한 헬퍼
@@ -54,8 +55,8 @@ export class AuthService {
     if (service.USE_YN !== 'Y') {
       throw new ForbiddenException('인사이트피그플랜 서비스가 비활성화 상태입니다.');
     }
-    // INSPIG_TO_DT, INSPIG_STOP_DT는 VARCHAR(8) YYYYMMDD 형식
-    const today = new Date().toISOString().slice(0, 10).replace(/-/g, ''); // YYYYMMDD
+    // INSPIG_TO_DT, INSPIG_STOP_DT는 VARCHAR(8) YYYYMMDD 형식 (한국 시간 기준)
+    const today = todayKst(); // YYYYMMDD (KST)
 
     // 유효 종료일 결정 (만료일과 중단일 중 빠른 날짜)
     // INSPIG_STOP_DT의 기본값은 99991231

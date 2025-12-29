@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { SHARE_TOKEN_SQL } from './sql';
+import { nowKst, parseExpireDateKst } from '../../common/utils';
 
 /**
  * Named parameter를 TypeORM query에 전달하기 위한 헬퍼
@@ -72,10 +73,10 @@ export class ShareTokenService {
         };
       }
 
-      // 만료일 체크
+      // 만료일 체크 (한국 시간 기준)
       if (week.TOKEN_EXPIRE_DT) {
-        const now = new Date();
-        const expireDate = new Date(week.TOKEN_EXPIRE_DT);
+        const now = nowKst();
+        const expireDate = parseExpireDateKst(week.TOKEN_EXPIRE_DT);
         if (now > expireDate) {
           return {
             valid: false,
@@ -126,9 +127,10 @@ export class ShareTokenService {
         return { valid: false, expired: false, week: null, message: '리포트를 찾을 수 없습니다.' };
       }
 
+      // 만료일 체크 (한국 시간 기준)
       if (week.TOKEN_EXPIRE_DT) {
-        const now = new Date();
-        const expireDate = new Date(week.TOKEN_EXPIRE_DT);
+        const now = nowKst();
+        const expireDate = parseExpireDateKst(week.TOKEN_EXPIRE_DT);
         if (now > expireDate) {
           return { valid: false, expired: true, week, message: '공유 링크가 만료되었습니다.' };
         }

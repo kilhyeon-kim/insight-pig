@@ -5,6 +5,7 @@ import { WEEKLY_SQL } from './sql';
 import { COM_SQL } from '../com/sql/com.sql';
 import { SHARE_TOKEN_SQL } from '../auth/sql/share-token.sql';
 import { ComService } from '../com/com.service';
+import { nowKst, parseExpireDateKst } from '../../common/utils';
 import * as mockData from '../../data/mock/weekly.mock';
 
 /**
@@ -100,19 +101,11 @@ export class WeeklyService {
         };
       }
 
-      // 만료일 체크 (skipExpiryCheck가 true면 건너뜀)
+      // 만료일 체크 (skipExpiryCheck가 true면 건너뜀, 한국 시간 기준)
       if (!skipExpiryCheck && tokenData.TOKEN_EXPIRE_DT) {
-        const now = new Date();
-        // TOKEN_EXPIRE_DT가 문자열(YYYYMMDD)인 경우 처리
-        let expireDate: Date;
-        if (typeof tokenData.TOKEN_EXPIRE_DT === 'string' && tokenData.TOKEN_EXPIRE_DT.length === 8) {
-          const year = parseInt(tokenData.TOKEN_EXPIRE_DT.substring(0, 4));
-          const month = parseInt(tokenData.TOKEN_EXPIRE_DT.substring(4, 6)) - 1;
-          const day = parseInt(tokenData.TOKEN_EXPIRE_DT.substring(6, 8));
-          expireDate = new Date(year, month, day, 23, 59, 59);
-        } else {
-          expireDate = new Date(tokenData.TOKEN_EXPIRE_DT);
-        }
+        const now = nowKst();
+        // TOKEN_EXPIRE_DT는 YYYYMMDD 형식 (KST 기준)
+        const expireDate = parseExpireDateKst(tokenData.TOKEN_EXPIRE_DT);
 
         if (now > expireDate) {
           return {
