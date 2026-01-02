@@ -45,32 +45,42 @@ export class AuthService {
     const service = services[0];
 
     if (!service) {
-      throw new ForbiddenException('인사이트피그플랜 서비스가 신청되지 않았습니다.');
+      throw new ForbiddenException('인사이트피그 서비스가 등록되지 않았습니다. 관리자에게 문의하세요.');
     }
 
     // 서비스 활성화 조건 체크
     if (service.INSPIG_YN !== 'Y') {
-      throw new ForbiddenException('인사이트피그플랜 서비스가 활성화되지 않았습니다.');
+      throw new ForbiddenException('인사이트피그 서비스가 활성화되지 않았습니다. 관리자에게 문의하세요.');
     }
     if (service.USE_YN !== 'Y') {
-      throw new ForbiddenException('인사이트피그플랜 서비스가 비활성화 상태입니다.');
+      throw new ForbiddenException('인사이트피그 서비스가 사용 중지 상태입니다. 관리자에게 문의하세요.');
     }
-    // INSPIG_TO_DT, INSPIG_STOP_DT는 VARCHAR(8) YYYYMMDD 형식 (한국 시간 기준)
-    const today = todayKst(); // YYYYMMDD (KST)
 
-    // 유효 종료일 결정 (만료일과 중단일 중 빠른 날짜)
-    // INSPIG_STOP_DT의 기본값은 99991231
+    // INSPIG_FROM_DT, INSPIG_TO_DT, INSPIG_STOP_DT는 VARCHAR(8) YYYYMMDD 형식 (한국 시간 기준)
+    const today = todayKst(); // YYYYMMDD (KST)
+    const fromDt = service.INSPIG_FROM_DT || '';
     const toDt = service.INSPIG_TO_DT || '99991231';
     const stopDt = service.INSPIG_STOP_DT || '99991231';
 
-    // 1. 중단일 체크 (STOP_DT가 오늘이거나 과거인 경우 차단)
-    if (stopDt <= today) {
-      throw new ForbiddenException('인사이트피그플랜 서비스가 중단되었습니다.');
+    // 날짜 포맷팅 헬퍼 (YYYYMMDD → YYYY-MM-DD)
+    const formatDate = (dt: string) => dt ? `${dt.slice(0, 4)}-${dt.slice(4, 6)}-${dt.slice(6, 8)}` : '';
+
+    // 1. 시작일 체크 (FROM_DT가 없거나 아직 시작 전인 경우)
+    if (!fromDt) {
+      throw new ForbiddenException('인사이트피그 서비스 시작일이 설정되지 않았습니다. 관리자에게 문의하세요.');
+    }
+    if (fromDt > today) {
+      throw new ForbiddenException(`인사이트피그 서비스 시작 전입니다. (시작일: ${formatDate(fromDt)})`);
     }
 
-    // 2. 만료일 체크 (TO_DT가 어제거나 과거인 경우 차단)
+    // 2. 중단일 체크 (STOP_DT가 오늘이거나 과거인 경우 차단)
+    if (stopDt !== '99991231' && stopDt <= today) {
+      throw new ForbiddenException(`인사이트피그 서비스가 중단되었습니다. (중단일: ${formatDate(stopDt)})`);
+    }
+
+    // 3. 만료일 체크 (TO_DT가 어제거나 과거인 경우 차단)
     if (toDt < today) {
-      throw new ForbiddenException('인사이트피그플랜 서비스 기간이 만료되었습니다.');
+      throw new ForbiddenException(`인사이트피그 서비스 기간이 만료되었습니다. (만료일: ${formatDate(toDt)})`);
     }
 
     // 4단계: 농장명 및 언어코드 조회
