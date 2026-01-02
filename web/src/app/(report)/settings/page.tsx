@@ -107,11 +107,11 @@ export default function SettingsPage() {
                                     </div>
                                 </div>
                                 {service.isOpen ? (
-                                    <span className="px-2.5 py-1 text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 rounded-full">
+                                    <span className="px-2.5 py-1 text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 rounded-full shrink-0 text-center whitespace-nowrap">
                                         서비스 중
                                     </span>
                                 ) : (
-                                    <span className="px-2.5 py-1 text-xs font-medium bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400 rounded-full">
+                                    <span className="px-2.5 py-1 text-xs font-medium bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400 rounded-full shrink-0 text-center whitespace-nowrap">
                                         준비 중
                                     </span>
                                 )}
