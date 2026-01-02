@@ -50,7 +50,7 @@ export class AuthService {
 
     // 서비스 활성화 조건 체크
     if (service.INSPIG_YN !== 'Y') {
-      throw new ForbiddenException('인사이트피그 서비스가 활성화되지 않았습니다. 관리자에게 문의하세요.');
+      throw new ForbiddenException('인사이트피그 서비스에 가입되지 않았습니다. 관리자에게 문의하세요.');
     }
     if (service.USE_YN !== 'Y') {
       throw new ForbiddenException('인사이트피그 서비스가 사용 중지 상태입니다. 관리자에게 문의하세요.');
