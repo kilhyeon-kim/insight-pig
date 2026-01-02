@@ -138,7 +138,7 @@ export default function WeeklyListPage() {
           id: `${item.masterSeq}-${activeFarmNo}`,
           masterSeq: item.masterSeq,
           farmNo: activeFarmNo,
-          title: `${item.year}년 ${item.weekNo}주차 주간 리포트`,
+          title: `${item.year}년 ${item.weekNo}주차 주간 보고서`,
           period: `${formatDate(item.period.from)} ~ ${formatDate(item.period.to)}`,
           date: formatDate(item.createdAt),
           shareToken: item.shareToken
@@ -221,7 +221,7 @@ export default function WeeklyListPage() {
     <div className="report-list-page p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
       <div className="mb-4">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">
-          주간 리포트
+          주간 보고서
         </h1>
         <p className="text-gray-600 dark:text-gray-400">
           농장의 주간 생산 성적을 확인하세요.

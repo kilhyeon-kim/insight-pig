@@ -34,7 +34,7 @@ export const WeeklyHeader: React.FC<WeeklyHeaderProps> = ({ data }) => {
     return (
         <div className="report-header">
             <div className="report-header-top">
-                <h1>주간 리포트</h1>
+                <h1>주간 보고서</h1>
                 <ThemeToggle variant="button" />
             </div>
             <div className="report-header-info">

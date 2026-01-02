@@ -71,7 +71,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
             {/* Sidebar */}
             <div className={`fixed top-0 left-0 h-full w-64 bg-white dark:bg-gray-900 shadow-xl transform transition-transform duration-300 ease-in-out z-50 ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
                 <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-800">
-                    <h2 className="text-xl font-bold text-gray-900 dark:text-white">INSPIG</h2>
+                    <h2 className="text-xl font-bold text-gray-900 dark:text-white">Insight Pigplan</h2>
                     <button onClick={onClose} className="lg:hidden text-gray-500 hover:text-gray-700 dark:text-gray-400">
                         <FontAwesomeIcon icon={faTimes} />
                     </button>

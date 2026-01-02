@@ -9,24 +9,24 @@ import { useAuth } from '@/contexts/AuthContext';
 
 const menuItems = [
   {
-    name: '주간 리포트',
+    name: '주간 보고서',
     href: '/weekly',
     icon: 'clipboard-list',
     description: '주간 실적 분석',
     color: 'bg-blue-500',
   },
   {
-    name: '월간 리포트',
+    name: '월간 보고서',
     href: '/monthly',
     icon: 'calendar-alt',
-    description: '월간 종합 리포트',
+    description: '월간 종합 분석',
     color: 'bg-green-500',
   },
   {
-    name: '컨설팅 진단서',
-    href: '/consulting',
-    icon: 'stethoscope',
-    description: '농장 진단 리포트',
+    name: '분기 보고서',
+    href: '/quarterly',
+    icon: 'chart-bar',
+    description: '분기별 심층 분석',
     color: 'bg-purple-500',
   },
 ];

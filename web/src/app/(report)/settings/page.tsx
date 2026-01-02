@@ -22,7 +22,7 @@ const SERVICE_SCHEDULE = {
             dataGeneration: '매주 월요일 02:00',
             notification: '매주 월요일 07:00',
         },
-        description: '지난주(월~일) 농장 운영 현황을 분석한 주간 리포트',
+        description: '지난주(월~일) 농장 운영 현황을 분석한 주간 보고서',
     },
     monthly: {
         name: '월간 보고서',
@@ -33,7 +33,7 @@ const SERVICE_SCHEDULE = {
             dataGeneration: '매월 1일 03:00 (예정)',
             notification: '매월 1일 08:00 (예정)',
         },
-        description: '지난달 농장 운영 현황을 종합 분석한 월간 리포트',
+        description: '지난달 농장 운영 현황을 종합 분석한 월간 보고서',
     },
     quarterly: {
         name: '분기 보고서',
@@ -44,7 +44,7 @@ const SERVICE_SCHEDULE = {
             dataGeneration: '분기 첫째날 04:00 (예정)',
             notification: '분기 첫째날 09:00 (예정)',
         },
-        description: '분기별 농장 성과를 심층 분석한 컨설팅 리포트',
+        description: '분기별 농장 성과를 심층 분석한 분기 보고서',
     },
 };
 

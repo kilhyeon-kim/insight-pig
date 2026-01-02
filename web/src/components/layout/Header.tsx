@@ -25,7 +25,7 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
                         <FontAwesomeIcon icon={faBars} className="w-5 h-5" />
                     </button>
                     <h1 className="text-lg font-bold text-gray-900 dark:text-white hidden sm:block">
-                        INSPIG
+                     Insight Pigplan
                     </h1>
                 </div>
 
