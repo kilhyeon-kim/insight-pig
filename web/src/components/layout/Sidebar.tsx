@@ -44,7 +44,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
         { name: '주간 보고서', path: '/weekly', icon: faCalendarAlt },
         { name: '월간 보고서', path: '/monthly', icon: faChartPie },
         { name: '분기 보고서', path: '/quarterly', icon: faChartBar },
-        { name: '서비스정보', path: '/settings', icon: faInfoCircle },
+        { name: '환경설정', path: '/settings', icon: faInfoCircle },
     ];
 
     const handleMenuClick = (e: React.MouseEvent, path: string) => {

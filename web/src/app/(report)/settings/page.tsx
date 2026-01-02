@@ -185,8 +185,8 @@ export default function SettingsPage() {
             <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4 text-sm text-blue-700 dark:text-blue-300">
                 <p className="font-medium mb-1">알림톡 수신 안내</p>
                 <p className="text-blue-600 dark:text-blue-400 text-xs">
-                    알림톡은 피그플랜에 등록된 휴대폰 번호로 발송됩니다.
-                    수신 번호 변경은 피그플랜 관리자에게 문의해 주세요.
+                    알림톡은 피그플랜에 가입하신 휴대폰 번호로 발송됩니다.<br></br>
+                    수신 번호 변경은 피그플랜에서 직접 수정하시거나 <br></br>관리자에게 문의해 주세요.
                 </p>
             </div>
         </div>
