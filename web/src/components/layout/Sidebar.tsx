@@ -4,7 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faChartPie, faCalendarAlt, faChartBar, faCog, faSignOutAlt, faTimes, faLock } from '@fortawesome/free-solid-svg-icons';
+import { faChartPie, faCalendarAlt, faChartBar, faInfoCircle, faSignOutAlt, faTimes, faLock } from '@fortawesome/free-solid-svg-icons';
 import { ThemeToggle } from './ThemeToggle';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -44,7 +44,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
         { name: '주간 보고서', path: '/weekly', icon: faCalendarAlt },
         { name: '월간 보고서', path: '/monthly', icon: faChartPie },
         { name: '분기 보고서', path: '/quarterly', icon: faChartBar },
-        { name: '환경설정', path: '/settings', icon: faCog },
+        { name: '서비스정보', path: '/settings', icon: faInfoCircle },
     ];
 
     const handleMenuClick = (e: React.MouseEvent, path: string) => {
