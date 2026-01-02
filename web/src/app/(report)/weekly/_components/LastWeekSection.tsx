@@ -123,7 +123,7 @@ export const LastWeekSection: React.FC<LastWeekSectionProps> = ({ data, onPopupO
                     <div className="cell label row-span-2 clickable section-start" onClick={() => onPopupOpen('weaning')}>
                         이유<FontAwesomeIcon icon={faArrowUpRightFromSquare} className="detail-icon fa-sm" />
                     </div>
-                    <div className="cell sub section-start">복수<br className="mobile-br"/><span className="mobile-sub-text">(대리모포함)</span></div>
+                    <div className="cell sub section-start">복수<span className="mobile-sub-text">(대리모포함)</span></div>
                     <div className="cell count lastweek section-start">{formatNumber(data.weaning.cnt)}</div>
                     <div className="cell empty lastweek section-start"></div>
                     <div className="cell count section-start">{formatNumber(data.weaning.sumCnt)}</div>

@@ -1969,6 +1969,7 @@
 
     /* 모바일 전용 작은 부가 텍스트 */
     .mobile-sub-text {
+        display: block;
         font-size: 10px;
         color: #9ca3af;
     }
@@ -2836,6 +2837,7 @@
 
         /* 데스크탑에서 부가 텍스트 - 작은 회색 글씨 */
         .mobile-sub-text {
+            display: inline;
             font-size: 11px;
             color: #9ca3af;
         }
