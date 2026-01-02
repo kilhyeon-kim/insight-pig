@@ -1955,7 +1955,7 @@
 
     /* 모바일 전용 줄바꿈 */
     .mobile-br {
-        display: inline;
+        display: block;
     }
 
     /* 모바일/데스크탑 전용 텍스트 */
