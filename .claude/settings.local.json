@@ -71,7 +71,9 @@
       "Bash(iconv:*)",
       "Bash(./deploy.sh:*)",
       "Bash(del \"C:\\\\Projects\\\\pig3.1\\\\pigplan\\\\docs\\\\kakao-alimtalk.md\")",
-      "Bash(git rm:*)"
+      "Bash(git rm:*)",
+      "Bash(for:*)",
+      "Bash(do curl -s --connect-timeout 2 http://10.4.35.10:$port/)"
     ],
     "deny": [],
     "ask": []

@@ -4,7 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faChartPie, faCalendarAlt, faChartBar, faCog, faSignOutAlt, faTimes } from '@fortawesome/free-solid-svg-icons';
+import { faChartPie, faCalendarAlt, faChartBar, faCog, faSignOutAlt, faTimes, faLock } from '@fortawesome/free-solid-svg-icons';
 import { ThemeToggle } from './ThemeToggle';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -12,6 +12,29 @@ interface SidebarProps {
     isOpen: boolean;
     onClose: () => void;
 }
+
+// 서비스 오픈 일정
+const SERVICE_OPEN_DATES: Record<string, Date> = {
+    '/monthly': new Date('2026-02-01'),
+    '/quarterly': new Date('2026-04-01'),
+};
+
+// 서비스 오픈 여부 확인
+const isServiceOpen = (path: string): boolean => {
+    const openDate = SERVICE_OPEN_DATES[path];
+    if (!openDate) return true;
+    return new Date() >= openDate;
+};
+
+// 서비스 오픈 예정일 포맷
+const getOpenDateText = (path: string): string => {
+    const openDate = SERVICE_OPEN_DATES[path];
+    if (!openDate) return '';
+    const year = openDate.getFullYear();
+    const month = String(openDate.getMonth() + 1).padStart(2, '0');
+    const day = String(openDate.getDate()).padStart(2, '0');
+    return `${year}년 ${month}월 ${day}일`;
+};
 
 export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     const pathname = usePathname();
@@ -23,6 +46,17 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
         { name: '분기 보고서', path: '/quarterly', icon: faChartBar },
         { name: '환경설정', path: '/settings', icon: faCog },
     ];
+
+    const handleMenuClick = (e: React.MouseEvent, path: string) => {
+        if (!isServiceOpen(path)) {
+            e.preventDefault();
+            const openDate = getOpenDateText(path);
+            alert(`서비스 준비 중입니다.\n\n오픈 예정일: ${openDate}`);
+        } else {
+            // Close sidebar on mobile when navigating
+            if (window.innerWidth < 1024) onClose();
+        }
+    };
 
     return (
         <>
@@ -46,18 +80,23 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                 <nav className="p-4 space-y-2">
                     {menuItems.map((item) => {
                         const isActive = pathname.startsWith(item.path);
+                        const isLocked = !isServiceOpen(item.path);
                         return (
                             <Link
                                 key={item.path}
-                                href={item.path}
-                                className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${isActive ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400 font-medium' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'}`}
-                                onClick={() => {
-                                    // Close sidebar on mobile when navigating
-                                    if (window.innerWidth < 1024) onClose();
-                                }}
+                                href={isLocked ? '#' : item.path}
+                                className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                                    isLocked
+                                        ? 'text-gray-400 dark:text-gray-500 cursor-not-allowed'
+                                        : isActive
+                                            ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400 font-medium'
+                                            : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
+                                }`}
+                                onClick={(e) => handleMenuClick(e, item.path)}
                             >
-                                <FontAwesomeIcon icon={item.icon} className="w-5 h-5" />
+                                <FontAwesomeIcon icon={isLocked ? faLock : item.icon} className="w-5 h-5" />
                                 {item.name}
+                                {isLocked && <span className="ml-auto text-xs text-gray-400">(준비중)</span>}
                             </Link>
                         );
                     })}
