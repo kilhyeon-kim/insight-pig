@@ -41,47 +41,20 @@ export class AuthService {
     }
 
     // 3단계: 서비스 사용권한 체크
+    // SQL에서 유효 조건 체크 (INSPIG_YN='Y', USE_YN='Y', 기간 유효, 최신 건)
     const services = await this.dataSource.query(AUTH_SQL.getService, params({ farmNo: member.FARM_NO }));
     const service = services[0];
 
     if (!service) {
-      throw new ForbiddenException('인사이트피그 서비스가 등록되지 않았습니다. 관리자에게 문의하세요.');
+      // 현재 유효한 서비스가 없음 (미등록, 만료, 중지 등)
+      throw new ForbiddenException('인사이트피그 서비스가 유효하지 않습니다. (미등록/만료/중지) 관리자에게 문의하세요.');
     }
 
-    // 서비스 활성화 조건 체크
-    if (service.INSPIG_YN !== 'Y') {
-      throw new ForbiddenException('인사이트피그 서비스에 가입되지 않았습니다. 관리자에게 문의하세요.');
-    }
-    if (service.USE_YN !== 'Y') {
-      throw new ForbiddenException('인사이트피그 서비스가 사용 중지 상태입니다. 관리자에게 문의하세요.');
-    }
-
-    // INSPIG_FROM_DT, INSPIG_TO_DT, INSPIG_STOP_DT는 VARCHAR(8) YYYYMMDD 형식 (한국 시간 기준)
-    const today = todayKst(); // YYYYMMDD (KST)
-    const fromDt = service.INSPIG_FROM_DT || '';
-    const toDt = service.INSPIG_TO_DT || '99991231';
-    const stopDt = service.INSPIG_STOP_DT || '99991231';
-
+    // SQL에서 이미 유효한 최신 건만 조회되므로 추가 검증은 불필요하나 방어적으로 유지
     // 날짜 포맷팅 헬퍼 (YYYYMMDD → YYYY-MM-DD)
     const formatDate = (dt: string) => dt ? `${dt.slice(0, 4)}-${dt.slice(4, 6)}-${dt.slice(6, 8)}` : '';
-
-    // 1. 시작일 체크 (FROM_DT가 없거나 아직 시작 전인 경우)
-    if (!fromDt) {
-      throw new ForbiddenException('인사이트피그 서비스 시작일이 설정되지 않았습니다. 관리자에게 문의하세요.');
-    }
-    if (fromDt > today) {
-      throw new ForbiddenException(`인사이트피그 서비스 시작 전입니다. (시작일: ${formatDate(fromDt)})`);
-    }
-
-    // 2. 중단일 체크 (STOP_DT가 오늘이거나 과거인 경우 차단)
-    if (stopDt !== '99991231' && stopDt <= today) {
-      throw new ForbiddenException(`인사이트피그 서비스가 중단되었습니다. (중단일: ${formatDate(stopDt)})`);
-    }
-
-    // 3. 만료일 체크 (TO_DT가 어제거나 과거인 경우 차단)
-    if (toDt < today) {
-      throw new ForbiddenException(`인사이트피그 서비스 기간이 만료되었습니다. (만료일: ${formatDate(toDt)})`);
-    }
+    const fromDt = service.INSPIG_FROM_DT || '';
+    const toDt = service.INSPIG_TO_DT || '99991231';
 
     // 4단계: 농장명 및 언어코드 조회
     const farms = await this.dataSource.query(AUTH_SQL.getFarm, params({ farmNo: member.FARM_NO }));
