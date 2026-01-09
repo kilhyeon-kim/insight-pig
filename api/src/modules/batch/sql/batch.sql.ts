@@ -1,6 +1,7 @@
 /**
  * Batch Job SQL 쿼리 모음
  * TS_INS_SERVICE PK: FARM_NO + INSPIG_REG_DT (이력 관리)
+ * 주의: DB가 UTC이므로 SYSDATE + 9/24로 KST 변환
  */
 export const BATCH_SQL = {
   /**
@@ -25,8 +26,8 @@ export const BATCH_SQL = {
           AND NVL(S1.REG_TYPE, 'AUTO') = 'AUTO'
           AND S1.INSPIG_FROM_DT IS NOT NULL
           AND S1.INSPIG_TO_DT IS NOT NULL
-          AND TO_CHAR(SYSDATE, 'YYYYMMDD') >= S1.INSPIG_FROM_DT
-          AND TO_CHAR(SYSDATE, 'YYYYMMDD') <= LEAST(
+          AND TO_CHAR(SYSDATE + 9/24, 'YYYYMMDD') >= S1.INSPIG_FROM_DT
+          AND TO_CHAR(SYSDATE + 9/24, 'YYYYMMDD') <= LEAST(
               S1.INSPIG_TO_DT,
               NVL(S1.INSPIG_STOP_DT, '99991231')
           )
@@ -38,8 +39,8 @@ export const BATCH_SQL = {
                 AND S2.USE_YN = 'Y'
                 AND S2.INSPIG_FROM_DT IS NOT NULL
                 AND S2.INSPIG_TO_DT IS NOT NULL
-                AND TO_CHAR(SYSDATE, 'YYYYMMDD') >= S2.INSPIG_FROM_DT
-                AND TO_CHAR(SYSDATE, 'YYYYMMDD') <= LEAST(
+                AND TO_CHAR(SYSDATE + 9/24, 'YYYYMMDD') >= S2.INSPIG_FROM_DT
+                AND TO_CHAR(SYSDATE + 9/24, 'YYYYMMDD') <= LEAST(
                     S2.INSPIG_TO_DT,
                     NVL(S2.INSPIG_STOP_DT, '99991231')
                 )
@@ -71,8 +72,8 @@ export const BATCH_SQL = {
       AND S1.USE_YN = 'Y'
       AND S1.INSPIG_FROM_DT IS NOT NULL
       AND S1.INSPIG_TO_DT IS NOT NULL
-      AND TO_CHAR(SYSDATE, 'YYYYMMDD') >= S1.INSPIG_FROM_DT
-      AND TO_CHAR(SYSDATE, 'YYYYMMDD') <= LEAST(
+      AND TO_CHAR(SYSDATE + 9/24, 'YYYYMMDD') >= S1.INSPIG_FROM_DT
+      AND TO_CHAR(SYSDATE + 9/24, 'YYYYMMDD') <= LEAST(
           S1.INSPIG_TO_DT,
           NVL(S1.INSPIG_STOP_DT, '99991231')
       )
@@ -84,8 +85,8 @@ export const BATCH_SQL = {
             AND S2.USE_YN = 'Y'
             AND S2.INSPIG_FROM_DT IS NOT NULL
             AND S2.INSPIG_TO_DT IS NOT NULL
-            AND TO_CHAR(SYSDATE, 'YYYYMMDD') >= S2.INSPIG_FROM_DT
-            AND TO_CHAR(SYSDATE, 'YYYYMMDD') <= LEAST(
+            AND TO_CHAR(SYSDATE + 9/24, 'YYYYMMDD') >= S2.INSPIG_FROM_DT
+            AND TO_CHAR(SYSDATE + 9/24, 'YYYYMMDD') <= LEAST(
                 S2.INSPIG_TO_DT,
                 NVL(S2.INSPIG_STOP_DT, '99991231')
             )
@@ -95,18 +96,18 @@ export const BATCH_SQL = {
   /**
    * TS_INS_SERVICE MANUAL 등록 (신규 INSERT)
    * PK: FARM_NO + INSPIG_REG_DT - 항상 새로운 이력 생성
-   * MANUAL 등록은 항상 신규 레코드로 INSERT (오늘 날짜로 INSPIG_REG_DT 생성)
+   * MANUAL 등록은 항상 신규 레코드로 INSERT (오늘 KST 날짜로 INSPIG_REG_DT 생성)
    */
   upsertManualService: `
     /* batch.batch.upsertManualService : 수동 서비스 등록 (신규 이력) */
     MERGE INTO TS_INS_SERVICE S
-    USING (SELECT :farmNo AS FARM_NO, TO_CHAR(SYSDATE, 'YYYYMMDD') AS INSPIG_REG_DT FROM DUAL) D
+    USING (SELECT :farmNo AS FARM_NO, TO_CHAR(SYSDATE + 9/24, 'YYYYMMDD') AS INSPIG_REG_DT FROM DUAL) D
     ON (S.FARM_NO = D.FARM_NO AND S.INSPIG_REG_DT = D.INSPIG_REG_DT)
     WHEN MATCHED THEN
         UPDATE SET INSPIG_YN = 'Y', REG_TYPE = 'MANUAL', USE_YN = 'Y', LOG_UPT_DT = SYSDATE
     WHEN NOT MATCHED THEN
         INSERT (FARM_NO, INSPIG_YN, INSPIG_REG_DT, REG_TYPE, USE_YN, LOG_INS_DT)
-        VALUES (:farmNo, 'Y', TO_CHAR(SYSDATE, 'YYYYMMDD'), 'MANUAL', 'Y', SYSDATE)
+        VALUES (:farmNo, 'Y', TO_CHAR(SYSDATE + 9/24, 'YYYYMMDD'), 'MANUAL', 'Y', SYSDATE)
   `,
 
 

@@ -51,6 +51,7 @@ export const AUTH_SQL = {
   /**
    * 서비스 정보 조회 (인사이트피그 서비스 여부 - 현재 유효한 최신 건)
    * PK: FARM_NO + INSPIG_REG_DT - 유효한 최신 건만 조회
+   * 주의: DB가 UTC이므로 SYSDATE + 9/24로 KST 변환
    * @param farmNo - 농장번호
    */
   getService: `
@@ -70,8 +71,8 @@ export const AUTH_SQL = {
       AND S1.USE_YN = 'Y'
       AND S1.INSPIG_FROM_DT IS NOT NULL
       AND S1.INSPIG_TO_DT IS NOT NULL
-      AND TO_CHAR(SYSDATE, 'YYYYMMDD') >= S1.INSPIG_FROM_DT
-      AND TO_CHAR(SYSDATE, 'YYYYMMDD') <= LEAST(
+      AND TO_CHAR(SYSDATE + 9/24, 'YYYYMMDD') >= S1.INSPIG_FROM_DT
+      AND TO_CHAR(SYSDATE + 9/24, 'YYYYMMDD') <= LEAST(
           S1.INSPIG_TO_DT,
           NVL(S1.INSPIG_STOP_DT, '99991231')
       )
@@ -83,8 +84,8 @@ export const AUTH_SQL = {
             AND S2.USE_YN = 'Y'
             AND S2.INSPIG_FROM_DT IS NOT NULL
             AND S2.INSPIG_TO_DT IS NOT NULL
-            AND TO_CHAR(SYSDATE, 'YYYYMMDD') >= S2.INSPIG_FROM_DT
-            AND TO_CHAR(SYSDATE, 'YYYYMMDD') <= LEAST(
+            AND TO_CHAR(SYSDATE + 9/24, 'YYYYMMDD') >= S2.INSPIG_FROM_DT
+            AND TO_CHAR(SYSDATE + 9/24, 'YYYYMMDD') <= LEAST(
                 S2.INSPIG_TO_DT,
                 NVL(S2.INSPIG_STOP_DT, '99991231')
             )
