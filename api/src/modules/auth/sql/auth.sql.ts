@@ -50,46 +50,22 @@ export const AUTH_SQL = {
 
   /**
    * 서비스 정보 조회 (인사이트피그 서비스 여부 - 현재 유효한 최신 건)
-   * PK: FARM_NO + INSPIG_REG_DT - 유효한 최신 건만 조회
-   * 주의: DB가 UTC이므로 SYSDATE + 9/24로 KST 변환
+   * VW_INS_SERVICE_ACTIVE View 사용
    * @param farmNo - 농장번호
    */
   getService: `
-    /* auth.auth.getService : 서비스 권한 조회 (유효한 최신 건) */
+    /* auth.auth.getService : 서비스 권한 조회 (View 사용) */
     SELECT
-        S1.FARM_NO,
-        S1.INSPIG_YN,
-        S1.INSPIG_REG_DT,
-        S1.INSPIG_FROM_DT,
-        S1.INSPIG_TO_DT,
-        S1.INSPIG_STOP_DT,
-        S1.WEB_PAY_YN,
-        S1.USE_YN
-    FROM TS_INS_SERVICE S1
-    WHERE S1.FARM_NO = :farmNo
-      AND S1.INSPIG_YN = 'Y'
-      AND S1.USE_YN = 'Y'
-      AND S1.INSPIG_FROM_DT IS NOT NULL
-      AND S1.INSPIG_TO_DT IS NOT NULL
-      AND TO_CHAR(SYSDATE + 9/24, 'YYYYMMDD') >= S1.INSPIG_FROM_DT
-      AND TO_CHAR(SYSDATE + 9/24, 'YYYYMMDD') <= LEAST(
-          S1.INSPIG_TO_DT,
-          NVL(S1.INSPIG_STOP_DT, '99991231')
-      )
-      AND S1.INSPIG_REG_DT = (
-          SELECT MAX(S2.INSPIG_REG_DT)
-          FROM TS_INS_SERVICE S2
-          WHERE S2.FARM_NO = S1.FARM_NO
-            AND S2.INSPIG_YN = 'Y'
-            AND S2.USE_YN = 'Y'
-            AND S2.INSPIG_FROM_DT IS NOT NULL
-            AND S2.INSPIG_TO_DT IS NOT NULL
-            AND TO_CHAR(SYSDATE + 9/24, 'YYYYMMDD') >= S2.INSPIG_FROM_DT
-            AND TO_CHAR(SYSDATE + 9/24, 'YYYYMMDD') <= LEAST(
-                S2.INSPIG_TO_DT,
-                NVL(S2.INSPIG_STOP_DT, '99991231')
-            )
-      )
+        FARM_NO,
+        INSPIG_YN,
+        INSPIG_REG_DT,
+        INSPIG_FROM_DT,
+        INSPIG_TO_DT,
+        INSPIG_STOP_DT,
+        WEB_PAY_YN,
+        USE_YN
+    FROM VW_INS_SERVICE_ACTIVE
+    WHERE FARM_NO = :farmNo
   `,
 
   /**
