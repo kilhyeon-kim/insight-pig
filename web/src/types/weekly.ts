@@ -478,6 +478,37 @@ export interface WeatherPopupData {
   minTemp: number[];
   weatherCode: string[];
   rainProb: number[];
+  humidity?: number[];
+  // 일별 상세 데이터 (카드형 UI용)
+  daily?: WeatherDailyItem[];
+}
+
+/**
+ * 일별 날씨 아이템 (기상청 형태 카드 UI용)
+ */
+export interface WeatherDailyItem {
+  wkDate: string;           // YYYYMMDD
+  dayLabel: string;         // "13일(화)"
+  periodLabel?: string;     // "오늘", "내일", "모레"
+  weatherCd: string;        // sunny, cloudy, rainy, snowy, overcast
+  weatherNm: string;        // 맑음, 구름많음, 비, 눈, 흐림
+  tempHigh: number | null;  // 최고기온
+  tempLow: number | null;   // 최저기온
+  rainProb: number;         // 강수확률 (%)
+  humidity?: number | null; // 습도 (%)
+}
+
+/**
+ * 시간별 날씨 데이터 (일별 카드 클릭 시)
+ */
+export interface WeatherHourlyItem {
+  wkTime: string;           // HHMM (0000~2300)
+  timeLabel: string;        // "00시", "03시"
+  weatherCd: string;
+  weatherNm: string;
+  temp: number | null;
+  rainProb: number;
+  humidity?: number | null;
 }
 
 /**

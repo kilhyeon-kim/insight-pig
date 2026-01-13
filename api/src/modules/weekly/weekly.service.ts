@@ -591,9 +591,9 @@ export class WeeklyService {
           source: '전국(제주제외) 탕박 등외제외',
         },
         weather: {
-          min: mockData.operationSummaryData.weather.min as number | null,
-          max: mockData.operationSummaryData.weather.max as number | null,
-          region: mockData.operationSummaryData.weather.location,
+          min: null as number | null,
+          max: null as number | null,
+          region: '',
         },
       },
       // 관리 포인트 (TS_INS_MGMT 테이블에서 조회)
@@ -1966,9 +1966,11 @@ export class WeeklyService {
       }
 
       const row = results[0];
+      // TEMP_HIGH/TEMP_LOW가 NULL이면 TEMP_AVG를 fallback으로 사용
+      const tempAvg = row.TEMP_AVG !== null ? Number(row.TEMP_AVG) : null;
       return {
-        min: row.TEMP_LOW !== null ? Number(row.TEMP_LOW) : null,
-        max: row.TEMP_HIGH !== null ? Number(row.TEMP_HIGH) : null,
+        min: row.TEMP_LOW !== null ? Number(row.TEMP_LOW) : tempAvg,
+        max: row.TEMP_HIGH !== null ? Number(row.TEMP_HIGH) : tempAvg,
         region: this.extractRegionName(grid.region),
         weatherCd: row.WEATHER_CD,
         weatherNm: row.WEATHER_NM,
