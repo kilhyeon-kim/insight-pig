@@ -25,8 +25,8 @@ export interface ExtraData {
         source: string;
     };
     weather: {
-        min: number;
-        max: number;
+        min: number | null;
+        max: number | null;
         region: string;
     };
 }
@@ -62,10 +62,12 @@ export const ExtraSection: React.FC<ExtraSectionProps> = ({ data, onPopupOpen })
                     부가 정보
                 </div>
                 <div className="info-accordion-preview">
-                    {/* TODO: PSY/날씨 데이터 준비되면 활성화 */}
+                    {/* TODO: PSY 데이터 준비되면 활성화 */}
                     {/* <span><FontAwesomeIcon icon={faGrip} /> {data.psy.zone}</span> */}
                     <span><FontAwesomeIcon icon={faWonSign} /> {data.price.avg.toLocaleString()}원</span>
-                    {/* <span><FontAwesomeIcon icon={faCloudSun} /> {data.weather.min}°/{data.weather.max}°</span> */}
+                    {data.weather.min !== null && data.weather.max !== null && (
+                        <span><FontAwesomeIcon icon={faCloudSun} /> {data.weather.min}°/{data.weather.max}°</span>
+                    )}
                 </div>
                 <div className="info-accordion-toggle">
                     <FontAwesomeIcon icon={faChevronDown} />
@@ -126,33 +128,35 @@ export const ExtraSection: React.FC<ExtraSectionProps> = ({ data, onPopupOpen })
                         </div>
                     </div>
 
-                    {/* 오늘 날씨 카드 - TODO: 날씨 데이터 준비되면 활성화 */}
-                    {/* <div className="info-accordion-card" id="cardWeather">
-                        <div className="card-header">
-                            <div className="card-title">
-                                <FontAwesomeIcon icon={faCloudSun} className="fa-sm" /> 오늘 날씨
-                            </div>
-                            <button className="card-more" onClick={() => handlePopup('weather')}>
-                                <FontAwesomeIcon icon={faChartLine} />&nbsp;주간날씨
-                            </button>
-                        </div>
-                        <div className="card-content">
-                            <div className="section-left">
-                                <div className="value-box">
-                                    <div className="label">최저</div>
-                                    <div className="value blue">{data.weather.min}°</div>
+                    {/* 오늘 날씨 카드 - 날씨 데이터가 있는 경우에만 표시 */}
+                    {data.weather.min !== null && data.weather.max !== null && (
+                        <div className="info-accordion-card" id="cardWeather">
+                            <div className="card-header">
+                                <div className="card-title">
+                                    <FontAwesomeIcon icon={faCloudSun} className="fa-sm" /> 오늘 날씨
                                 </div>
-                                <div className="value-box">
-                                    <div className="label">최고</div>
-                                    <div className="value red">{data.weather.max}°</div>
+                                <button className="card-more" onClick={() => handlePopup('weather')}>
+                                    <FontAwesomeIcon icon={faChartLine} />&nbsp;주간날씨
+                                </button>
+                            </div>
+                            <div className="card-content">
+                                <div className="section-left">
+                                    <div className="value-box">
+                                        <div className="label">최저</div>
+                                        <div className="value blue">{data.weather.min}°</div>
+                                    </div>
+                                    <div className="value-box">
+                                        <div className="label">최고</div>
+                                        <div className="value red">{data.weather.max}°</div>
+                                    </div>
+                                </div>
+                                <div className="section-right">
+                                    <div className="source-label">지역</div>
+                                    <div className="source-value">{data.weather.region}</div>
                                 </div>
                             </div>
-                            <div className="section-right">
-                                <div className="source-label">지역</div>
-                                <div className="source-value">{data.weather.region}</div>
-                            </div>
                         </div>
-                    </div> */}
+                    )}
                 </div>
             </div>
         </div>

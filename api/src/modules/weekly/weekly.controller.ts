@@ -426,6 +426,52 @@ export class WeeklyController {
     return { success: true, data: this.weeklyService.getWeather() };
   }
 
+  /**
+   * GET /api/weekly/weather/daily/:farmNo
+   * 주간 일별 날씨 조회 (날씨 팝업용)
+   * @param farmNo - 농장번호
+   * @query from - 시작일 (YYYYMMDD)
+   * @query to - 종료일 (YYYYMMDD)
+   */
+  @Get('weather/daily/:farmNo')
+  async getWeatherDaily(
+    @Param('farmNo') farmNo: string,
+    @Query('from') from: string,
+    @Query('to') to: string,
+  ) {
+    const farmNoNum = parseInt(farmNo, 10);
+    if (!farmNoNum) {
+      return { success: false, error: 'farmNo 파라미터가 필요합니다.' };
+    }
+    if (!from || !to) {
+      return { success: false, error: 'from, to 파라미터가 필요합니다.' };
+    }
+    const data = await this.weeklyService.getWeatherDaily(farmNoNum, from, to);
+    return { success: true, data };
+  }
+
+  /**
+   * GET /api/weekly/weather/hourly/:farmNo/:wkDate
+   * 시간별 날씨 조회 (날짜 클릭 시)
+   * @param farmNo - 농장번호
+   * @param wkDate - 조회일 (YYYYMMDD)
+   */
+  @Get('weather/hourly/:farmNo/:wkDate')
+  async getWeatherHourly(
+    @Param('farmNo') farmNo: string,
+    @Param('wkDate') wkDate: string,
+  ) {
+    const farmNoNum = parseInt(farmNo, 10);
+    if (!farmNoNum) {
+      return { success: false, error: 'farmNo 파라미터가 필요합니다.' };
+    }
+    if (!wkDate || !/^\d{8}$/.test(wkDate)) {
+      return { success: false, error: 'wkDate는 YYYYMMDD 형식이어야 합니다.' };
+    }
+    const data = await this.weeklyService.getWeatherHourly(farmNoNum, wkDate);
+    return { success: true, data };
+  }
+
   /** GET /api/weekly/insights */
   @Get('insights')
   getInsights() {

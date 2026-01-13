@@ -127,6 +127,34 @@ export class AuthService {
   }
 
   /**
+   * 스케줄 그룹 업데이트
+   * @param farmNo 농장번호
+   * @param scheduleGroupWeek 주간 스케줄 그룹 (AM7/PM2)
+   * @returns 업데이트 성공 여부
+   */
+  async updateScheduleGroup(farmNo: number, scheduleGroupWeek: string): Promise<boolean> {
+    // 먼저 유효한 서비스가 있는지 확인
+    const service = await this.getServiceByFarmNo(farmNo);
+    if (!service) {
+      return false;
+    }
+
+    // 스케줄 그룹 유효성 검증
+    if (!['AM7', 'PM2'].includes(scheduleGroupWeek)) {
+      return false;
+    }
+
+    // 업데이트 실행
+    await this.dataSource.query(AUTH_SQL.updateScheduleGroup, params({
+      farmNo,
+      inspigRegDt: service.INSPIG_REG_DT,
+      scheduleGroupWeek,
+    }));
+
+    return true;
+  }
+
+  /**
    * Raw SQL 결과를 TaMember 형식으로 매핑
    */
   private mapToMember(row: any): TaMember {

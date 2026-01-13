@@ -63,9 +63,28 @@ export const AUTH_SQL = {
         INSPIG_TO_DT,
         INSPIG_STOP_DT,
         WEB_PAY_YN,
+        SCHEDULE_GROUP_WEEK,
+        SCHEDULE_GROUP_MONTH,
+        SCHEDULE_GROUP_QUARTER,
         USE_YN
     FROM VW_INS_SERVICE_ACTIVE
     WHERE FARM_NO = :farmNo
+  `,
+
+  /**
+   * 스케줄 그룹 업데이트
+   * VW_INS_SERVICE_ACTIVE가 반환하는 INSPIG_REG_DT를 사용하여 정확한 행 업데이트
+   * @param farmNo - 농장번호
+   * @param inspigRegDt - 서비스 등록일 (PK)
+   * @param scheduleGroupWeek - 주간 스케줄 그룹 (AM7/PM2)
+   */
+  updateScheduleGroup: `
+    /* auth.auth.updateScheduleGroup : 스케줄 그룹 업데이트 */
+    UPDATE TS_INS_SERVICE
+    SET SCHEDULE_GROUP_WEEK = :scheduleGroupWeek,
+        LOG_UPT_DT = SYSDATE
+    WHERE FARM_NO = :farmNo
+      AND INSPIG_REG_DT = :inspigRegDt
   `,
 
   /**

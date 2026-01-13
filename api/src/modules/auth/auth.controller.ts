@@ -3,8 +3,10 @@ import {
   Post,
   Body,
   Get,
+  Put,
   Headers,
   UnauthorizedException,
+  BadRequestException,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { LoginRequestDto } from './dto';
@@ -86,8 +88,47 @@ export class AuthController {
         inspigYn: service.INSPIG_YN,
         inspigFromDt: service.INSPIG_FROM_DT,
         inspigToDt: service.INSPIG_TO_DT,
+        scheduleGroupWeek: service.SCHEDULE_GROUP_WEEK || 'AM7',
+        scheduleGroupMonth: service.SCHEDULE_GROUP_MONTH || 'AM7',
+        scheduleGroupQuarter: service.SCHEDULE_GROUP_QUARTER || 'AM7',
         useYn: service.USE_YN,
       },
+    };
+  }
+
+  /**
+   * 스케줄 그룹 업데이트
+   * PUT /api/auth/service/schedule-group
+   */
+  @Put('service/schedule-group')
+  async updateScheduleGroup(
+    @Headers('authorization') authHeader: string,
+    @Body() body: { scheduleGroupWeek: string },
+  ) {
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      throw new UnauthorizedException('인증 토큰이 필요합니다.');
+    }
+
+    const token = authHeader.substring(7);
+    const payload = await this.authService.validateToken(token);
+
+    // 스케줄 그룹 유효성 검증
+    if (!body.scheduleGroupWeek || !['AM7', 'PM2'].includes(body.scheduleGroupWeek)) {
+      throw new BadRequestException('유효하지 않은 스케줄 그룹입니다. (AM7 또는 PM2)');
+    }
+
+    const success = await this.authService.updateScheduleGroup(
+      payload.farmNo,
+      body.scheduleGroupWeek,
+    );
+
+    if (!success) {
+      throw new BadRequestException('서비스가 유효하지 않아 스케줄 그룹을 변경할 수 없습니다.');
+    }
+
+    return {
+      success: true,
+      message: '스케줄 그룹이 변경되었습니다.',
     };
   }
 

@@ -439,4 +439,103 @@ export const WEEKLY_SQL = {
         UPD_DT = SYSDATE
     WHERE FILE_SEQ = :fileSeq
   `,
+
+  /**
+   * 농장 격자 좌표 조회
+   * @param farmNo - 농장번호
+   */
+  getFarmWeatherGrid: `
+    /* weekly.weekly.getFarmWeatherGrid : 농장 격자 좌표 조회 */
+    SELECT
+        FARM_NO,
+        WEATHER_NX_N AS NX,
+        WEATHER_NY_N AS NY,
+        ADDR1 AS REGION
+    FROM TA_FARM
+    WHERE FARM_NO = :farmNo
+      AND WEATHER_NX_N IS NOT NULL
+      AND WEATHER_NY_N IS NOT NULL
+  `,
+
+  /**
+   * 일별 날씨 조회 (TM_WEATHER)
+   * @param nx - 격자 X
+   * @param ny - 격자 Y
+   * @param dtFrom - 시작일 (YYYYMMDD)
+   * @param dtTo - 종료일 (YYYYMMDD)
+   */
+  getWeatherDaily: `
+    /* weekly.weekly.getWeatherDaily : 일별 날씨 조회 */
+    SELECT
+        WK_DATE,
+        NX,
+        NY,
+        WEATHER_CD,
+        WEATHER_NM,
+        TEMP_AVG,
+        TEMP_HIGH,
+        TEMP_LOW,
+        RAIN_PROB,
+        RAIN_AMT,
+        HUMIDITY,
+        WIND_SPEED,
+        SKY_CD,
+        IS_FORECAST
+    FROM TM_WEATHER
+    WHERE NX = :nx
+      AND NY = :ny
+      AND WK_DATE BETWEEN :dtFrom AND :dtTo
+    ORDER BY WK_DATE
+  `,
+
+  /**
+   * 시간별 날씨 조회 (TM_WEATHER_HOURLY)
+   * @param nx - 격자 X
+   * @param ny - 격자 Y
+   * @param wkDate - 조회일 (YYYYMMDD)
+   */
+  getWeatherHourly: `
+    /* weekly.weekly.getWeatherHourly : 시간별 날씨 조회 */
+    SELECT
+        WK_DATE,
+        WK_TIME,
+        NX,
+        NY,
+        WEATHER_CD,
+        WEATHER_NM,
+        TEMP,
+        RAIN_PROB,
+        RAIN_AMT,
+        HUMIDITY,
+        WIND_SPEED,
+        SKY_CD,
+        PTY_CD
+    FROM TM_WEATHER_HOURLY
+    WHERE NX = :nx
+      AND NY = :ny
+      AND WK_DATE = :wkDate
+    ORDER BY WK_TIME
+  `,
+
+  /**
+   * 오늘 날씨 조회 (extra.weather 카드용)
+   * @param nx - 격자 X
+   * @param ny - 격자 Y
+   */
+  getWeatherToday: `
+    /* weekly.weekly.getWeatherToday : 오늘 날씨 조회 */
+    SELECT
+        WK_DATE,
+        WEATHER_CD,
+        WEATHER_NM,
+        TEMP_AVG,
+        TEMP_HIGH,
+        TEMP_LOW,
+        RAIN_PROB,
+        SKY_CD
+    FROM TM_WEATHER
+    WHERE NX = :nx
+      AND NY = :ny
+      AND WK_DATE = TO_CHAR(SYSDATE, 'YYYYMMDD')
+  `,
 };

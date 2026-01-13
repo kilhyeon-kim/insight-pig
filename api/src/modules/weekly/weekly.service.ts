@@ -308,11 +308,64 @@ export class WeeklyService {
         auctionPopupData = await this.getAuctionPopupData(dtFrom, dtTo);
       }
 
-      // 6. 상시모돈 데이터: TS_INS_WEEK.MODON_SANGSI_CNT 사용 (방식 2)
+      // 6. 날씨 데이터 조회 (extra.weather용)
+      const weatherToday = await this.getWeatherToday(farmNo);
+      if (reportData.extra && weatherToday) {
+        reportData.extra.weather = {
+          min: weatherToday.min,
+          max: weatherToday.max,
+          region: weatherToday.region,
+        };
+      }
+
+      // 7. 날씨 팝업 데이터 조회 (금주 월~일)
+      let weatherPopupData: {
+        xData: string[];
+        maxTemp: number[];
+        minTemp: number[];
+        weatherCode: string[];
+        rainProb: number[];
+      } | null = null;
+
+      // 금주 날짜 계산 (오늘 기준 월~일)
+      const today = nowKst();
+      const dayOfWeek = today.getDay(); // 0=일, 1=월, ..., 6=토
+      const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+      const monday = new Date(today);
+      monday.setDate(today.getDate() + mondayOffset);
+      const sunday = new Date(monday);
+      sunday.setDate(monday.getDate() + 6);
+
+      const formatDate = (d: Date) =>
+        `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
+
+      const weekDtFrom = formatDate(monday);
+      const weekDtTo = formatDate(sunday);
+
+      const weatherDaily = await this.getWeatherDaily(farmNo, weekDtFrom, weekDtTo);
+      if (weatherDaily && weatherDaily.daily.length > 0) {
+        const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
+        weatherPopupData = {
+          xData: weatherDaily.daily.map((d) => {
+            const dt = new Date(
+              parseInt(d.wkDate.substring(0, 4)),
+              parseInt(d.wkDate.substring(4, 6)) - 1,
+              parseInt(d.wkDate.substring(6, 8)),
+            );
+            return `${d.wkDate.substring(4, 6)}/${d.wkDate.substring(6, 8)}(${dayNames[dt.getDay()]})`;
+          }),
+          maxTemp: weatherDaily.daily.map((d) => d.tempHigh ?? 0),
+          minTemp: weatherDaily.daily.map((d) => d.tempLow ?? 0),
+          weatherCode: weatherDaily.daily.map((d) => d.weatherCd || 'sunny'),
+          rainProb: weatherDaily.daily.map((d) => d.rainProb ?? 0),
+        };
+      }
+
+      // 8. 상시모돈 데이터: TS_INS_WEEK.MODON_SANGSI_CNT 사용 (방식 2)
       // ETL에서 TS_PRODUCTIVITY → TS_INS_WEEK.MODON_SANGSI_CNT 업데이트
       // 웹에서는 TS_INS_WEEK에서 직접 읽어옴 (362라인의 sangsiCnt: week.MODON_SANGSI_CNT)
 
-      return { ...reportData, popupData, auction: auctionPopupData };
+      return { ...reportData, popupData, auction: auctionPopupData, weather: weatherPopupData };
     } catch (error) {
       this.logger.error('DB 조회 실패', error.message);
       // DB 연동 완료 - Mock fallback 제거
@@ -538,8 +591,8 @@ export class WeeklyService {
           source: '전국(제주제외) 탕박 등외제외',
         },
         weather: {
-          min: mockData.operationSummaryData.weather.min,
-          max: mockData.operationSummaryData.weather.max,
+          min: mockData.operationSummaryData.weather.min as number | null,
+          max: mockData.operationSummaryData.weather.max as number | null,
           region: mockData.operationSummaryData.weather.location,
         },
       },
@@ -1860,6 +1913,169 @@ export class WeeklyService {
 
   getWeather() {
     return mockData.operationSummaryData.weather;
+  }
+
+  /**
+   * 농장 격자 좌표 및 지역명 조회
+   * @param farmNo - 농장번호
+   */
+  async getFarmWeatherGrid(farmNo: number) {
+    try {
+      const results = await this.dataSource.query(
+        WEEKLY_SQL.getFarmWeatherGrid,
+        params({ farmNo }),
+      );
+      if (!results || results.length === 0) {
+        return null;
+      }
+      const row = results[0];
+      return {
+        farmNo: row.FARM_NO,
+        nx: Number(row.NX),
+        ny: Number(row.NY),
+        region: row.REGION || '',
+      };
+    } catch (error) {
+      this.logger.error(`농장 격자 좌표 조회 실패: ${error.message}`);
+      return null;
+    }
+  }
+
+  /**
+   * 오늘 날씨 조회 (extra.weather 카드용)
+   * @param farmNo - 농장번호
+   */
+  async getWeatherToday(farmNo: number) {
+    try {
+      const grid = await this.getFarmWeatherGrid(farmNo);
+      if (!grid) {
+        return null;
+      }
+
+      const results = await this.dataSource.query(
+        WEEKLY_SQL.getWeatherToday,
+        params({ nx: grid.nx, ny: grid.ny }),
+      );
+
+      if (!results || results.length === 0) {
+        return {
+          min: null,
+          max: null,
+          region: this.extractRegionName(grid.region),
+        };
+      }
+
+      const row = results[0];
+      return {
+        min: row.TEMP_LOW !== null ? Number(row.TEMP_LOW) : null,
+        max: row.TEMP_HIGH !== null ? Number(row.TEMP_HIGH) : null,
+        region: this.extractRegionName(grid.region),
+        weatherCd: row.WEATHER_CD,
+        weatherNm: row.WEATHER_NM,
+        skyCd: row.SKY_CD,
+      };
+    } catch (error) {
+      this.logger.error(`오늘 날씨 조회 실패: ${error.message}`);
+      return null;
+    }
+  }
+
+  /**
+   * 주간 일별 날씨 조회 (날씨 팝업용)
+   * @param farmNo - 농장번호
+   * @param dtFrom - 시작일 (YYYYMMDD)
+   * @param dtTo - 종료일 (YYYYMMDD)
+   */
+  async getWeatherDaily(farmNo: number, dtFrom: string, dtTo: string) {
+    try {
+      const grid = await this.getFarmWeatherGrid(farmNo);
+      if (!grid) {
+        return { region: '', daily: [] };
+      }
+
+      const results = await this.dataSource.query(
+        WEEKLY_SQL.getWeatherDaily,
+        params({ nx: grid.nx, ny: grid.ny, dtFrom, dtTo }),
+      );
+
+      const daily = (results || []).map((row: any) => ({
+        wkDate: row.WK_DATE,
+        weatherCd: row.WEATHER_CD,
+        weatherNm: row.WEATHER_NM,
+        tempAvg: row.TEMP_AVG !== null ? Number(row.TEMP_AVG) : null,
+        tempHigh: row.TEMP_HIGH !== null ? Number(row.TEMP_HIGH) : null,
+        tempLow: row.TEMP_LOW !== null ? Number(row.TEMP_LOW) : null,
+        rainProb: row.RAIN_PROB !== null ? Number(row.RAIN_PROB) : null,
+        rainAmt: row.RAIN_AMT !== null ? Number(row.RAIN_AMT) : null,
+        humidity: row.HUMIDITY !== null ? Number(row.HUMIDITY) : null,
+        windSpeed: row.WIND_SPEED !== null ? Number(row.WIND_SPEED) : null,
+        skyCd: row.SKY_CD,
+        isForecast: row.IS_FORECAST,
+      }));
+
+      return {
+        region: this.extractRegionName(grid.region),
+        nx: grid.nx,
+        ny: grid.ny,
+        daily,
+      };
+    } catch (error) {
+      this.logger.error(`주간 날씨 조회 실패: ${error.message}`);
+      return { region: '', daily: [] };
+    }
+  }
+
+  /**
+   * 시간별 날씨 조회 (날짜 클릭 시)
+   * @param farmNo - 농장번호
+   * @param wkDate - 조회일 (YYYYMMDD)
+   */
+  async getWeatherHourly(farmNo: number, wkDate: string) {
+    try {
+      const grid = await this.getFarmWeatherGrid(farmNo);
+      if (!grid) {
+        return { region: '', hourly: [] };
+      }
+
+      const results = await this.dataSource.query(
+        WEEKLY_SQL.getWeatherHourly,
+        params({ nx: grid.nx, ny: grid.ny, wkDate }),
+      );
+
+      const hourly = (results || []).map((row: any) => ({
+        wkDate: row.WK_DATE,
+        wkTime: row.WK_TIME,
+        weatherCd: row.WEATHER_CD,
+        weatherNm: row.WEATHER_NM,
+        temp: row.TEMP !== null ? Number(row.TEMP) : null,
+        rainProb: row.RAIN_PROB !== null ? Number(row.RAIN_PROB) : null,
+        rainAmt: row.RAIN_AMT !== null ? Number(row.RAIN_AMT) : null,
+        humidity: row.HUMIDITY !== null ? Number(row.HUMIDITY) : null,
+        windSpeed: row.WIND_SPEED !== null ? Number(row.WIND_SPEED) : null,
+        skyCd: row.SKY_CD,
+        ptyCd: row.PTY_CD,
+      }));
+
+      return {
+        region: this.extractRegionName(grid.region),
+        wkDate,
+        hourly,
+      };
+    } catch (error) {
+      this.logger.error(`시간별 날씨 조회 실패: ${error.message}`);
+      return { region: '', hourly: [] };
+    }
+  }
+
+  /**
+   * 주소에서 지역명 추출 (시도 시군구 읍면동)
+   * @param addr - 전체 주소 (예: 충청남도 홍성군 홍동면 문당리 ...)
+   */
+  private extractRegionName(addr: string): string {
+    if (!addr) return '';
+    // 공백으로 분리하여 앞 3개만 (시도 시군구 읍면동)
+    const parts = addr.split(/\s+/);
+    return parts.slice(0, 3).join(' ');
   }
 
   getInsights() {
