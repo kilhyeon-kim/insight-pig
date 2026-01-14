@@ -48,6 +48,9 @@ interface ExtraSectionProps {
 export const ExtraSection: React.FC<ExtraSectionProps> = ({ data, onPopupOpen }) => {
     const [isOpen, setIsOpen] = useState(false);
 
+    // 날씨 데이터 유효성 체크
+    const hasWeatherData = data.weather.current !== null || data.weather.max !== null || data.weather.min !== null;
+
     const handleToggle = () => {
         setIsOpen(!isOpen);
     };
@@ -70,20 +73,24 @@ export const ExtraSection: React.FC<ExtraSectionProps> = ({ data, onPopupOpen })
                     {/* TODO: PSY 데이터 준비되면 활성화 */}
                     {/* <span><FontAwesomeIcon icon={faGrip} /> {data.psy.zone}</span> */}
                     <span><FontAwesomeIcon icon={faWonSign} /> {data.price.avg.toLocaleString()}원</span>
-                    {(data.weather.current !== null || data.weather.max !== null || data.weather.min !== null) && (
-                        <span className="weather-preview inline-flex items-center !bg-transparent !p-0">
-                            <FontAwesomeIcon icon={faCloudSun} />
-                            {data.weather.current !== null && <span className="ml-1 !bg-transparent !p-0">{data.weather.current}°</span>}
-                            <span className="ml-1 inline-grid text-[10px] leading-none px-1.5 py-0.5 rounded bg-blue-50 dark:bg-blue-900/50">
-                                {data.weather.max !== null && (
-                                    <span className="text-red-700 dark:text-red-400 !p-0 !m-0 !bg-transparent"><FontAwesomeIcon icon={faCaretUp} /> {data.weather.max}°</span>
-                                )}
-                                {data.weather.min !== null && (
-                                    <span className="text-blue-700 dark:text-blue-400 !p-0 !m-0 !bg-transparent"><FontAwesomeIcon icon={faCaretDown} /> {data.weather.min}°</span>
-                                )}
-                            </span>
-                        </span>
-                    )}
+                    <span className="weather-preview inline-flex items-center !bg-transparent !p-0">
+                        <FontAwesomeIcon icon={faCloudSun} />
+                        {hasWeatherData ? (
+                            <>
+                                {data.weather.current !== null && <span className="ml-1 !bg-transparent !p-0">{data.weather.current}°</span>}
+                                <span className="ml-1 inline-grid text-[10px] leading-none px-1.5 py-0.5 rounded bg-blue-50 dark:bg-blue-900/50">
+                                    {data.weather.max !== null && (
+                                        <span className="text-red-700 dark:text-red-400 !p-0 !m-0 !bg-transparent"><FontAwesomeIcon icon={faCaretUp} /> {data.weather.max}°</span>
+                                    )}
+                                    {data.weather.min !== null && (
+                                        <span className="text-blue-700 dark:text-blue-400 !p-0 !m-0 !bg-transparent"><FontAwesomeIcon icon={faCaretDown} /> {data.weather.min}°</span>
+                                    )}
+                                </span>
+                            </>
+                        ) : (
+                            <span className="ml-1 text-gray-400 dark:text-gray-500 !bg-transparent !p-0">정보없음</span>
+                        )}
+                    </span>
                 </div>
                 <div className="info-accordion-toggle">
                     <FontAwesomeIcon icon={faChevronDown} />
@@ -144,39 +151,49 @@ export const ExtraSection: React.FC<ExtraSectionProps> = ({ data, onPopupOpen })
                         </div>
                     </div>
 
-                    {/* 오늘 날씨 카드 - 날씨 데이터가 있는 경우에만 표시 */}
-                    {(data.weather.current !== null || data.weather.min !== null || data.weather.max !== null) && (
-                        <div className="info-accordion-card" id="cardWeather">
-                            <div className="card-header">
-                                <div className="card-title">
-                                    <FontAwesomeIcon icon={faCloudSun} className="fa-sm" /> 오늘 날씨
-                                </div>
+                    {/* 오늘 날씨 카드 */}
+                    <div className="info-accordion-card" id="cardWeather">
+                        <div className="card-header">
+                            <div className="card-title">
+                                <FontAwesomeIcon icon={faCloudSun} className="fa-sm" /> 오늘 날씨
+                            </div>
+                            {hasWeatherData && (
                                 <button className="card-more" onClick={() => handlePopup('weather')}>
                                     <FontAwesomeIcon icon={faChartLine} />&nbsp;주간날씨
                                 </button>
-                            </div>
-                            <div className="card-content">
-                                <div className="section-left">
-                                    <div className="value-box">
-                                        <div className="label">현재</div>
-                                        <div className="value" style={{ fontSize: '18px' }}>{data.weather.current !== null ? `${data.weather.current}°` : '-'}</div>
-                                    </div>
-                                    <div className="value-box">
-                                        <div className="label">최고</div>
-                                        <div className="value red">{data.weather.max !== null ? `${data.weather.max}°` : '-'}</div>
-                                    </div>
-                                    <div className="value-box">
-                                        <div className="label">최저</div>
-                                        <div className="value blue">{data.weather.min !== null ? `${data.weather.min}°` : '-'}</div>
-                                    </div>
-                                </div>
-                                <div className="section-right">
-                                    <div className="source-label">지역</div>
-                                    <div className="source-value">{data.weather.region}</div>
-                                </div>
-                            </div>
+                            )}
                         </div>
-                    )}
+                        <div className="card-content">
+                            {hasWeatherData ? (
+                                <>
+                                    <div className="section-left">
+                                        <div className="value-box">
+                                            <div className="label">현재</div>
+                                            <div className="value" style={{ fontSize: '18px' }}>{data.weather.current !== null ? `${data.weather.current}°` : '-'}</div>
+                                        </div>
+                                        <div className="value-box">
+                                            <div className="label">최고</div>
+                                            <div className="value red">{data.weather.max !== null ? `${data.weather.max}°` : '-'}</div>
+                                        </div>
+                                        <div className="value-box">
+                                            <div className="label">최저</div>
+                                            <div className="value blue">{data.weather.min !== null ? `${data.weather.min}°` : '-'}</div>
+                                        </div>
+                                    </div>
+                                    <div className="section-right">
+                                        <div className="source-label">지역</div>
+                                        <div className="source-value">{data.weather.region}</div>
+                                    </div>
+                                </>
+                            ) : (
+                                <div className="section-left">
+                                    <div className="text-gray-400 dark:text-gray-500 text-sm">
+                                        날씨 정보없음
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
