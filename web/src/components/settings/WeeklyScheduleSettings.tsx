@@ -261,9 +261,9 @@ export default function WeeklyScheduleSettings({
 
     return (
         <div id="weekly-schedule-settings">
-            <div className="px-4 py-4">
+            <div className="px-4 py-4 lg:px-6">
                 {/* 작업 항목별 설정 */}
-                <div className="space-y-2">
+                <div className="space-y-2 lg:grid lg:grid-cols-2 lg:gap-3 lg:space-y-0">
                     {SCHEDULE_ITEMS.map((item) => {
                         const isModon = scheduleCalcMethods[item.key] === 'modon';
                         const isVaccine = item.key === 'vaccine';
@@ -284,25 +284,25 @@ export default function WeeklyScheduleSettings({
                                 {/* 작업 구분 헤더 */}
                                 <div className="flex items-center justify-between px-4 py-3">
                                     <div className="flex items-center gap-2">
-                                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                        <span className="text-sm lg:text-base font-medium text-gray-700 dark:text-gray-300">
                                             {item.label}
                                         </span>
                                     </div>
 
                                     {/* 산정 방식 선택 */}
-                                    <div className="flex items-center gap-3">
+                                    <div className="flex items-center gap-3 lg:gap-4">
                                         <label
                                             onClick={() => !readOnly && !isVaccine && handleScheduleMethodChange(item.key, 'farm')}
-                                            className={`flex items-center gap-1.5 ${readOnly || isVaccine ? 'cursor-default' : 'cursor-pointer'} ${isVaccine ? 'opacity-50' : ''}`}
+                                            className={`flex items-center gap-1.5 lg:gap-2 ${readOnly || isVaccine ? 'cursor-default' : 'cursor-pointer'} ${isVaccine ? 'opacity-50' : ''}`}
                                         >
-                                            <span className={`w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center ${
+                                            <span className={`w-3.5 h-3.5 lg:w-4 lg:h-4 rounded-full border-2 flex items-center justify-center ${
                                                 !isModon && !isVaccine
                                                     ? 'border-blue-500 bg-blue-500'
                                                     : 'border-gray-300 dark:border-gray-500'
                                             }`}>
-                                                {!isModon && !isVaccine && <span className="w-1.5 h-1.5 rounded-full bg-white" />}
+                                                {!isModon && !isVaccine && <span className="w-1.5 h-1.5 lg:w-2 lg:h-2 rounded-full bg-white" />}
                                             </span>
-                                            <span className={`text-xs ${
+                                            <span className={`text-xs lg:text-sm ${
                                                 !isModon && !isVaccine
                                                     ? 'text-blue-600 dark:text-blue-400 font-medium'
                                                     : 'text-gray-500 dark:text-gray-400'
@@ -312,16 +312,16 @@ export default function WeeklyScheduleSettings({
                                         </label>
                                         <label
                                             onClick={() => !readOnly && handleScheduleMethodChange(item.key, 'modon')}
-                                            className={`flex items-center gap-1.5 ${readOnly ? 'cursor-default' : 'cursor-pointer'}`}
+                                            className={`flex items-center gap-1.5 lg:gap-2 ${readOnly ? 'cursor-default' : 'cursor-pointer'}`}
                                         >
-                                            <span className={`w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center ${
+                                            <span className={`w-3.5 h-3.5 lg:w-4 lg:h-4 rounded-full border-2 flex items-center justify-center ${
                                                 isModon || isVaccine
                                                     ? 'border-green-500 bg-green-500'
                                                     : 'border-gray-300 dark:border-gray-500'
                                             }`}>
-                                                {(isModon || isVaccine) && <span className="w-1.5 h-1.5 rounded-full bg-white" />}
+                                                {(isModon || isVaccine) && <span className="w-1.5 h-1.5 lg:w-2 lg:h-2 rounded-full bg-white" />}
                                             </span>
-                                            <span className={`text-xs ${
+                                            <span className={`text-xs lg:text-sm ${
                                                 isModon || isVaccine
                                                     ? 'text-green-600 dark:text-green-400 font-medium'
                                                     : 'text-gray-500 dark:text-gray-400'
@@ -339,7 +339,7 @@ export default function WeeklyScheduleSettings({
                                             {farmDefaults.map((defaultItem, idx) => (
                                                 <div
                                                     key={idx}
-                                                    className={`flex items-center justify-between px-3 py-1.5 text-xs ${
+                                                    className={`flex items-center justify-between px-3 py-1.5 lg:py-2 text-xs lg:text-sm ${
                                                         idx < farmDefaults.length - 1 ? 'border-b border-gray-100 dark:border-gray-700' : ''
                                                     }`}
                                                 >
@@ -360,7 +360,7 @@ export default function WeeklyScheduleSettings({
                                 {(isModon || isVaccine) && modonTasks.length > 0 && (
                                     <div className="px-4 pb-3 pt-0">
                                         <div className="bg-white dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-600 overflow-hidden">
-                                            <div className="grid grid-cols-[20px_2fr_2fr_40px] gap-2 px-3 py-1.5 bg-gray-50 dark:bg-gray-700 text-xs font-medium text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-600">
+                                            <div className="grid grid-cols-[20px_2fr_2fr_40px] lg:grid-cols-[24px_2fr_2fr_50px] gap-2 px-3 py-1.5 lg:py-2 bg-gray-50 dark:bg-gray-700 text-xs lg:text-sm font-medium text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-600">
                                                 <div></div>
                                                 <div>작업명</div>
                                                 <div>대상돈군</div>
@@ -374,7 +374,7 @@ export default function WeeklyScheduleSettings({
                                                 return (
                                                     <div
                                                         key={task.seq}
-                                                        className={`grid grid-cols-[20px_2fr_2fr_40px] gap-2 px-3 py-1.5 items-center transition-colors ${
+                                                        className={`grid grid-cols-[20px_2fr_2fr_40px] lg:grid-cols-[24px_2fr_2fr_50px] gap-2 px-3 py-1.5 lg:py-2 items-center transition-colors ${
                                                             readOnly ? 'cursor-default' : 'cursor-pointer'
                                                         } ${
                                                             isSelected
@@ -389,25 +389,25 @@ export default function WeeklyScheduleSettings({
                                                                 checked={isSelected}
                                                                 onChange={() => {}}
                                                                 disabled={isDisabled}
-                                                                className={`w-3.5 h-3.5 rounded border-gray-300 dark:border-gray-600 text-green-500 focus:ring-green-500 pointer-events-none ${
+                                                                className={`w-3.5 h-3.5 lg:w-4 lg:h-4 rounded border-gray-300 dark:border-gray-600 text-green-500 focus:ring-green-500 pointer-events-none ${
                                                                     isDisabled ? 'cursor-not-allowed opacity-50' : ''
                                                                 }`}
                                                             />
                                                         </div>
-                                                        <div className={`text-xs ${isSelected ? 'text-gray-900 dark:text-white font-medium' : 'text-gray-500 dark:text-gray-400'}`}>
+                                                        <div className={`text-xs lg:text-sm ${isSelected ? 'text-gray-900 dark:text-white font-medium' : 'text-gray-500 dark:text-gray-400'}`}>
                                                             {task.taskNm}
                                                         </div>
-                                                        <div className={`text-xs ${isSelected ? 'text-gray-700 dark:text-gray-300' : 'text-gray-400 dark:text-gray-500'}`}>
+                                                        <div className={`text-xs lg:text-sm ${isSelected ? 'text-gray-700 dark:text-gray-300' : 'text-gray-400 dark:text-gray-500'}`}>
                                                             {task.targetGroup}
                                                         </div>
-                                                        <div className={`text-xs text-right ${isSelected ? 'text-gray-700 dark:text-gray-300' : 'text-gray-400 dark:text-gray-500'}`}>
+                                                        <div className={`text-xs lg:text-sm text-right ${isSelected ? 'text-gray-700 dark:text-gray-300' : 'text-gray-400 dark:text-gray-500'}`}>
                                                             {task.elapsedDays}
                                                         </div>
                                                     </div>
                                                 );
                                             })}
                                         </div>
-                                        <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                                        <div className="mt-2 text-xs lg:text-sm text-gray-500 dark:text-gray-400">
                                             {selectedTasks.length}개 작업 선택됨
                                             {selectedTasks.length === 1 && (
                                                 <span className="text-amber-600 dark:text-amber-400 ml-2">(최소 1개 필수)</span>
@@ -428,25 +428,25 @@ export default function WeeklyScheduleSettings({
                             <div className="border rounded-lg border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-900/10">
                                 <div className="flex items-center justify-between px-4 py-3">
                                     <div className="flex items-center gap-2">
-                                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                        <span className="text-sm lg:text-base font-medium text-gray-700 dark:text-gray-300">
                                             출하
                                         </span>
                                     </div>
-                                    <span className="text-xs text-blue-600 dark:text-blue-400 font-medium">
+                                    <span className="text-xs lg:text-sm text-blue-600 dark:text-blue-400 font-medium">
                                         농장 기본값
                                     </span>
                                 </div>
                                 <div className="px-4 pb-3 pt-0">
                                     <div className="bg-white dark:bg-gray-800 rounded-md border border-blue-100 dark:border-blue-800 overflow-hidden">
-                                        <div className="flex items-center justify-between px-3 py-1.5 text-xs border-b border-gray-100 dark:border-gray-700">
+                                        <div className="flex items-center justify-between px-3 py-1.5 lg:py-2 text-xs lg:text-sm border-b border-gray-100 dark:border-gray-700">
                                             <span className="text-gray-600 dark:text-gray-400">기준출하일령</span>
                                             <span className="font-medium text-blue-600 dark:text-blue-400">{shipDays}일</span>
                                         </div>
-                                        <div className="flex items-center justify-between px-3 py-1.5 text-xs border-b border-gray-100 dark:border-gray-700">
+                                        <div className="flex items-center justify-between px-3 py-1.5 lg:py-2 text-xs lg:text-sm border-b border-gray-100 dark:border-gray-700">
                                             <span className="text-gray-600 dark:text-gray-400">평균포유기간</span>
                                             <span className="font-medium text-blue-600 dark:text-blue-400">{weanPeriod}일</span>
                                         </div>
-                                        <div className="flex items-center justify-between px-3 py-1.5 text-xs bg-blue-50 dark:bg-blue-900/30">
+                                        <div className="flex items-center justify-between px-3 py-1.5 lg:py-2 text-xs lg:text-sm bg-blue-50 dark:bg-blue-900/30">
                                             <span className="text-gray-700 dark:text-gray-300 font-medium">산정 공식</span>
                                             <span className="font-medium text-blue-700 dark:text-blue-300">이유일 + {shipOffset}일</span>
                                         </div>
