@@ -232,7 +232,11 @@ export default function WeeklyDetailPage({ params }: WeeklyDetailPageProps) {
                 <LastWeekSection data={data.lastWeek} onPopupOpen={handlePopupOpen} />
 
                 {/* This Week Section */}
-                <ThisWeekSection data={data.thisWeek} onPopupOpen={handlePopupOpen} />
+                <ThisWeekSection
+                    data={data.thisWeek}
+                    farmNo={isLoginAccess ? data.header?.farmNo : undefined}
+                    onPopupOpen={handlePopupOpen}
+                />
 
                 <div className="space-y-6">
                     {/* Extra Section (부가 정보 아코디언) */}

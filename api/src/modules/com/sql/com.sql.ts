@@ -50,8 +50,8 @@ export const COM_SQL = {
    * - HELP_MSG: 툴팁 정보 (JSON 형식, 생산성 통계코드 031~035 등에서 사용)
    *
    * 사용 PCODE:
-   *   - '01': 모돈상태 (STATUS_CD)
-   *   - '02': 기준작업코드 (STD_CD)
+   *   - '01': 모돈상태 (STATUS_CD) - 019999(전체모돈) 포함
+   *   - '02': 기준작업코드 (STD_CD) - 029999(전체) 포함
    *   - '08': 도폐사구분 (OUT_GUBUN_CD)
    *   - '031'~'035': 생산성 통계코드 (교배/분만/이유/번식주기/농장회전율)
    *   - '941': 국가코드 → 언어그룹코드
@@ -69,8 +69,8 @@ export const COM_SQL = {
         HELP_MSG,
         LANGUAGE_CD
     FROM TC_CODE_SYS
-    WHERE USE_YN = 'Y'
-      AND PCODE IN ('01', '02', '08', '031', '032', '033', '034', '035', '941', '942')
+    WHERE (USE_YN = 'Y' AND PCODE IN ('01', '02', '08', '031', '032', '033', '034', '035', '941', '942'))
+       OR CODE IN ('019999', '029999')
     ORDER BY PCODE, SORT_NO
   `,
 
@@ -153,5 +153,126 @@ export const COM_SQL = {
                   WHEN GRADE_CD = 'T' THEN 9100
                   ELSE 10
              END
+  `,
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // 농장 기본값 설정 (TC_FARM_CONFIG)
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  /**
+   * 농장 기본값 조회 (주간보고서 작업예정 산정용)
+   * - TC_CODE_SYS: 시스템 기본값
+   * - TC_FARM_CONFIG: 농장별 설정값 (없으면 시스템 기본값 사용)
+   *
+   * 설정 코드:
+   * - 140002: 평균임신기간 (기본 115일)
+   * - 140003: 평균포유기간 (기본 21일)
+   * - 140005: 기준출하일령 (기본 180일)
+   * - 140007: 후보돈초교배일령 (기본 240일)
+   * - 140008: 평균재귀일 (기본 7일)
+   *
+   * @param farmNo - 농장번호
+   * @returns CODE, CNAME, CVALUE, SORT_NO
+   */
+  getFarmConfig: `
+    /* com.com.getFarmConfig : 농장 기본값 조회 */
+    SELECT
+        TA1.CODE,
+        TA1.CNAME,
+        NVL(TA2.CVALUE, TA1.ORIGIN_VALUE) AS CVALUE,
+        TA1.SORT_NO
+    FROM (
+        SELECT T1.CODE, T1.CNAME, T1.CVALUE AS ORIGIN_VALUE, T1.SORT_NO
+        FROM TC_CODE_SYS T1
+        WHERE T1.PCODE = '14'
+          AND T1.CODE IN ('140002', '140003', '140005', '140007', '140008')
+          AND T1.LANGUAGE_CD = 'ko'
+          AND T1.USE_YN = 'Y'
+    ) TA1
+    LEFT OUTER JOIN TC_FARM_CONFIG TA2
+        ON TA1.CODE = TA2.CODE
+       AND TA2.FARM_NO = :farmNo
+       AND TA2.USE_YN = 'Y'
+    ORDER BY TA1.SORT_NO
+  `,
+
+  /**
+   * 모돈 작업설정 조회 (주간보고서 작업예정 산정용)
+   * - TB_PLAN_MODON: 피그플랜 예정작업 설정
+   *
+   * 예정작업 유형 (JOB_GUBUN_CD):
+   * - 150001: 임신감정(진단)
+   * - 150002: 분만
+   * - 150003: 이유
+   * - 150005: 교배
+   * - 150007: 백신
+   *
+   * @param farmNo - 농장번호
+   * @returns SEQ, JOB_GUBUN_CD, WK_NM, MODON_STATUS_CD, PASS_DAY
+   */
+  getPlanModon: `
+    /* com.com.getPlanModon : 모돈 작업설정 조회 */
+    SELECT
+        SEQ,
+        JOB_GUBUN_CD,
+        WK_NM,
+        MODON_STATUS_CD,
+        PASS_DAY
+    FROM TB_PLAN_MODON
+    WHERE FARM_NO = :farmNo
+      AND USE_YN = 'Y'
+    ORDER BY JOB_GUBUN_CD, SEQ
+  `,
+
+  /**
+   * 인사이트피그 설정 조회 (TS_INS_CONF)
+   * - 주간보고서 작업예정 산정 방식 설정
+   *
+   * @param farmNo - 농장번호
+   * @returns WEEK_TW_GY, WEEK_TW_BM, WEEK_TW_IM, WEEK_TW_EU, WEEK_TW_VC (JSON)
+   */
+  getInsConf: `
+    /* com.com.getInsConf : 인사이트피그 설정 조회 */
+    SELECT
+        WEEK_TW_GY,
+        WEEK_TW_BM,
+        WEEK_TW_IM,
+        WEEK_TW_EU,
+        WEEK_TW_VC
+    FROM TS_INS_CONF
+    WHERE FARM_NO = :farmNo
+  `,
+
+  /**
+   * 인사이트피그 설정 존재 여부 확인
+   */
+  checkInsConf: `
+    /* com.com.checkInsConf : 인사이트피그 설정 존재 확인 */
+    SELECT COUNT(*) AS CNT FROM TS_INS_CONF WHERE FARM_NO = :farmNo
+  `,
+
+  /**
+   * 인사이트피그 설정 신규 등록
+   */
+  insertInsConf: `
+    /* com.com.insertInsConf : 인사이트피그 설정 신규 등록 */
+    INSERT INTO TS_INS_CONF (FARM_NO, LOG_INS_DT)
+    VALUES (:farmNo, SYSDATE)
+  `,
+
+  /**
+   * 주간보고서 작업예정 설정 저장 (MERGE)
+   * - 동적으로 컬럼 지정하여 UPDATE
+   */
+  updateInsConfWeekly: `
+    /* com.com.updateInsConfWeekly : 주간보고서 작업예정 설정 저장 */
+    UPDATE TS_INS_CONF
+    SET WEEK_TW_GY = :weekTwGy,
+        WEEK_TW_BM = :weekTwBm,
+        WEEK_TW_IM = :weekTwIm,
+        WEEK_TW_EU = :weekTwEu,
+        WEEK_TW_VC = :weekTwVc,
+        LOG_UPT_DT = SYSDATE
+    WHERE FARM_NO = :farmNo
   `,
 };

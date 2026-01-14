@@ -8,6 +8,7 @@ import { AppService } from './app.service';
 import { WeeklyModule } from './modules/weekly';
 import { AuthModule } from './modules/auth';
 import { BatchModule } from './modules/batch';
+import { ConfigModule as InsConfigModule } from './modules/config';
 
 // Config
 import configs from './config';
@@ -52,6 +53,7 @@ import { TaMember, TaFarm, TsInsService } from './modules/auth/entities';
     WeeklyModule,
     AuthModule,
     BatchModule,
+    InsConfigModule,
   ],
   controllers: [AppController],
   providers: [AppService],

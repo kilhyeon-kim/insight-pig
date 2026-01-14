@@ -135,7 +135,62 @@ export const serviceApi = {
     }),
 };
 
+// ─────────────────────────────────────────────────────────────────────────────
+// 설정 API (농장 기본값, 모돈 작업설정)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** 농장 기본값 항목 */
+export interface FarmConfigItem {
+  code: string;
+  name: string;
+  value: number;
+}
+
+/** 모돈 작업설정 항목 (TB_PLAN_MODON) */
+export interface PlanModonItem {
+  seq: number;
+  name: string;
+  targetSow: string;
+  elapsedDays: number;
+}
+
+/** inspig 설정 항목 (TS_INS_CONF) */
+export interface InsConfItem {
+  method: 'farm' | 'modon';
+  tasks: number[];
+}
+
+/** 농장 설정 응답 */
+export interface FarmConfigResponse {
+  farmConfig: Record<string, FarmConfigItem>;
+  planModon: Record<string, PlanModonItem[]>;
+  insConf: Record<string, InsConfItem>;
+}
+
+/** 주간보고서 설정 저장 요청 */
+export interface SaveWeeklySettingsRequest {
+  mating?: InsConfItem;
+  farrowing?: InsConfItem;
+  pregnancy?: InsConfItem;
+  weaning?: InsConfItem;
+  vaccine?: InsConfItem;
+}
+
+export const configApi = {
+  /** 농장 기본값 및 모돈 작업설정 조회 */
+  getFarmConfig: (farmNo: number) =>
+    fetchApiWithAuth<FarmConfigResponse>(`/api/config/farm/${farmNo}`),
+
+  /** 주간보고서 작업예정 설정 저장 */
+  saveWeeklySettings: (farmNo: number, settings: SaveWeeklySettingsRequest) =>
+    fetchApiWithAuth<{ success: boolean; message: string }>(`/api/config/farm/${farmNo}/weekly`, {
+      method: 'POST',
+      body: JSON.stringify(settings),
+    }),
+};
+
 export default {
   weekly: weeklyApi,
   service: serviceApi,
+  config: configApi,
 };

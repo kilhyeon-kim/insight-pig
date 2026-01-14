@@ -394,4 +394,169 @@ export class ComService implements OnModuleInit {
     const result = await this.dataSource.query(COM_SQL.getCodeList, [grpCd]);
     return result;
   }
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // 농장 기본값 설정 (TC_FARM_CONFIG)
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  /**
+   * 농장 기본값 조회 (주간보고서 작업예정 산정용)
+   * @param farmNo 농장번호
+   * @returns 농장 기본값 + 모돈 작업설정 (TB_PLAN_MODON) + inspig 설정 (TS_INS_CONF)
+   */
+  async getFarmConfig(farmNo: number): Promise<{
+    farmConfig: Record<string, { code: string; name: string; value: number }>;
+    planModon: Record<string, { seq: number; name: string; targetSow: string; elapsedDays: number }[]>;
+    insConf: Record<string, { method: string; tasks: number[] }>;
+  }> {
+    // JOB_GUBUN_CD → 프론트엔드 키 매핑
+    const jobGubunMap: Record<string, string> = {
+      '150001': 'pregnancy', // 임신감정(진단)
+      '150002': 'farrowing', // 분만
+      '150003': 'weaning', // 이유
+      '150004': 'vaccine', // 백신
+      '150005': 'mating', // 교배
+    };
+
+    // TS_INS_CONF 컬럼명 → 프론트엔드 키 매핑
+    const insConfColMap: Record<string, string> = {
+      WEEK_TW_GY: 'mating',
+      WEEK_TW_BM: 'farrowing',
+      WEEK_TW_IM: 'pregnancy',
+      WEEK_TW_EU: 'weaning',
+      WEEK_TW_VC: 'vaccine',
+    };
+
+    try {
+      // 1. 농장 기본값 조회 (TC_FARM_CONFIG)
+      const configRows = await this.dataSource.query(COM_SQL.getFarmConfig, params({ farmNo }));
+
+      const farmConfig: Record<string, { code: string; name: string; value: number }> = {};
+      for (const row of configRows) {
+        farmConfig[row.CODE] = {
+          code: row.CODE,
+          name: row.CNAME,
+          value: parseInt(row.CVALUE, 10) || 0,
+        };
+      }
+
+      // 2. 모돈 작업설정 조회 (TB_PLAN_MODON)
+      const planRows = await this.dataSource.query(COM_SQL.getPlanModon, params({ farmNo }));
+
+      const planModon: Record<string, { seq: number; name: string; targetSow: string; elapsedDays: number }[]> = {
+        mating: [], // 교배 (150005)
+        farrowing: [], // 분만 (150002)
+        pregnancy: [], // 임신감정 (150001)
+        weaning: [], // 이유 (150003)
+        vaccine: [], // 백신 (150007)
+      };
+
+      for (const row of planRows) {
+        const frontKey = jobGubunMap[row.JOB_GUBUN_CD];
+        if (frontKey && planModon[frontKey]) {
+          planModon[frontKey].push({
+            seq: parseInt(row.SEQ, 10) || 0,
+            name: row.WK_NM || '',
+            targetSow: this.getCodeSysName('01', row.MODON_STATUS_CD, 'ko') || row.MODON_STATUS_CD || '',
+            elapsedDays: parseInt(row.PASS_DAY, 10) || 0,
+          });
+        }
+      }
+
+      // 3. inspig 설정 조회 (TS_INS_CONF)
+      const insConfRows = await this.dataSource.query(COM_SQL.getInsConf, params({ farmNo }));
+
+      // 기본값: 교배/분만/이유/백신은 modon, 임신감정은 farm
+      // modon 선택 시 해당 작업의 모든 seq를 기본 선택
+      const getDefaultTasks = (key: string): number[] => {
+        const jobs = planModon[key] || [];
+        return jobs.map((j: { seq: number }) => j.seq);
+      };
+
+      const insConf: Record<string, { method: string; tasks: number[] }> = {
+        mating: { method: 'modon', tasks: getDefaultTasks('mating') },
+        farrowing: { method: 'modon', tasks: getDefaultTasks('farrowing') },
+        pregnancy: { method: 'farm', tasks: [] }, // 임신감정만 농장 기본값
+        weaning: { method: 'modon', tasks: getDefaultTasks('weaning') },
+        vaccine: { method: 'modon', tasks: getDefaultTasks('vaccine') },
+      };
+
+      if (insConfRows.length > 0) {
+        const row = insConfRows[0];
+        for (const [colName, frontKey] of Object.entries(insConfColMap)) {
+          const jsonStr = row[colName];
+          if (jsonStr) {
+            try {
+              const parsed = JSON.parse(jsonStr);
+              insConf[frontKey] = {
+                method: parsed.method || (frontKey === 'vaccine' ? 'modon' : 'farm'),
+                tasks: (parsed.tasks || []).map((t: string | number) => parseInt(String(t), 10)),
+              };
+            } catch {
+              // JSON 파싱 실패 시 기본값 유지
+            }
+          }
+        }
+      }
+
+      return { farmConfig, planModon, insConf };
+    } catch (error) {
+      this.logger.error(`농장 기본값 조회 실패: farmNo=${farmNo}`, error.message);
+      // 에러 시 빈 객체 반환
+      return {
+        farmConfig: {},
+        planModon: { mating: [], farrowing: [], pregnancy: [], weaning: [], vaccine: [] },
+        insConf: {
+          mating: { method: 'farm', tasks: [] },
+          farrowing: { method: 'farm', tasks: [] },
+          pregnancy: { method: 'farm', tasks: [] },
+          weaning: { method: 'farm', tasks: [] },
+          vaccine: { method: 'modon', tasks: [] },
+        },
+      };
+    }
+  }
+
+  /**
+   * 주간보고서 작업예정 설정 저장
+   * @param farmNo 농장번호
+   * @param settings 작업예정 설정 (mating, farrowing, pregnancy, weaning, vaccine)
+   */
+  async saveWeeklyScheduleSettings(
+    farmNo: number,
+    settings: Record<string, { method: string; tasks: number[] }>,
+  ): Promise<{ success: boolean; message?: string }> {
+    try {
+      // 1. TS_INS_CONF 존재 여부 확인
+      const checkResult = await this.dataSource.query(COM_SQL.checkInsConf, params({ farmNo }));
+      const exists = checkResult[0]?.CNT > 0;
+
+      // 2. 없으면 신규 등록
+      if (!exists) {
+        await this.dataSource.query(COM_SQL.insertInsConf, params({ farmNo }));
+      }
+
+      // 3. JSON 형식으로 변환
+      const toJson = (key: string) => {
+        const item = settings[key];
+        if (!item) return null;
+        return JSON.stringify({ method: item.method, tasks: item.tasks });
+      };
+
+      // 4. UPDATE
+      await this.dataSource.query(COM_SQL.updateInsConfWeekly, params({
+        farmNo,
+        weekTwGy: toJson('mating'),
+        weekTwBm: toJson('farrowing'),
+        weekTwIm: toJson('pregnancy'),
+        weekTwEu: toJson('weaning'),
+        weekTwVc: toJson('vaccine'),
+      }));
+
+      return { success: true };
+    } catch (error) {
+      this.logger.error(`주간보고서 설정 저장 실패: farmNo=${farmNo}`, error.message);
+      return { success: false, message: error.message };
+    }
+  }
 }

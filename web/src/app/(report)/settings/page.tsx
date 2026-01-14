@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
@@ -14,6 +14,7 @@ import {
     faSpinner
 } from '@fortawesome/free-solid-svg-icons';
 import { serviceApi, ServiceInfo } from '@/services/api';
+import WeeklyScheduleSettings from '@/components/settings/WeeklyScheduleSettings';
 
 // 탭 타입 정의
 type TabKey = 'service' | 'weekly' | 'monthly' | 'quarterly';
@@ -99,7 +100,7 @@ const formatOpenDate = (dateStr: string | null) => {
     return `${year}년 ${month}월 ${day}일`;
 };
 
-export default function SettingsPage() {
+function SettingsContent() {
     const searchParams = useSearchParams();
     const initialTab = (searchParams.get('tab') as TabKey) || 'service';
 
@@ -435,130 +436,39 @@ export default function SettingsPage() {
         </div>
     );
 
-    // 금주 작업예정 산정 방식 설정
-    type ScheduleCalcMethod = 'farm' | 'modon';
-    const SCHEDULE_ITEMS = [
-        { key: 'mating', label: '교배', icon: '💕' },
-        { key: 'farrowing', label: '분만', icon: '🐷' },
-        { key: 'recheck', label: '재발확인', icon: '🔄' },
-        { key: 'pregnancy', label: '임신진단', icon: '🩺' },
-        { key: 'weaning', label: '이유', icon: '🍼' },
-        { key: 'vaccine', label: '모돈백신', icon: '💉' },
-        { key: 'shipment', label: '출하', icon: '🚛' },
-    ] as const;
-
-    type ScheduleItemKey = typeof SCHEDULE_ITEMS[number]['key'];
-
-    const [scheduleCalcMethods, setScheduleCalcMethods] = useState<Record<ScheduleItemKey, ScheduleCalcMethod>>({
-        mating: 'farm',
-        farrowing: 'farm',
-        recheck: 'farm',
-        pregnancy: 'farm',
-        weaning: 'farm',
-        vaccine: 'farm',
-        shipment: 'farm',
-    });
-
-    const handleScheduleMethodChange = (itemKey: ScheduleItemKey, method: ScheduleCalcMethod) => {
-        setScheduleCalcMethods(prev => ({ ...prev, [itemKey]: method }));
-    };
+    // 농장번호 (serviceInfo에서 가져옴)
+    const farmNo = serviceInfo?.farmNo;
 
     // 주간보고서 설정 탭 렌더링
     const renderWeeklyTab = () => (
         <div className="space-y-4">
             {/* 금주 작업예정 산정 방식 설정 */}
             <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
-                <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-700">
+                <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-700">
                     <h2 className="font-semibold text-gray-900 dark:text-white">
                         금주 작업예정 산정 방식
                     </h2>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                        각 작업별 예정일 산정 기준을 선택합니다.
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 space-y-0.5">
+                        <span className="block">• 각 작업별 예정일 산정 기준을 선택합니다.</span>
+                        <span className="block">• 모돈 작업설정 선택 시 최소 1개 이상 선택해야 합니다.</span>
+                        <span className="block">• 변경된 설정은 차주 보고서부터 적용됩니다.</span>
                     </p>
                 </div>
-                <div className="px-5 py-4">
-                    {/* 헤더 */}
-                    <div className="grid grid-cols-[1fr_1fr_1fr] gap-2 mb-3 pb-3 border-b border-gray-100 dark:border-gray-700">
-                        <div className="text-sm font-medium text-gray-500 dark:text-gray-400">
-                            작업 구분
-                        </div>
-                        <div className="text-sm font-medium text-center text-gray-500 dark:text-gray-400">
-                            농장 기본값 기준
-                        </div>
-                        <div className="text-sm font-medium text-center text-gray-500 dark:text-gray-400">
-                            모돈 작업설정 기준
-                        </div>
+                {farmNo ? (
+                    <WeeklyScheduleSettings farmNo={farmNo} showSaveButton={true} />
+                ) : (
+                    <div className="px-4 py-8 text-center text-gray-500 dark:text-gray-400 text-sm">
+                        농장 정보를 불러오는 중...
                     </div>
-
-                    {/* 작업 항목별 설정 */}
-                    <div className="space-y-2">
-                        {SCHEDULE_ITEMS.map((item) => (
-                            <div
-                                key={item.key}
-                                className="grid grid-cols-[1fr_1fr_1fr] gap-2 items-center py-2 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-lg transition-colors"
-                            >
-                                {/* 작업명 */}
-                                <div className="flex items-center gap-2">
-                                    <span className="text-lg">{item.icon}</span>
-                                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                        {item.label}
-                                    </span>
-                                </div>
-
-                                {/* 농장 기본값 기준 */}
-                                <div className="flex justify-center">
-                                    <button
-                                        onClick={() => handleScheduleMethodChange(item.key, 'farm')}
-                                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-all w-full max-w-[140px] ${
-                                            scheduleCalcMethods[item.key] === 'farm'
-                                                ? 'bg-blue-500 text-white shadow-sm'
-                                                : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
-                                        }`}
-                                    >
-                                        {scheduleCalcMethods[item.key] === 'farm' && (
-                                            <FontAwesomeIcon icon={faCheck} className="mr-1.5 text-xs" />
-                                        )}
-                                        농장 기본값
-                                    </button>
-                                </div>
-
-                                {/* 모돈 작업설정 기준 */}
-                                <div className="flex justify-center">
-                                    <button
-                                        onClick={() => handleScheduleMethodChange(item.key, 'modon')}
-                                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-all w-full max-w-[140px] ${
-                                            scheduleCalcMethods[item.key] === 'modon'
-                                                ? 'bg-green-500 text-white shadow-sm'
-                                                : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
-                                        }`}
-                                    >
-                                        {scheduleCalcMethods[item.key] === 'modon' && (
-                                            <FontAwesomeIcon icon={faCheck} className="mr-1.5 text-xs" />
-                                        )}
-                                        모돈 작업설정
-                                    </button>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-
-                    {/* 저장 버튼 */}
-                    <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700 flex justify-end">
-                        <button
-                            className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
-                        >
-                            저장
-                        </button>
-                    </div>
-                </div>
+                )}
             </div>
 
             {/* 안내 문구 */}
             <div className="bg-amber-50 dark:bg-amber-900/20 rounded-xl p-4 text-sm text-amber-700 dark:text-amber-300">
-                <p className="font-medium mb-1">산정 방식 안내</p>
+                <p className="font-medium mb-1">설정값 확인 경로</p>
                 <ul className="text-amber-600 dark:text-amber-400 text-xs space-y-1">
-                    <li><strong>농장 기본값 기준:</strong> 농장에 설정된 기본 일수를 적용하여 작업 예정일을 산정합니다.</li>
-                    <li><strong>모돈 작업설정 기준:</strong> 각 모돈별로 설정된 개별 일수를 적용하여 작업 예정일을 산정합니다.</li>
+                    <li><strong>농장 기본값:</strong> 피그플랜 &gt; 농장 정보관리 &gt; 농장 기본값 설정</li>
+                    <li><strong>모돈 작업설정:</strong> 피그플랜 &gt; 농장 정보관리 &gt; 모돈 작업설정</li>
                 </ul>
             </div>
         </div>
@@ -603,7 +513,7 @@ export default function SettingsPage() {
     };
 
     return (
-        <div className="p-4 sm:p-6 space-y-6 max-w-4xl mx-auto">
+        <div className="p-4 sm:p-6 space-y-6 max-w-5xl mx-auto">
             {/* 페이지 헤더 */}
             <div className="mb-2">
                 <h1 className="text-2xl font-bold text-gray-900 dark:text-white">환경설정</h1>
@@ -655,5 +565,13 @@ export default function SettingsPage() {
                 {renderTabContent()}
             </div>
         </div>
+    );
+}
+
+export default function SettingsPage() {
+    return (
+        <Suspense fallback={<div className="p-4 sm:p-6 space-y-6 max-w-5xl mx-auto">로딩 중...</div>}>
+            <SettingsContent />
+        </Suspense>
     );
 }
