@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { WeatherPopupData, WeatherHourlyItem } from '@/types/weekly';
 import { PopupContainer } from './PopupContainer';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -10,14 +10,14 @@ import {
     faCloudRain,
     faSnowflake,
     faCloudSun,
-    faSmog,
     faDroplet,
     faTemperatureHigh,
     faTemperatureLow,
     faUmbrella,
-    faChevronLeft,
-    faChevronRight
+    faWind,
+    faClock
 } from '@fortawesome/free-solid-svg-icons';
+import * as echarts from 'echarts';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
@@ -69,17 +69,31 @@ const getWeatherBg = (weatherCd: string, isSelected: boolean) => {
     return 'bg-white dark:bg-gray-800/50 hover:bg-gray-50 dark:hover:bg-gray-700/50';
 };
 
+// 날씨 코드 → 이름
+function getWeatherName(code: string): string {
+    const map: Record<string, string> = {
+        sunny: '맑음',
+        cloudy: '구름많음',
+        overcast: '흐림',
+        rainy: '비',
+        snowy: '눈',
+        shower: '소나기',
+    };
+    return map[code] || code;
+}
+
 export const WeatherPopup: React.FC<WeatherPopupProps> = ({ isOpen, onClose, data, farmNo }) => {
-    const [selectedIdx, setSelectedIdx] = useState<number>(0);
+    const [selectedIdx, setSelectedIdx] = useState<number>(-1); // -1: 초기화 전
     const [hourlyData, setHourlyData] = useState<WeatherHourlyItem[]>([]);
     const [loadingHourly, setLoadingHourly] = useState(false);
+    const chartRef = useRef<HTMLDivElement>(null);
+    const chartInstance = useRef<echarts.ECharts | null>(null);
 
     // daily 데이터 생성 (기존 데이터에서 변환)
     const dailyItems = React.useMemo(() => {
         if (!data?.xData) return [];
 
         const today = new Date();
-        const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
 
         return data.xData.map((label, idx) => {
             // xData: "01/13(월)" 형식에서 파싱
@@ -113,18 +127,40 @@ export const WeatherPopup: React.FC<WeatherPopupProps> = ({ isOpen, onClose, dat
         });
     }, [data]);
 
-    // 날씨 코드 → 이름
-    function getWeatherName(code: string): string {
-        const map: Record<string, string> = {
-            sunny: '맑음',
-            cloudy: '구름많음',
-            overcast: '흐림',
-            rainy: '비',
-            snowy: '눈',
-            shower: '소나기',
-        };
-        return map[code] || code;
-    }
+    // 팝업 열릴 때 오늘 날짜를 기본 선택으로 설정
+    useEffect(() => {
+        if (isOpen && dailyItems.length > 0) {
+            const todayIdx = dailyItems.findIndex(item => item.periodLabel === '오늘');
+            setSelectedIdx(todayIdx >= 0 ? todayIdx : 0);
+        } else if (!isOpen) {
+            // 팝업 닫힐 때 초기화
+            setSelectedIdx(-1);
+            setHourlyData([]);
+        }
+    }, [isOpen, dailyItems]);
+
+    // 현재 시간에 가장 가까운 시간별 데이터 찾기
+    const currentHourData = React.useMemo(() => {
+        if (hourlyData.length === 0) return null;
+
+        const now = new Date();
+        const currentHour = now.getHours();
+        const currentHHMM = `${String(currentHour).padStart(2, '0')}00`;
+
+        // 현재 시간과 가장 가까운 데이터 찾기
+        let closest = hourlyData[0];
+        let minDiff = Math.abs(parseInt(hourlyData[0].wkTime) - parseInt(currentHHMM));
+
+        for (const h of hourlyData) {
+            const diff = Math.abs(parseInt(h.wkTime) - parseInt(currentHHMM));
+            if (diff < minDiff) {
+                minDiff = diff;
+                closest = h;
+            }
+        }
+
+        return closest;
+    }, [hourlyData]);
 
     // 시간별 데이터 조회
     useEffect(() => {
@@ -163,14 +199,132 @@ export const WeatherPopup: React.FC<WeatherPopupProps> = ({ isOpen, onClose, dat
         fetchHourly();
     }, [isOpen, farmNo, selectedIdx, dailyItems]);
 
-    // 선택된 날짜 변경
-    const handlePrev = () => {
-        if (selectedIdx > 0) setSelectedIdx(selectedIdx - 1);
-    };
+    // 시간별 차트 렌더링
+    useEffect(() => {
+        if (!chartRef.current || hourlyData.length === 0) return;
 
-    const handleNext = () => {
-        if (selectedIdx < dailyItems.length - 1) setSelectedIdx(selectedIdx + 1);
-    };
+        // Dispose existing chart
+        if (chartInstance.current) {
+            chartInstance.current.dispose();
+        }
+
+        const chart = echarts.init(chartRef.current);
+        chartInstance.current = chart;
+
+        const isDark = document.documentElement.classList.contains('dark');
+
+        const option: echarts.EChartsOption = {
+            tooltip: {
+                trigger: 'axis',
+                backgroundColor: isDark ? 'rgba(22, 27, 34, 0.95)' : 'rgba(255, 255, 255, 0.95)',
+                borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : '#ddd',
+                textStyle: { color: isDark ? '#e6edf3' : '#333', fontSize: 12 },
+                formatter: (params: any) => {
+                    if (!Array.isArray(params) || params.length === 0) return '';
+                    const idx = params[0].dataIndex;
+                    const hour = hourlyData[idx];
+                    let result = `<strong>${hour.timeLabel}</strong><br/>`;
+                    result += `날씨: ${hour.weatherNm}<br/>`;
+                    params.forEach((p: any) => {
+                        if (p.seriesName === '기온') {
+                            result += `${p.seriesName}: ${p.value}°C<br/>`;
+                        } else if (p.seriesName === '강수확률') {
+                            result += `${p.seriesName}: ${p.value}%<br/>`;
+                        }
+                    });
+                    return result;
+                }
+            },
+            legend: {
+                data: ['기온', '강수확률'],
+                bottom: 0,
+                textStyle: { fontSize: 11, color: isDark ? '#e6edf3' : '#555' }
+            },
+            grid: {
+                left: '3%',
+                right: '4%',
+                top: '8%',
+                bottom: '18%',
+                containLabel: true
+            },
+            xAxis: {
+                type: 'category',
+                data: hourlyData.map(h => h.timeLabel),
+                boundaryGap: false,
+                axisLabel: { fontSize: 10, color: isDark ? '#aaa' : '#666' },
+                axisLine: { lineStyle: { color: isDark ? 'rgba(255,255,255,0.2)' : '#ddd' } }
+            },
+            yAxis: [
+                {
+                    type: 'value',
+                    name: '기온(°C)',
+                    nameTextStyle: { fontSize: 10, color: isDark ? '#aaa' : '#666' },
+                    axisLabel: { fontSize: 10, color: isDark ? '#aaa' : '#666', formatter: '{value}°' },
+                    axisLine: { show: false },
+                    splitLine: { lineStyle: { color: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)' } }
+                },
+                {
+                    type: 'value',
+                    name: '강수(%)',
+                    nameTextStyle: { fontSize: 10, color: isDark ? '#aaa' : '#666' },
+                    min: 0,
+                    max: 100,
+                    axisLabel: { fontSize: 10, color: isDark ? '#aaa' : '#666', formatter: '{value}%' },
+                    axisLine: { show: false },
+                    splitLine: { show: false }
+                }
+            ],
+            series: [
+                {
+                    name: '기온',
+                    type: 'line',
+                    data: hourlyData.map(h => h.temp),
+                    smooth: true,
+                    lineStyle: { width: 2, color: '#ff6b6b' },
+                    itemStyle: { color: '#ff6b6b' },
+                    symbolSize: 6,
+                    label: {
+                        show: true,
+                        position: 'top',
+                        fontSize: 10,
+                        color: '#ff6b6b',
+                        formatter: '{c}°'
+                    },
+                    areaStyle: {
+                        color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                            { offset: 0, color: 'rgba(255, 107, 107, 0.3)' },
+                            { offset: 1, color: 'rgba(255, 107, 107, 0.05)' }
+                        ])
+                    }
+                },
+                {
+                    name: '강수확률',
+                    type: 'bar',
+                    yAxisIndex: 1,
+                    data: hourlyData.map(h => h.rainProb),
+                    barWidth: '40%',
+                    itemStyle: {
+                        color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                            { offset: 0, color: 'rgba(74, 144, 226, 0.8)' },
+                            { offset: 1, color: 'rgba(74, 144, 226, 0.3)' }
+                        ]),
+                        borderRadius: [4, 4, 0, 0]
+                    }
+                }
+            ]
+        };
+
+        chart.setOption(option);
+
+        const handleResize = () => chart.resize();
+        window.addEventListener('resize', handleResize);
+
+        return () => {
+            window.removeEventListener('resize', handleResize);
+            chart.dispose();
+            chartInstance.current = null;
+        };
+    }, [hourlyData]);
 
     const selectedDay = dailyItems[selectedIdx];
 
@@ -183,8 +337,8 @@ export const WeatherPopup: React.FC<WeatherPopupProps> = ({ isOpen, onClose, dat
             maxWidth="max-w-3xl"
             id="pop-weather"
         >
-            {/* 일별 카드 그리드 */}
-            <div className="mb-4">
+            {/* 섹션 1: 일별 카드 그리드 */}
+            <div id="weather-daily-cards" className="mb-4">
                 <div className="grid grid-cols-7 gap-1">
                     {dailyItems.map((item, idx) => (
                         <div
@@ -231,106 +385,77 @@ export const WeatherPopup: React.FC<WeatherPopupProps> = ({ isOpen, onClose, dat
                 </div>
             </div>
 
-            {/* 선택된 날짜 상세 정보 */}
-            {selectedDay && (
-                <div className={`rounded-lg p-4 mb-4 ${getWeatherBg(selectedDay.weatherCd, true)} border border-gray-200 dark:border-gray-700`}>
-                    <div className="flex items-center justify-between mb-3">
-                        <button
-                            onClick={handlePrev}
-                            disabled={selectedIdx === 0}
-                            className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed"
-                        >
-                            <FontAwesomeIcon icon={faChevronLeft} />
-                        </button>
+            {/* 섹션 2: 현재 시간 날씨 (시간별 데이터가 있을 때만) */}
+            {selectedDay && currentHourData && (
+                <div id="weather-current-hour" className={`rounded-lg p-4 mb-4 ${getWeatherBg(currentHourData.weatherCd, true)} border border-gray-200 dark:border-gray-700`}>
+                    <div className="flex items-center justify-between">
+                        {/* 왼쪽: 현재 시간 날씨 */}
+                        <div className="flex items-center gap-4">
+                            <div className={`text-4xl ${getWeatherColor(currentHourData.weatherCd)}`}>
+                                <FontAwesomeIcon icon={getWeatherIcon(currentHourData.weatherCd)} />
+                            </div>
+                            <div>
+                                <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mb-1">
+                                    <FontAwesomeIcon icon={faClock} className="text-xs" />
+                                    <span>{selectedDay.dayLabel} {currentHourData.timeLabel}</span>
+                                </div>
+                                <div className="text-2xl font-bold text-gray-800 dark:text-gray-100">
+                                    {currentHourData.temp !== null ? `${currentHourData.temp}°C` : '-'}
+                                </div>
+                                <div className="text-sm text-gray-600 dark:text-gray-300">
+                                    {currentHourData.weatherNm}
+                                </div>
+                            </div>
+                        </div>
 
-                        <div className="text-center">
-                            <div className="text-lg font-bold text-gray-800 dark:text-gray-100">
-                                {selectedDay.periodLabel && <span className="text-blue-500 mr-2">{selectedDay.periodLabel}</span>}
-                                {selectedDay.dayLabel}
+                        {/* 오른쪽: 상세 정보 */}
+                        <div className="grid grid-cols-3 gap-4 text-center">
+                            <div>
+                                <div className="flex items-center justify-center gap-1 text-xs text-gray-500 dark:text-gray-400 mb-1">
+                                    <FontAwesomeIcon icon={faTemperatureHigh} className="text-red-400" />
+                                    <span>최고</span>
+                                </div>
+                                <div className="text-lg font-bold text-red-500">
+                                    {selectedDay.tempHigh !== null ? `${selectedDay.tempHigh}°` : '-'}
+                                </div>
                             </div>
-                            <div className={`text-3xl my-2 ${getWeatherColor(selectedDay.weatherCd)}`}>
-                                <FontAwesomeIcon icon={getWeatherIcon(selectedDay.weatherCd)} />
-                                <span className="ml-2 text-lg text-gray-700 dark:text-gray-200">{selectedDay.weatherNm}</span>
+                            <div>
+                                <div className="flex items-center justify-center gap-1 text-xs text-gray-500 dark:text-gray-400 mb-1">
+                                    <FontAwesomeIcon icon={faTemperatureLow} className="text-blue-400" />
+                                    <span>최저</span>
+                                </div>
+                                <div className="text-lg font-bold text-blue-500">
+                                    {selectedDay.tempLow !== null ? `${selectedDay.tempLow}°` : '-'}
+                                </div>
                             </div>
-                        </div>
-
-                        <button
-                            onClick={handleNext}
-                            disabled={selectedIdx === dailyItems.length - 1}
-                            className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed"
-                        >
-                            <FontAwesomeIcon icon={faChevronRight} />
-                        </button>
-                    </div>
-
-                    {/* 상세 정보 그리드 */}
-                    <div className="grid grid-cols-4 gap-3 text-center">
-                        <div className="bg-white/60 dark:bg-gray-800/60 rounded-lg p-3">
-                            <FontAwesomeIcon icon={faTemperatureHigh} className="text-red-400 mb-1" />
-                            <div className="text-xs text-gray-500 dark:text-gray-400">최고</div>
-                            <div className="text-lg font-bold text-red-500">
-                                {selectedDay.tempHigh !== null ? `${selectedDay.tempHigh}°C` : '-'}
-                            </div>
-                        </div>
-                        <div className="bg-white/60 dark:bg-gray-800/60 rounded-lg p-3">
-                            <FontAwesomeIcon icon={faTemperatureLow} className="text-blue-400 mb-1" />
-                            <div className="text-xs text-gray-500 dark:text-gray-400">최저</div>
-                            <div className="text-lg font-bold text-blue-500">
-                                {selectedDay.tempLow !== null ? `${selectedDay.tempLow}°C` : '-'}
-                            </div>
-                        </div>
-                        <div className="bg-white/60 dark:bg-gray-800/60 rounded-lg p-3">
-                            <FontAwesomeIcon icon={faUmbrella} className="text-indigo-400 mb-1" />
-                            <div className="text-xs text-gray-500 dark:text-gray-400">강수확률</div>
-                            <div className="text-lg font-bold text-indigo-500">{selectedDay.rainProb}%</div>
-                        </div>
-                        <div className="bg-white/60 dark:bg-gray-800/60 rounded-lg p-3">
-                            <FontAwesomeIcon icon={faDroplet} className="text-cyan-400 mb-1" />
-                            <div className="text-xs text-gray-500 dark:text-gray-400">습도</div>
-                            <div className="text-lg font-bold text-cyan-500">
-                                {selectedDay.humidity !== null ? `${selectedDay.humidity}%` : '-'}
+                            <div>
+                                <div className="flex items-center justify-center gap-1 text-xs text-gray-500 dark:text-gray-400 mb-1">
+                                    <FontAwesomeIcon icon={faUmbrella} className="text-indigo-400" />
+                                    <span>강수</span>
+                                </div>
+                                <div className="text-lg font-bold text-indigo-500">
+                                    {currentHourData.rainProb}%
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
             )}
 
-            {/* 시간별 예보 */}
-            <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+            {/* 섹션 3: 시간별 예보 차트 */}
+            <div id="weather-hourly-chart" className="border-t border-gray-200 dark:border-gray-700 pt-4">
                 <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
                     시간별 예보 - {selectedDay?.dayLabel}
                 </h4>
 
                 {loadingHourly ? (
-                    <div className="flex items-center justify-center h-24 text-gray-400">
+                    <div className="flex items-center justify-center h-48 text-gray-400">
                         <span className="animate-pulse">로딩 중...</span>
                     </div>
                 ) : hourlyData.length > 0 ? (
-                    <div className="overflow-x-auto">
-                        <div className="flex gap-2 pb-2" style={{ minWidth: 'max-content' }}>
-                            {hourlyData.map((hour, idx) => (
-                                <div
-                                    key={hour.wkTime}
-                                    className="shrink-0 w-16 text-center bg-gray-50 dark:bg-gray-800/50 rounded-lg p-2"
-                                >
-                                    <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">
-                                        {hour.timeLabel}
-                                    </div>
-                                    <div className={`text-lg mb-1 ${getWeatherColor(hour.weatherCd)}`}>
-                                        <FontAwesomeIcon icon={getWeatherIcon(hour.weatherCd)} />
-                                    </div>
-                                    <div className="text-sm font-semibold text-gray-800 dark:text-gray-100">
-                                        {hour.temp !== null ? `${hour.temp}°` : '-'}
-                                    </div>
-                                    <div className="text-xs text-blue-400">
-                                        {hour.rainProb}%
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
+                    <div ref={chartRef} style={{ width: '100%', height: '220px' }} />
                 ) : (
-                    <div className="flex items-center justify-center h-24 text-gray-400 text-sm">
+                    <div className="flex items-center justify-center h-48 text-gray-400 text-sm">
                         시간별 데이터가 없습니다
                     </div>
                 )}
