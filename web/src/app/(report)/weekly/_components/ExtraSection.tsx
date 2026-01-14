@@ -71,23 +71,17 @@ export const ExtraSection: React.FC<ExtraSectionProps> = ({ data, onPopupOpen })
                     {/* <span><FontAwesomeIcon icon={faGrip} /> {data.psy.zone}</span> */}
                     <span><FontAwesomeIcon icon={faWonSign} /> {data.price.avg.toLocaleString()}원</span>
                     {(data.weather.current !== null || data.weather.max !== null || data.weather.min !== null) && (
-                        <span className="weather-preview inline-flex items-center">
+                        <span className="weather-preview inline-flex items-center !bg-transparent !p-0">
                             <FontAwesomeIcon icon={faCloudSun} />
-                            {data.weather.current !== null && <span className="ml-1">{data.weather.current}°</span>}
-                            {(data.weather.max !== null || data.weather.min !== null) && (
-                                <span className="ml-1 inline-flex flex-col text-[10px] leading-tight">
-                                    {data.weather.max !== null && (
-                                        <span className="text-red-500">
-                                            <FontAwesomeIcon icon={faCaretUp} /> {data.weather.max}°
-                                        </span>
-                                    )}
-                                    {data.weather.min !== null && (
-                                        <span className="text-blue-500">
-                                            <FontAwesomeIcon icon={faCaretDown} /> {data.weather.min}°
-                                        </span>
-                                    )}
-                                </span>
-                            )}
+                            {data.weather.current !== null && <span className="ml-1 !bg-transparent !p-0">{data.weather.current}°</span>}
+                            <span className="ml-1 inline-grid text-[10px] leading-none px-1.5 py-0.5 rounded bg-blue-50 dark:bg-blue-900/50">
+                                {data.weather.max !== null && (
+                                    <span className="text-red-700 dark:text-red-400 !p-0 !m-0 !bg-transparent"><FontAwesomeIcon icon={faCaretUp} /> {data.weather.max}°</span>
+                                )}
+                                {data.weather.min !== null && (
+                                    <span className="text-blue-700 dark:text-blue-400 !p-0 !m-0 !bg-transparent"><FontAwesomeIcon icon={faCaretDown} /> {data.weather.min}°</span>
+                                )}
+                            </span>
                         </span>
                     )}
                 </div>
