@@ -387,7 +387,7 @@ export const WeatherPopup: React.FC<WeatherPopupProps> = ({ isOpen, onClose, dat
                                 <div className="text-2xl font-bold text-gray-800 dark:text-gray-100">
                                     {currentHourInfo.data.temp !== null ? `${currentHourInfo.data.temp}°C` : '-'}
                                 </div>
-                                <div className="text-sm text-gray-600 dark:text-gray-300">
+                                <div className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 truncate max-w-[100px] sm:max-w-[140px]" title={region || currentHourInfo.data.weatherNm}>
                                     {region || currentHourInfo.data.weatherNm}
                                 </div>
                             </div>
