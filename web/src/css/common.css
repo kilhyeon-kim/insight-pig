@@ -2660,7 +2660,9 @@
         }
 
         .info-accordion-grid {
-            grid-template-columns: 0.85fr 1.35fr 0.8fr;
+            /* PSY 카드 비활성화 상태에서는 2개 카드만 균등 배치 */
+            /* PSY 활성화시: grid-template-columns: 0.85fr 1.35fr 0.8fr; */
+            grid-template-columns: 1fr 1fr;
             gap: 10px;
         }
 
