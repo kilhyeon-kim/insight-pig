@@ -25,6 +25,7 @@ interface WeatherPopupProps {
     onClose: () => void;
     data: WeatherPopupData;
     farmNo?: number;
+    region?: string;  // 읍면동 지역명
 }
 
 // 날씨 코드별 아이콘 매핑
@@ -81,7 +82,7 @@ function getWeatherName(code: string): string {
     return map[code] || code;
 }
 
-export const WeatherPopup: React.FC<WeatherPopupProps> = ({ isOpen, onClose, data, farmNo }) => {
+export const WeatherPopup: React.FC<WeatherPopupProps> = ({ isOpen, onClose, data, farmNo, region }) => {
     const [selectedIdx, setSelectedIdx] = useState<number>(-1); // -1: 초기화 전
     const [hourlyData, setHourlyData] = useState<WeatherHourlyItem[]>([]);
     const [loadingHourly, setLoadingHourly] = useState(false);
@@ -115,10 +116,16 @@ export const WeatherPopup: React.FC<WeatherPopupProps> = ({ isOpen, onClose, dat
             else if (diffDays === 1) periodLabel = '내일';
             else if (diffDays === 2) periodLabel = '모레';
 
+            // 단기예보는 오늘~+2일(3일간)만 시간별 데이터 있음
+            // +3일 이후는 중기예보로 일별 데이터만 존재
+            const hasHourlyData = diffDays >= 0 && diffDays <= 2;
+
             return {
                 wkDate,
                 dayLabel: `${day}일(${dayOfWeek})`,
                 periodLabel,
+                diffDays,
+                hasHourlyData,
                 weatherCd: data.weatherCode?.[idx] || 'cloudy',
                 weatherNm: getWeatherName(data.weatherCode?.[idx] || 'cloudy'),
                 tempHigh: data.maxTemp?.[idx] ?? null,
@@ -381,7 +388,7 @@ export const WeatherPopup: React.FC<WeatherPopupProps> = ({ isOpen, onClose, dat
                                     {currentHourInfo.data.temp !== null ? `${currentHourInfo.data.temp}°C` : '-'}
                                 </div>
                                 <div className="text-sm text-gray-600 dark:text-gray-300">
-                                    {currentHourInfo.data.weatherNm}
+                                    {region || currentHourInfo.data.weatherNm}
                                 </div>
                             </div>
                         </div>
@@ -433,6 +440,7 @@ export const WeatherPopup: React.FC<WeatherPopupProps> = ({ isOpen, onClose, dat
                                     ? `${getWeatherBg(item.weatherCd, true)} border-blue-400 dark:border-blue-500 shadow-sm`
                                     : `${getWeatherBg(item.weatherCd, false)} border-gray-200 dark:border-gray-700`
                                 }
+                                ${!item.hasHourlyData ? 'opacity-70' : ''}
                             `}
                         >
                             {/* 날짜 라벨 */}
@@ -448,7 +456,7 @@ export const WeatherPopup: React.FC<WeatherPopupProps> = ({ isOpen, onClose, dat
                                 <FontAwesomeIcon icon={getWeatherIcon(item.weatherCd)} />
                             </div>
 
-                            {/* 기온 */}
+                            {/* 기온 (최고/최저) */}
                             <div className="text-xs space-y-0.5">
                                 <div className="text-red-500 font-semibold">
                                     {item.tempHigh !== null ? `${item.tempHigh}°` : '-'}

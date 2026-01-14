@@ -8,7 +8,9 @@ import {
     faWonSign,
     faCloudSun,
     faChevronDown,
-    faChartLine
+    faChartLine,
+    faCaretUp,
+    faCaretDown
 } from '@fortawesome/free-solid-svg-icons';
 
 export interface ExtraData {
@@ -27,7 +29,10 @@ export interface ExtraData {
     weather: {
         min: number | null;
         max: number | null;
+        current: number | null;
         region: string;
+        weatherCd?: string;
+        weatherNm?: string;
     };
 }
 
@@ -65,8 +70,25 @@ export const ExtraSection: React.FC<ExtraSectionProps> = ({ data, onPopupOpen })
                     {/* TODO: PSY 데이터 준비되면 활성화 */}
                     {/* <span><FontAwesomeIcon icon={faGrip} /> {data.psy.zone}</span> */}
                     <span><FontAwesomeIcon icon={faWonSign} /> {data.price.avg.toLocaleString()}원</span>
-                    {data.weather.min !== null && data.weather.max !== null && (
-                        <span><FontAwesomeIcon icon={faCloudSun} /> {data.weather.min}°/{data.weather.max}°</span>
+                    {(data.weather.current !== null || data.weather.max !== null || data.weather.min !== null) && (
+                        <span className="weather-preview inline-flex items-center">
+                            <FontAwesomeIcon icon={faCloudSun} />
+                            {data.weather.current !== null && <span className="ml-1">{data.weather.current}°</span>}
+                            {(data.weather.max !== null || data.weather.min !== null) && (
+                                <span className="ml-1 inline-flex flex-col text-[10px] leading-tight">
+                                    {data.weather.max !== null && (
+                                        <span className="text-red-500">
+                                            <FontAwesomeIcon icon={faCaretUp} /> {data.weather.max}°
+                                        </span>
+                                    )}
+                                    {data.weather.min !== null && (
+                                        <span className="text-blue-500">
+                                            <FontAwesomeIcon icon={faCaretDown} /> {data.weather.min}°
+                                        </span>
+                                    )}
+                                </span>
+                            )}
+                        </span>
                     )}
                 </div>
                 <div className="info-accordion-toggle">
@@ -129,7 +151,7 @@ export const ExtraSection: React.FC<ExtraSectionProps> = ({ data, onPopupOpen })
                     </div>
 
                     {/* 오늘 날씨 카드 - 날씨 데이터가 있는 경우에만 표시 */}
-                    {data.weather.min !== null && data.weather.max !== null && (
+                    {(data.weather.current !== null || data.weather.min !== null || data.weather.max !== null) && (
                         <div className="info-accordion-card" id="cardWeather">
                             <div className="card-header">
                                 <div className="card-title">
@@ -142,12 +164,16 @@ export const ExtraSection: React.FC<ExtraSectionProps> = ({ data, onPopupOpen })
                             <div className="card-content">
                                 <div className="section-left">
                                     <div className="value-box">
-                                        <div className="label">최저</div>
-                                        <div className="value blue">{data.weather.min}°</div>
+                                        <div className="label">현재</div>
+                                        <div className="value" style={{ fontSize: '18px' }}>{data.weather.current !== null ? `${data.weather.current}°` : '-'}</div>
                                     </div>
                                     <div className="value-box">
                                         <div className="label">최고</div>
-                                        <div className="value red">{data.weather.max}°</div>
+                                        <div className="value red">{data.weather.max !== null ? `${data.weather.max}°` : '-'}</div>
+                                    </div>
+                                    <div className="value-box">
+                                        <div className="label">최저</div>
+                                        <div className="value blue">{data.weather.min !== null ? `${data.weather.min}°` : '-'}</div>
                                     </div>
                                 </div>
                                 <div className="section-right">

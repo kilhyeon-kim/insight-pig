@@ -314,7 +314,10 @@ export class WeeklyService {
         reportData.extra.weather = {
           min: weatherToday.min,
           max: weatherToday.max,
+          current: weatherToday.current,
           region: weatherToday.region,
+          weatherCd: weatherToday.weatherCd,
+          weatherNm: weatherToday.weatherNm,
         };
       }
 
@@ -593,7 +596,10 @@ export class WeeklyService {
         weather: {
           min: null as number | null,
           max: null as number | null,
+          current: null as number | null,
           region: '',
+          weatherCd: undefined as string | undefined,
+          weatherNm: undefined as string | undefined,
         },
       },
       // 관리 포인트 (TS_INS_MGMT 테이블에서 조회)
@@ -1952,29 +1958,69 @@ export class WeeklyService {
         return null;
       }
 
-      const results = await this.dataSource.query(
+      // 일별 날씨 (최고/최저)
+      const dailyResults = await this.dataSource.query(
         WEEKLY_SQL.getWeatherToday,
         params({ nx: grid.nx, ny: grid.ny }),
       );
 
-      if (!results || results.length === 0) {
+      // 현재 시간 날씨 (현재 기온)
+      const currentResults = await this.dataSource.query(
+        WEEKLY_SQL.getWeatherCurrent,
+        params({ nx: grid.nx, ny: grid.ny }),
+      );
+
+      const region = this.extractRegionName(grid.region);
+
+      if (!dailyResults || dailyResults.length === 0) {
+        // 일별 데이터 없으면 현재 시간 데이터로 대체
+        if (currentResults && currentResults.length > 0) {
+          const curr = currentResults[0];
+          const currTemp = curr.TEMP !== null ? Number(curr.TEMP) : null;
+          return {
+            min: currTemp,
+            max: currTemp,
+            current: currTemp,
+            region,
+            weatherCd: curr.WEATHER_CD,
+            weatherNm: curr.WEATHER_NM,
+            skyCd: curr.SKY_CD,
+          };
+        }
         return {
           min: null,
           max: null,
-          region: this.extractRegionName(grid.region),
+          current: null,
+          region,
         };
       }
 
-      const row = results[0];
+      const row = dailyResults[0];
       // TEMP_HIGH/TEMP_LOW가 NULL이면 TEMP_AVG를 fallback으로 사용
       const tempAvg = row.TEMP_AVG !== null ? Number(row.TEMP_AVG) : null;
+
+      // 현재 기온 (시간별 데이터에서)
+      let currentTemp = tempAvg;
+      let currentWeatherCd = row.WEATHER_CD;
+      let currentWeatherNm = row.WEATHER_NM;
+      let currentSkyCd = row.SKY_CD;
+
+      if (currentResults && currentResults.length > 0) {
+        const curr = currentResults[0];
+        currentTemp = curr.TEMP !== null ? Number(curr.TEMP) : tempAvg;
+        currentWeatherCd = curr.WEATHER_CD || row.WEATHER_CD;
+        currentWeatherNm = curr.WEATHER_NM || row.WEATHER_NM;
+        currentSkyCd = curr.SKY_CD || row.SKY_CD;
+      }
+
       return {
         min: row.TEMP_LOW !== null ? Number(row.TEMP_LOW) : tempAvg,
         max: row.TEMP_HIGH !== null ? Number(row.TEMP_HIGH) : tempAvg,
-        region: this.extractRegionName(grid.region),
-        weatherCd: row.WEATHER_CD,
-        weatherNm: row.WEATHER_NM,
-        skyCd: row.SKY_CD,
+        current: currentTemp,
+        region,
+        weatherCd: currentWeatherCd,
+        weatherNm: currentWeatherNm,
+        skyCd: currentSkyCd,
       };
     } catch (error) {
       this.logger.error(`오늘 날씨 조회 실패: ${error.message}`);

@@ -371,6 +371,7 @@ export default function WeeklyDetailPage({ params }: WeeklyDetailPageProps) {
                     onClose={handlePopupClose}
                     data={data.weather}
                     farmNo={data.header?.farmNo}
+                    region={data.extra?.weather?.region}
                 />
             )}
 

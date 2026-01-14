@@ -536,6 +536,34 @@ export const WEEKLY_SQL = {
     FROM TM_WEATHER
     WHERE NX = :nx
       AND NY = :ny
-      AND WK_DATE = TO_CHAR(SYSDATE, 'YYYYMMDD')
+      AND WK_DATE = TO_CHAR(SYSDATE + 9/24, 'YYYYMMDD')  /* UTC→KST 변환 */
+  `,
+
+  /**
+   * 현재 시간 날씨 조회 (cardWeather용 - 가장 가까운 시간대)
+   * @param nx - 격자 X
+   * @param ny - 격자 Y
+   */
+  getWeatherCurrent: `
+    /* weekly.weekly.getWeatherCurrent : 현재 시간 날씨 조회 */
+    SELECT *
+    FROM (
+        SELECT
+            WK_DATE,
+            WK_TIME,
+            WEATHER_CD,
+            WEATHER_NM,
+            TEMP,
+            RAIN_PROB,
+            SKY_CD,
+            PTY_CD
+        FROM TM_WEATHER_HOURLY
+        WHERE NX = :nx
+          AND NY = :ny
+          AND WK_DATE = TO_CHAR(SYSDATE + 9/24, 'YYYYMMDD')  /* UTC→KST 변환 */
+          AND WK_TIME <= TO_CHAR(SYSDATE + 9/24, 'HH24') || '00'  /* 현재 시간 이하 */
+        ORDER BY WK_TIME DESC
+    )
+    WHERE ROWNUM = 1
   `,
 };
