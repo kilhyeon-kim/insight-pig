@@ -110,7 +110,10 @@
       "Bash(git -C \"C:\\\\Projects\\\\docs\\\\inspig-docs-shared\" mv \"db/sql/ins/week/02_SP_INS_WEEK_CONFIG.sql\" \"db/sql/ins/backup/\")",
       "Bash(git -C \"C:\\\\Projects\\\\docs\\\\inspig-docs-shared\" mv \"db/sql/ins/week/11_SP_INS_WEEK_MODON_POPUP.sql\" \"db/sql/ins/backup/\")",
       "Bash(git -C \"C:\\\\Projects\\\\docs\\\\inspig-docs-shared\" mv \"db/sql/ins/week/12_SP_INS_WEEK_ALERT_POPUP.sql\" \"db/sql/ins/backup/\")",
-      "Bash(del \"c:\\\\Projects\\\\inspig\\\\web\\\\src\\\\services\\\\mockData.ts\")"
+      "Bash(del \"c:\\\\Projects\\\\inspig\\\\web\\\\src\\\\services\\\\mockData.ts\")",
+      "Bash(move:*)",
+      "Bash(cmd /c move:*)",
+      "Bash(del \"C:\\\\Projects\\\\pig3.1\\\\pigplan\\\\pigplanxe\\\\src\\\\main\\\\webapp\\\\WEB-INF\\\\jsp\\\\pigplan\\\\popup\\\\InsWeeklyConfigPopup.jsp\")"
     ],
     "deny": [],
     "ask": [],

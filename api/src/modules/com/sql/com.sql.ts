@@ -205,7 +205,7 @@ export const COM_SQL = {
    * - 150002: 분만
    * - 150003: 이유
    * - 150005: 교배
-   * - 150007: 백신
+   * - 150004: 백신
    *
    * @param farmNo - 농장번호
    * @returns SEQ, JOB_GUBUN_CD, WK_NM, MODON_STATUS_CD, PASS_DAY

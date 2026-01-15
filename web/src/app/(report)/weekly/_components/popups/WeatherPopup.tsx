@@ -26,6 +26,7 @@ interface WeatherPopupProps {
     data: WeatherPopupData;
     farmNo?: number;
     region?: string;  // 읍면동 지역명
+    weekPeriod?: { from: string; to: string; fromRaw?: string; toRaw?: string };  // 금주 주차 범위
 }
 
 // 날씨 코드별 아이콘 매핑
@@ -82,7 +83,7 @@ function getWeatherName(code: string): string {
     return map[code] || code;
 }
 
-export const WeatherPopup: React.FC<WeatherPopupProps> = ({ isOpen, onClose, data, farmNo, region }) => {
+export const WeatherPopup: React.FC<WeatherPopupProps> = ({ isOpen, onClose, data, farmNo, region, weekPeriod }) => {
     const [selectedIdx, setSelectedIdx] = useState<number>(-1); // -1: 초기화 전
     const [hourlyData, setHourlyData] = useState<WeatherHourlyItem[]>([]);
     const [loadingHourly, setLoadingHourly] = useState(false);
@@ -90,51 +91,113 @@ export const WeatherPopup: React.FC<WeatherPopupProps> = ({ isOpen, onClose, dat
     const chartRef = useRef<HTMLDivElement>(null);
     const chartInstance = useRef<echarts.ECharts | null>(null);
 
-    // daily 데이터 생성 (기존 데이터에서 변환)
+    // daily 데이터 생성 - 항상 7일 슬롯 생성 후 API 데이터 매칭
     const dailyItems = React.useMemo(() => {
-        if (!data?.xData) return [];
+        const fromRaw = weekPeriod?.fromRaw;
+        const toRaw = weekPeriod?.toRaw;
+
+        // weekPeriod가 없으면 빈 배열
+        if (!fromRaw || !toRaw) return [];
 
         // 한국 시간(KST) 기준으로 오늘 날짜 계산
         const kstTime = getKSTDate();
         const todayDate = new Date(kstTime.getFullYear(), kstTime.getMonth(), kstTime.getDate());
+        const todayStr = `${kstTime.getFullYear()}${String(kstTime.getMonth() + 1).padStart(2, '0')}${String(kstTime.getDate()).padStart(2, '0')}`;
 
-        return data.xData.map((label, idx) => {
-            // xData: "01/13(월)" 형식에서 파싱
-            const match = label.match(/(\d{2})\/(\d{2})\((.)\)/);
-            const month = match ? match[1] : '';
-            const day = match ? match[2] : '';
-            const dayOfWeek = match ? match[3] : '';
+        // API 데이터를 wkDate 기준으로 Map 생성
+        const dataMap = new Map<string, { weatherCd: string; tempHigh: number | null; tempLow: number | null; rainProb: number; humidity: number | null }>();
+        if (data?.xData) {
+            data.xData.forEach((label, idx) => {
+                // xData: "01/13(월)" 형식에서 파싱
+                const match = label.match(/(\d{2})\/(\d{2})\((.)\)/);
+                if (match) {
+                    const month = match[1];
+                    const day = match[2];
+                    // 연도 결정: fromRaw에서 추출 (연도 넘김 처리)
+                    let year = parseInt(fromRaw.substring(0, 4), 10);
+                    // 12월 → 1월 넘김 처리
+                    if (parseInt(fromRaw.substring(4, 6), 10) === 12 && parseInt(month, 10) === 1) {
+                        year += 1;
+                    }
+                    const wkDate = `${year}${month}${day}`;
+                    dataMap.set(wkDate, {
+                        weatherCd: data.weatherCode?.[idx] || 'cloudy',
+                        tempHigh: data.maxTemp?.[idx] ?? null,
+                        tempLow: data.minTemp?.[idx] ?? null,
+                        rainProb: data.rainProb?.[idx] ?? 0,
+                        humidity: data.humidity?.[idx] ?? null,
+                    });
+                }
+            });
+        }
 
-            // wkDate 계산 (한국 시간 기준 연도)
-            const wkDate = `${kstTime.getFullYear()}${month}${day}`;
+        // 7일 슬롯 생성 (fromRaw부터 7일)
+        const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
+        const items = [];
+        const startDate = new Date(
+            parseInt(fromRaw.substring(0, 4), 10),
+            parseInt(fromRaw.substring(4, 6), 10) - 1,
+            parseInt(fromRaw.substring(6, 8), 10)
+        );
 
-            // 오늘/내일/모레 라벨 (날짜만 비교)
+        for (let i = 0; i < 7; i++) {
+            const d = new Date(startDate);
+            d.setDate(d.getDate() + i);
+            const wkDate = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
+            const dayOfWeek = dayNames[d.getDay()];
+
+            // 오늘/내일/모레 라벨
+            const diffDays = Math.round((d.getTime() - todayDate.getTime()) / (1000 * 60 * 60 * 24));
             let periodLabel = '';
-            const itemDate = new Date(kstTime.getFullYear(), parseInt(month) - 1, parseInt(day));
-            const diffDays = Math.round((itemDate.getTime() - todayDate.getTime()) / (1000 * 60 * 60 * 24));
             if (diffDays === 0) periodLabel = '오늘';
             else if (diffDays === 1) periodLabel = '내일';
             else if (diffDays === 2) periodLabel = '모레';
 
-            // 단기예보는 오늘~+2일(3일간)만 시간별 데이터 있음
-            // +3일 이후는 중기예보로 일별 데이터만 존재
-            const hasHourlyData = diffDays >= 0 && diffDays <= 2;
+            // API 데이터 매칭
+            const apiData = dataMap.get(wkDate);
+            const hasData = !!apiData;
 
-            return {
+            items.push({
                 wkDate,
-                dayLabel: `${day}일(${dayOfWeek})`,
+                dayLabel: `${d.getDate()}일(${dayOfWeek})`,
                 periodLabel,
                 diffDays,
-                hasHourlyData,
-                weatherCd: data.weatherCode?.[idx] || 'cloudy',
-                weatherNm: getWeatherName(data.weatherCode?.[idx] || 'cloudy'),
-                tempHigh: data.maxTemp?.[idx] ?? null,
-                tempLow: data.minTemp?.[idx] ?? null,
-                rainProb: data.rainProb?.[idx] ?? 0,
-                humidity: data.humidity?.[idx] ?? null,
-            };
-        });
-    }, [data]);
+                hasHourlyData: diffDays >= 0 && diffDays <= 2,
+                hasData, // 데이터 유무
+                weatherCd: apiData?.weatherCd || 'cloudy',
+                weatherNm: getWeatherName(apiData?.weatherCd || 'cloudy'),
+                tempHigh: apiData?.tempHigh ?? null,
+                tempLow: apiData?.tempLow ?? null,
+                rainProb: apiData?.rainProb ?? 0,
+                humidity: apiData?.humidity ?? null,
+            });
+        }
+
+        return items;
+    }, [data, weekPeriod]);
+
+    // 현재 날짜가 금주 주차 범위 내인지 확인
+    const isTodayInWeekPeriod = React.useMemo(() => {
+        const fromRaw = weekPeriod?.fromRaw;
+        const toRaw = weekPeriod?.toRaw;
+        if (!fromRaw || !toRaw) return true; // weekPeriod 없으면 항상 표시
+
+        const kstTime = getKSTDate();
+        const todayStr = `${kstTime.getFullYear()}${String(kstTime.getMonth() + 1).padStart(2, '0')}${String(kstTime.getDate()).padStart(2, '0')}`;
+
+        return todayStr >= fromRaw && todayStr <= toRaw;
+    }, [weekPeriod]);
+
+    // 과거 주차인지 확인 (주차 종료일이 오늘보다 이전)
+    const isPastWeek = React.useMemo(() => {
+        const toRaw = weekPeriod?.toRaw;
+        if (!toRaw) return false;
+
+        const kstTime = getKSTDate();
+        const todayStr = `${kstTime.getFullYear()}${String(kstTime.getMonth() + 1).padStart(2, '0')}${String(kstTime.getDate()).padStart(2, '0')}`;
+
+        return toRaw < todayStr;
+    }, [weekPeriod]);
 
     // 팝업 열릴 때 오늘 날짜를 기본 선택으로 설정 + 현재 시간 정보 조회
     useEffect(() => {
@@ -365,13 +428,13 @@ export const WeatherPopup: React.FC<WeatherPopupProps> = ({ isOpen, onClose, dat
         <PopupContainer
             isOpen={isOpen}
             onClose={onClose}
-            title="주간 날씨 예보"
-            subtitle="기상청 단기예보 기준"
+            title={isPastWeek ? "주간 날씨 기록" : "주간 날씨 예보"}
+            subtitle={isPastWeek ? "해당 주차의 관측 날씨" : "기상청 단기예보 기준"}
             maxWidth="max-w-3xl"
             id="pop-weather"
         >
-            {/* 섹션 1: 현재 시간 날씨 (오늘 기준, 고정) */}
-            {currentHourInfo && (
+            {/* 섹션 1: 현재 시간 날씨 (오늘 기준, 고정) - 금주 주차 범위 내일 때만 표시 */}
+            {currentHourInfo && isTodayInWeekPeriod && (
                 <div id="weather-current-hour" className={`rounded-lg p-4 mb-4 ${getWeatherBg(currentHourInfo.data.weatherCd, true)} border border-gray-200 dark:border-gray-700`}>
                     <div className="flex items-center justify-between">
                         {/* 왼쪽: 현재 시간 날씨 */}
@@ -427,20 +490,29 @@ export const WeatherPopup: React.FC<WeatherPopupProps> = ({ isOpen, onClose, dat
                 </div>
             )}
 
-            {/* 섹션 2: 일별 카드 그리드 */}
+            {/* 섹션 2: 일별 카드 그리드 (항상 7개 슬롯 표시) */}
             <div id="weather-daily-cards" className="mb-4">
+                {dailyItems.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-12 text-gray-400 dark:text-gray-500">
+                        <FontAwesomeIcon icon={faCloud} className="text-4xl mb-3 opacity-50" />
+                        <p className="text-sm">주차 정보를 불러올 수 없습니다</p>
+                    </div>
+                ) : (
                 <div className="grid grid-cols-7 gap-1">
                     {dailyItems.map((item, idx) => (
                         <div
                             key={item.wkDate}
-                            onClick={() => setSelectedIdx(idx)}
+                            onClick={() => item.hasData && setSelectedIdx(idx)}
                             className={`
-                                cursor-pointer rounded-lg p-2 text-center transition-all border
-                                ${idx === selectedIdx
-                                    ? `${getWeatherBg(item.weatherCd, true)} border-blue-400 dark:border-blue-500 shadow-sm`
-                                    : `${getWeatherBg(item.weatherCd, false)} border-gray-200 dark:border-gray-700`
+                                rounded-lg p-2 text-center transition-all border
+                                ${item.hasData ? 'cursor-pointer' : 'cursor-default'}
+                                ${item.hasData
+                                    ? idx === selectedIdx
+                                        ? `${getWeatherBg(item.weatherCd, true)} border-blue-400 dark:border-blue-500 shadow-sm`
+                                        : `${getWeatherBg(item.weatherCd, false)} border-gray-200 dark:border-gray-700`
+                                    : 'bg-gray-50 dark:bg-gray-800/50 border-gray-200 dark:border-gray-700 border-dashed'
                                 }
-                                ${!item.hasHourlyData ? 'opacity-70' : ''}
+                                ${item.hasData && !item.hasHourlyData ? 'opacity-70' : ''}
                             `}
                         >
                             {/* 날짜 라벨 */}
@@ -451,35 +523,52 @@ export const WeatherPopup: React.FC<WeatherPopupProps> = ({ isOpen, onClose, dat
                                 {item.dayLabel}
                             </div>
 
-                            {/* 날씨 아이콘 */}
-                            <div className={`text-2xl my-2 ${getWeatherColor(item.weatherCd)}`}>
-                                <FontAwesomeIcon icon={getWeatherIcon(item.weatherCd)} />
-                            </div>
+                            {item.hasData ? (
+                                <>
+                                    {/* 날씨 아이콘 */}
+                                    <div className={`text-2xl my-2 ${getWeatherColor(item.weatherCd)}`}>
+                                        <FontAwesomeIcon icon={getWeatherIcon(item.weatherCd)} />
+                                    </div>
 
-                            {/* 기온 (최고/최저) */}
-                            <div className="text-xs space-y-0.5">
-                                <div className="text-red-500 font-semibold">
-                                    {item.tempHigh !== null ? `${item.tempHigh}°` : '-'}
-                                </div>
-                                <div className="text-blue-500 font-semibold">
-                                    {item.tempLow !== null ? `${item.tempLow}°` : '-'}
-                                </div>
-                            </div>
+                                    {/* 기온 (최고/최저) */}
+                                    <div className="text-xs space-y-0.5">
+                                        <div className="text-red-500 font-semibold">
+                                            {item.tempHigh !== null ? `${item.tempHigh}°` : '-'}
+                                        </div>
+                                        <div className="text-blue-500 font-semibold">
+                                            {item.tempLow !== null ? `${item.tempLow}°` : '-'}
+                                        </div>
+                                    </div>
 
-                            {/* 강수확률 */}
-                            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                <FontAwesomeIcon icon={faUmbrella} className="mr-0.5 text-blue-400" />
-                                {item.rainProb}%
-                            </div>
+                                    {/* 강수확률 */}
+                                    <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                        <FontAwesomeIcon icon={faUmbrella} className="mr-0.5 text-blue-400" />
+                                        {item.rainProb}%
+                                    </div>
+                                </>
+                            ) : (
+                                <>
+                                    {/* 데이터 없음 표시 */}
+                                    <div className="text-2xl my-2 text-gray-300 dark:text-gray-600">
+                                        <FontAwesomeIcon icon={faCloud} />
+                                    </div>
+                                    <div className="text-xs text-gray-400 dark:text-gray-500">
+                                        <div>정보</div>
+                                        <div>없음</div>
+                                    </div>
+                                </>
+                            )}
                         </div>
                     ))}
                 </div>
+                )}
             </div>
 
-            {/* 섹션 3: 시간별 예보 차트 */}
+            {/* 섹션 3: 시간별 예보 차트 - 일별 데이터가 있을 때만 표시 */}
+            {dailyItems.length > 0 && (
             <div id="weather-hourly-chart" className="border-t border-gray-200 dark:border-gray-700 pt-4">
                 <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
-                    시간별 예보 - {selectedDay?.dayLabel}
+                    {isPastWeek ? '시간별 기록' : '시간별 예보'} - {selectedDay?.dayLabel}
                 </h4>
 
                 {loadingHourly ? (
@@ -507,6 +596,7 @@ export const WeatherPopup: React.FC<WeatherPopupProps> = ({ isOpen, onClose, dat
                     </div>
                 )}
             </div>
+            )}
         </PopupContainer>
     );
 };

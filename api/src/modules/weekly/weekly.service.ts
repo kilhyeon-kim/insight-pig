@@ -60,6 +60,8 @@ export class WeeklyService {
         period: {
           from: row.DT_FROM,
           to: row.DT_TO,
+          fromRaw: row.DT_FROM_RAW,  // YYYYMMDD 형식
+          toRaw: row.DT_TO_RAW,      // YYYYMMDD 형식
         },
         statusCd: row.STATUS_CD,
         createdAt: row.LOG_INS_DT,
@@ -283,6 +285,9 @@ export class WeeklyService {
       // DT_FROM, DT_TO: YY.MM.DD 형식 그대로 전달 (SQL에서 YYYYMMDD로 변환)
       const dtFrom = week.DT_FROM;
       const dtTo = week.DT_TO;
+      // DT_FROM_RAW, DT_TO_RAW: YYYYMMDD 형식 (날짜 비교용)
+      const dtFromRaw = week.DT_FROM_RAW;
+      const dtToRaw = week.DT_TO_RAW;
       let auctionPopupData: {
         xData: string[];
         grade1Plus: number[];
@@ -308,20 +313,17 @@ export class WeeklyService {
         auctionPopupData = await this.getAuctionPopupData(dtFrom, dtTo);
       }
 
-      // 6. 날씨 데이터 조회 (extra.weather용)
-      const weatherToday = await this.getWeatherToday(farmNo);
-      if (reportData.extra && weatherToday) {
-        reportData.extra.weather = {
-          min: weatherToday.min,
-          max: weatherToday.max,
-          current: weatherToday.current,
-          region: weatherToday.region,
-          weatherCd: weatherToday.weatherCd,
-          weatherNm: weatherToday.weatherNm,
-        };
-      }
+      // 6. 날씨 데이터 조회 (extra.weather용 + 팝업용)
+      // 날씨는 금주 작업예정 기간(thisWeek.calendarGrid) 기준으로 조회
+      const thisWeekFromRaw = reportData.thisWeek?.calendarGrid?.periodFromRaw;
+      const thisWeekToRaw = reportData.thisWeek?.calendarGrid?.periodToRaw;
 
-      // 7. 날씨 팝업 데이터 조회 (금주 월~일)
+      // 과거 주차 여부 확인 (금주 작업예정 종료일이 오늘보다 이전)
+      const today = nowKst();
+      const todayStr = `${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, '0')}${String(today.getDate()).padStart(2, '0')}`;
+      const isPastWeek = thisWeekToRaw ? thisWeekToRaw < todayStr : false;
+
+      // 7. 날씨 팝업 데이터 조회 (금주 작업예정 기간)
       let weatherPopupData: {
         xData: string[];
         maxTemp: number[];
@@ -330,22 +332,43 @@ export class WeeklyService {
         rainProb: number[];
       } | null = null;
 
-      // 금주 날짜 계산 (오늘 기준 월~일)
-      const today = nowKst();
-      const dayOfWeek = today.getDay(); // 0=일, 1=월, ..., 6=토
-      const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-      const monday = new Date(today);
-      monday.setDate(today.getDate() + mondayOffset);
-      const sunday = new Date(monday);
-      sunday.setDate(monday.getDate() + 6);
+      // 금주 작업예정 기간의 날씨 데이터 조회 (extra.weather + 팝업 공용)
+      // thisWeekFromRaw/thisWeekToRaw: YYYYMMDD 형식 (TM_WEATHER.WK_DATE와 일치)
+      const weatherDaily = thisWeekFromRaw && thisWeekToRaw
+        ? await this.getWeatherDaily(farmNo, thisWeekFromRaw, thisWeekToRaw)
+        : null;
 
-      const formatDate = (d: Date) =>
-        `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
+      if (isPastWeek) {
+        // 과거 주차: 해당 주차의 날씨 데이터로 최고/최저 표시
+        if (reportData.extra && weatherDaily && weatherDaily.daily.length > 0) {
+          // 주간 최고/최저 계산
+          const maxTemps = weatherDaily.daily.map(d => d.tempHigh).filter(t => t !== null) as number[];
+          const minTemps = weatherDaily.daily.map(d => d.tempLow).filter(t => t !== null) as number[];
+          reportData.extra.weather = {
+            min: minTemps.length > 0 ? Math.min(...minTemps) : null,
+            max: maxTemps.length > 0 ? Math.max(...maxTemps) : null,
+            current: null, // 과거 주차는 현재 온도 없음
+            region: weatherDaily.region || '',
+            weatherCd: undefined,
+            weatherNm: undefined,
+          };
+        }
+      } else {
+        // 금주: 오늘 날씨 표시
+        const weatherToday = await this.getWeatherToday(farmNo);
+        if (reportData.extra && weatherToday) {
+          reportData.extra.weather = {
+            min: weatherToday.min,
+            max: weatherToday.max,
+            current: weatherToday.current,
+            region: weatherToday.region,
+            weatherCd: weatherToday.weatherCd,
+            weatherNm: weatherToday.weatherNm,
+          };
+        }
+      }
 
-      const weekDtFrom = formatDate(monday);
-      const weekDtTo = formatDate(sunday);
-
-      const weatherDaily = await this.getWeatherDaily(farmNo, weekDtFrom, weekDtTo);
+      // 날씨 팝업 데이터 변환
       if (weatherDaily && weatherDaily.daily.length > 0) {
         const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
         weatherPopupData = {
@@ -483,6 +506,8 @@ export class WeeklyService {
         period: {
           from: this.formatDate(week.DT_FROM),
           to: this.formatDate(week.DT_TO),
+          fromRaw: week.DT_FROM_RAW,  // YYYYMMDD 형식
+          toRaw: week.DT_TO_RAW,      // YYYYMMDD 형식
         },
       },
       alertMd: {
@@ -811,6 +836,8 @@ export class WeeklyService {
     // periodFrom/periodTo 계산 (SCHEDULE 데이터 없는 경우 fallback)
     let periodFrom = scheduleSub?.str1 || '';
     let periodTo = scheduleSub?.str2 || '';
+    let periodFromRaw = ''; // YYYYMMDD 형식
+    let periodToRaw = '';   // YYYYMMDD 형식
 
     if (!periodFrom && dates.length === 7) {
       // dates[0]과 dates[6]에서 MM.DD 형식 생성
@@ -830,6 +857,32 @@ export class WeeklyService {
 
         periodFrom = `${String(startDate.getMonth() + 1).padStart(2, '0')}.${String(startDate.getDate()).padStart(2, '0')}`;
         periodTo = `${String(endDate.getMonth() + 1).padStart(2, '0')}.${String(endDate.getDate()).padStart(2, '0')}`;
+        periodFromRaw = `${startDate.getFullYear()}${String(startDate.getMonth() + 1).padStart(2, '0')}${String(startDate.getDate()).padStart(2, '0')}`;
+        periodToRaw = `${endDate.getFullYear()}${String(endDate.getMonth() + 1).padStart(2, '0')}${String(endDate.getDate()).padStart(2, '0')}`;
+      }
+    } else if (periodFrom && periodTo) {
+      // SCHEDULE 데이터가 있는 경우 RAW 형식 계산
+      // periodFrom/To: 'MM.DD' 형식, week.DT_TO_RAW에서 연도 추출
+      const yearStr = week.DT_TO_RAW?.substring(0, 4) || String(new Date().getFullYear());
+      const fromParts = periodFrom.split('.');
+      const toParts = periodTo.split('.');
+      if (fromParts.length === 2 && toParts.length === 2) {
+        // 연도 넘김 처리: periodFrom이 12월이고 periodTo가 1월이면 연도 증가
+        let fromYear = parseInt(yearStr, 10);
+        let toYear = fromYear;
+        const fromMonth = parseInt(fromParts[0], 10);
+        const toMonth = parseInt(toParts[0], 10);
+        // DT_TO는 지난주 종료일이므로 금주 시작은 다음날
+        // 12월 마지막 주 → 1월 첫 주로 넘어가는 경우
+        if (fromMonth === 12 && toMonth === 1) {
+          toYear = fromYear + 1;
+        } else if (fromMonth === 1) {
+          // 금주가 1월이면 연도는 DT_TO_RAW + 1
+          fromYear = parseInt(yearStr, 10) + (parseInt(week.DT_TO_RAW?.substring(4, 6) || '12', 10) === 12 ? 1 : 0);
+          toYear = fromYear;
+        }
+        periodFromRaw = `${fromYear}${fromParts[0]}${fromParts[1]}`;
+        periodToRaw = `${toYear}${toParts[0]}${toParts[1]}`;
       }
     }
 
@@ -838,6 +891,8 @@ export class WeeklyService {
       weekNum: scheduleSub?.cnt7 || week.REPORT_WEEK_NO || 0,
       periodFrom,
       periodTo,
+      periodFromRaw,  // YYYYMMDD 형식 (날씨 조회용)
+      periodToRaw,    // YYYYMMDD 형식 (날씨 조회용)
       // 날짜 배열 (항상 7개)
       dates,
       // 요약 합계 (SCHEDULE 행 또는 week 테이블)

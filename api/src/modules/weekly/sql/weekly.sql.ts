@@ -16,6 +16,8 @@ export const WEEKLY_SQL = {
         M.REPORT_WEEK_NO,
         TO_CHAR(TO_DATE(M.DT_FROM, 'YYYYMMDD'), 'YY.MM.DD') AS DT_FROM,
         TO_CHAR(TO_DATE(M.DT_TO, 'YYYYMMDD'), 'YY.MM.DD') AS DT_TO,
+        M.DT_FROM AS DT_FROM_RAW,
+        M.DT_TO AS DT_TO_RAW,
         M.STATUS_CD,
         TO_CHAR(SF_GET_LOCALE_VW_DATE_2022('KOR', M.LOG_INS_DT), 'YYYY.MM.DD') AS LOG_INS_DT,
         W.SHARE_TOKEN,
@@ -42,6 +44,8 @@ export const WEEKLY_SQL = {
         M.REPORT_WEEK_NO,
         TO_CHAR(TO_DATE(M.DT_FROM, 'YYYYMMDD'), 'YY.MM.DD') AS DT_FROM,
         TO_CHAR(TO_DATE(M.DT_TO, 'YYYYMMDD'), 'YY.MM.DD') AS DT_TO,
+        M.DT_FROM AS DT_FROM_RAW,
+        M.DT_TO AS DT_TO_RAW,
         M.STATUS_CD,
         TO_CHAR(SF_GET_LOCALE_VW_DATE_2022('KOR', M.LOG_INS_DT), 'YYYY.MM.DD') AS LOG_INS_DT,
         W.SHARE_TOKEN,
@@ -75,6 +79,8 @@ export const WEEKLY_SQL = {
         W.REPORT_WEEK_NO,
         TO_CHAR(TO_DATE(W.DT_FROM, 'YYYYMMDD'), 'YY.MM.DD') AS DT_FROM,
         TO_CHAR(TO_DATE(W.DT_TO, 'YYYYMMDD'), 'YY.MM.DD') AS DT_TO,
+        W.DT_FROM AS DT_FROM_RAW,
+        W.DT_TO AS DT_TO_RAW,
         W.ALERT_TOTAL,
         W.ALERT_HUBO,
         W.ALERT_EU_MI,
@@ -251,7 +257,7 @@ export const WEEKLY_SQL = {
    * - 금주 실적 요일별 건수 셋팅
    * @param farmNo - 농장번호
    * @param reportGb - 리포트구분 (JOB-DAJANG: 작업예정돈 대장, JOB-CALENDAR: 달력)
-   * @param scheduleGb - 예정구분 (150001:임신진단, 150002:분만, 150003:이유, 150004:백신, 150005:교배, 150007:백신2)
+   * @param scheduleGb - 예정구분 (150001:임신진단, 150002:분만, 150003:이유, 150004:백신, 150005:교배, 150004:백신2)
    * @param statusCode - 모돈상태 (NULL=전체)
    * @param dtFrom - 시작일 (yyyy-MM-dd)
    * @param dtTo - 종료일 (yyyy-MM-dd)

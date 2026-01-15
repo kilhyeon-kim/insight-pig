@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, use } from 'react';
+import React, { useState, useEffect, use, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import {
     parseApiError,
@@ -30,6 +30,7 @@ import { ScheduleDetailPopup } from '../_components/popups/ScheduleDetailPopup';
 import { PsyTrendPopup } from '../_components/popups/PsyTrendPopup';
 import { AuctionPopup } from '../_components/popups/AuctionPopup';
 import { WeatherPopup } from '../_components/popups/WeatherPopup';
+import { getTodayKST } from '@/utils/date';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
@@ -44,7 +45,7 @@ interface ReportData {
         ownerNm: string;
         year: number;
         weekNo: number;
-        period: { from: string; to: string };
+        period: { from: string; to: string; fromRaw?: string; toRaw?: string };
     };
     alertMd: {
         count: number;
@@ -79,6 +80,27 @@ export default function WeeklyDetailPage({ params }: WeeklyDetailPageProps) {
     const [activePopup, setActivePopup] = useState<string | null>(null);
     const [isLoginAccess, setIsLoginAccess] = useState(false);
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+    // 금주 작업예정 기간 (thisWeek.calendarGrid에서 가져옴)
+    const thisWeekPeriod = useMemo(() => {
+        const calendarGrid = data?.thisWeek?.calendarGrid;
+        if (!calendarGrid) return undefined;
+        return {
+            from: calendarGrid.periodFrom,
+            to: calendarGrid.periodTo,
+            fromRaw: calendarGrid.periodFromRaw,
+            toRaw: calendarGrid.periodToRaw,
+        };
+    }, [data?.thisWeek?.calendarGrid]);
+
+    // 과거 주차인지 확인 (금주 작업예정 종료일이 오늘보다 이전)
+    // periodToRaw: YYYYMMDD 형식 (API에서 제공)
+    const isPastWeek = useMemo(() => {
+        const toRaw = thisWeekPeriod?.toRaw;
+        if (!toRaw) return false;
+        const todayStr = getTodayKST(); // YYYYMMDD
+        return toRaw < todayStr;
+    }, [thisWeekPeriod?.toRaw]);
 
     useEffect(() => {
         const fetchReport = async () => {
@@ -240,7 +262,7 @@ export default function WeeklyDetailPage({ params }: WeeklyDetailPageProps) {
 
                 <div className="space-y-6">
                     {/* Extra Section (부가 정보 아코디언) */}
-                    {data.extra && <ExtraSection data={data.extra} onPopupOpen={handlePopupOpen} />}
+                    {data.extra && <ExtraSection data={data.extra} onPopupOpen={handlePopupOpen} isPastWeek={isPastWeek} />}
 
                     {/* Mgmt Section (현재 시기 관리 포인트) */}
                     {data.mgmt && <MgmtSection data={data.mgmt} />}
@@ -376,6 +398,7 @@ export default function WeeklyDetailPage({ params }: WeeklyDetailPageProps) {
                     data={data.weather}
                     farmNo={data.header?.farmNo}
                     region={data.extra?.weather?.region}
+                    weekPeriod={thisWeekPeriod}
                 />
             )}
 

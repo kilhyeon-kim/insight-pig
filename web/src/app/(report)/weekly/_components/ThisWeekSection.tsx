@@ -103,7 +103,7 @@ export const ThisWeekSection: React.FC<ThisWeekSectionProps> = ({ data, farmNo, 
                                 style={{ color: '#6b7280' }}
                                 title="작업예정 설정 상세 보기"
                             >
-                                설정 상세 <span className="icon-circle" style={{ background: '#f3f4f6', color: '#6b7280' }}>
+                                산정방식 보기 <span className="icon-circle" style={{ background: '#f3f4f6', color: '#6b7280' }}>
                                     <FontAwesomeIcon icon={faGear} />
                                 </span>
                             </div>

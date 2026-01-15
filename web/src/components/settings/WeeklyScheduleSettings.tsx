@@ -198,7 +198,8 @@ export default function WeeklyScheduleSettings({
             const currentSelected = prev[itemKey];
             const isSelected = currentSelected.includes(taskSeq);
 
-            if (isSelected && currentSelected.length <= 1) {
+            // 최소 1개 유지 (백신은 0개 허용)
+            if (isSelected && currentSelected.length <= 1 && itemKey !== 'vaccine') {
                 return prev;
             }
 
@@ -214,9 +215,9 @@ export default function WeeklyScheduleSettings({
     const handleSave = async () => {
         if (!farmNo) return;
 
-        // 검증
+        // 검증 (백신은 작업정보가 없을 수 있으므로 예외)
         for (const itemKey of Object.keys(scheduleCalcMethods) as ScheduleItemKey[]) {
-            if (scheduleCalcMethods[itemKey] === 'modon') {
+            if (scheduleCalcMethods[itemKey] === 'modon' && itemKey !== 'vaccine') {
                 const tasks = selectedModonTasks[itemKey] || [];
                 if (tasks.length === 0) {
                     const label = SCHEDULE_ITEMS.find(s => s.key === itemKey)?.label || itemKey;
@@ -230,11 +231,12 @@ export default function WeeklyScheduleSettings({
         setMessage(null);
 
         try {
+            // farm 선택 시 tasks는 빈 배열로 저장
             const settings = {
-                mating: { method: scheduleCalcMethods.mating, tasks: selectedModonTasks.mating },
-                farrowing: { method: scheduleCalcMethods.farrowing, tasks: selectedModonTasks.farrowing },
-                pregnancy: { method: scheduleCalcMethods.pregnancyCheck, tasks: selectedModonTasks.pregnancyCheck },
-                weaning: { method: scheduleCalcMethods.weaning, tasks: selectedModonTasks.weaning },
+                mating: { method: scheduleCalcMethods.mating, tasks: scheduleCalcMethods.mating === 'farm' ? [] : selectedModonTasks.mating },
+                farrowing: { method: scheduleCalcMethods.farrowing, tasks: scheduleCalcMethods.farrowing === 'farm' ? [] : selectedModonTasks.farrowing },
+                pregnancy: { method: scheduleCalcMethods.pregnancyCheck, tasks: scheduleCalcMethods.pregnancyCheck === 'farm' ? [] : selectedModonTasks.pregnancyCheck },
+                weaning: { method: scheduleCalcMethods.weaning, tasks: scheduleCalcMethods.weaning === 'farm' ? [] : selectedModonTasks.weaning },
                 vaccine: { method: 'modon' as const, tasks: selectedModonTasks.vaccine },
             };
 
@@ -368,7 +370,8 @@ export default function WeeklyScheduleSettings({
                                             </div>
                                             {modonTasks.map((task, idx) => {
                                                 const isSelected = selectedTasks.includes(task.seq);
-                                                const isLastSelected = isSelected && selectedTasks.length === 1;
+                                                // 백신은 0개 허용이므로 마지막 하나도 해제 가능
+                                                const isLastSelected = isSelected && selectedTasks.length === 1 && !isVaccine;
                                                 const isDisabled = readOnly || isLastSelected;
 
                                                 return (
@@ -409,7 +412,8 @@ export default function WeeklyScheduleSettings({
                                         </div>
                                         <div className="mt-2 text-xs lg:text-sm text-gray-500 dark:text-gray-400">
                                             {selectedTasks.length}개 작업 선택됨
-                                            {selectedTasks.length === 1 && (
+                                            {/* 백신은 0개 허용이므로 최소 1개 필수 경고 표시 안함 */}
+                                            {selectedTasks.length === 1 && !isVaccine && (
                                                 <span className="text-amber-600 dark:text-amber-400 ml-2">(최소 1개 필수)</span>
                                             )}
                                         </div>
@@ -447,8 +451,8 @@ export default function WeeklyScheduleSettings({
                                             <span className="font-medium text-blue-600 dark:text-blue-400">{weanPeriod}일</span>
                                         </div>
                                         <div className="flex items-center justify-between px-3 py-1.5 lg:py-2 text-xs lg:text-sm bg-blue-50 dark:bg-blue-900/30">
-                                            <span className="text-gray-700 dark:text-gray-300 font-medium">산정 공식</span>
-                                            <span className="font-medium text-blue-700 dark:text-blue-300">이유일 + {shipOffset}일</span>
+                                            <span className="text-gray-700 dark:text-gray-300 font-medium">산정 범위</span>
+                                            <span className="font-medium text-blue-700 dark:text-blue-300">이유 후 {shipOffset}~{shipOffset + 6}일</span>
                                         </div>
                                     </div>
                                 </div>

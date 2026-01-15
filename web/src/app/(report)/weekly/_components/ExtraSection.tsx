@@ -39,13 +39,14 @@ export interface ExtraData {
 interface ExtraSectionProps {
     data: ExtraData;
     onPopupOpen?: (type: string) => void;
+    isPastWeek?: boolean;  // 과거 주차 여부
 }
 
 /**
  * 부가 정보 아코디언 섹션
  * @see weekly.html #secExtra
  */
-export const ExtraSection: React.FC<ExtraSectionProps> = ({ data, onPopupOpen }) => {
+export const ExtraSection: React.FC<ExtraSectionProps> = ({ data, onPopupOpen, isPastWeek = false }) => {
     const [isOpen, setIsOpen] = useState(false);
 
     // 날씨 데이터 유효성 체크
@@ -151,15 +152,15 @@ export const ExtraSection: React.FC<ExtraSectionProps> = ({ data, onPopupOpen })
                         </div>
                     </div>
 
-                    {/* 오늘 날씨 카드 */}
+                    {/* 날씨 카드 */}
                     <div className="info-accordion-card" id="cardWeather">
                         <div className="card-header">
                             <div className="card-title">
-                                <FontAwesomeIcon icon={faCloudSun} className="fa-sm" /> 오늘 날씨
+                                <FontAwesomeIcon icon={faCloudSun} className="fa-sm" /> {isPastWeek ? '주간 날씨' : '오늘 날씨'}
                             </div>
                             {hasWeatherData && (
                                 <button className="card-more" onClick={() => handlePopup('weather')}>
-                                    <FontAwesomeIcon icon={faChartLine} />&nbsp;주간날씨
+                                    <FontAwesomeIcon icon={faChartLine} />&nbsp;{isPastWeek ? '날씨기록' : '주간날씨'}
                                 </button>
                             )}
                         </div>
@@ -167,18 +168,33 @@ export const ExtraSection: React.FC<ExtraSectionProps> = ({ data, onPopupOpen })
                             {hasWeatherData ? (
                                 <>
                                     <div className="section-left">
-                                        <div className="value-box">
-                                            <div className="label">현재</div>
-                                            <div className="value" style={{ fontSize: '18px' }}>{data.weather.current !== null ? `${data.weather.current}°` : '-'}</div>
-                                        </div>
-                                        <div className="value-box">
-                                            <div className="label">최고</div>
-                                            <div className="value red">{data.weather.max !== null ? `${data.weather.max}°` : '-'}</div>
-                                        </div>
-                                        <div className="value-box">
-                                            <div className="label">최저</div>
-                                            <div className="value blue">{data.weather.min !== null ? `${data.weather.min}°` : '-'}</div>
-                                        </div>
+                                        {isPastWeek ? (
+                                            <>
+                                                <div className="value-box">
+                                                    <div className="label">최고</div>
+                                                    <div className="value red">{data.weather.max !== null ? `${data.weather.max}°` : '-'}</div>
+                                                </div>
+                                                <div className="value-box">
+                                                    <div className="label">최저</div>
+                                                    <div className="value blue">{data.weather.min !== null ? `${data.weather.min}°` : '-'}</div>
+                                                </div>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <div className="value-box">
+                                                    <div className="label">현재</div>
+                                                    <div className="value" style={{ fontSize: '18px' }}>{data.weather.current !== null ? `${data.weather.current}°` : '-'}</div>
+                                                </div>
+                                                <div className="value-box">
+                                                    <div className="label">최고</div>
+                                                    <div className="value red">{data.weather.max !== null ? `${data.weather.max}°` : '-'}</div>
+                                                </div>
+                                                <div className="value-box">
+                                                    <div className="label">최저</div>
+                                                    <div className="value blue">{data.weather.min !== null ? `${data.weather.min}°` : '-'}</div>
+                                                </div>
+                                            </>
+                                        )}
                                     </div>
                                     <div className="section-right">
                                         <div className="source-label">지역</div>

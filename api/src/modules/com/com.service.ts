@@ -3,6 +3,13 @@ import { DataSource } from 'typeorm';
 import { COM_SQL } from './sql/com.sql';
 
 /**
+ * pig3.1 API Base URL
+ * - localhost: http://localhost:8070
+ * - production: https://www.pigplan.io
+ */
+const PIG31_API_URL = process.env.PIG31_API_URL || 'http://localhost:8070';
+
+/**
  * 코드 캐시 키 생성 (CNAME용)
  * @param pcode 부모코드 (예: '031' 도폐사원인)
  * @param code 코드값 (예: '031038')
@@ -396,11 +403,13 @@ export class ComService implements OnModuleInit {
   }
 
   // ─────────────────────────────────────────────────────────────────────────────
-  // 농장 기본값 설정 (TC_FARM_CONFIG)
+  // 농장 기본값 설정 (pig3.1 API 호출)
   // ─────────────────────────────────────────────────────────────────────────────
 
   /**
    * 농장 기본값 조회 (주간보고서 작업예정 산정용)
+   * - pig3.1 API 호출: /officers/api/ins/getFarmConfig.json
+   *
    * @param farmNo 농장번호
    * @returns 농장 기본값 + 모돈 작업설정 (TB_PLAN_MODON) + inspig 설정 (TS_INS_CONF)
    */
@@ -409,116 +418,52 @@ export class ComService implements OnModuleInit {
     planModon: Record<string, { seq: number; name: string; targetSow: string; elapsedDays: number }[]>;
     insConf: Record<string, { method: string; tasks: number[] }>;
   }> {
-    // JOB_GUBUN_CD → 프론트엔드 키 매핑
-    const jobGubunMap: Record<string, string> = {
-      '150001': 'pregnancy', // 임신감정(진단)
-      '150002': 'farrowing', // 분만
-      '150003': 'weaning', // 이유
-      '150004': 'vaccine', // 백신
-      '150005': 'mating', // 교배
-    };
-
-    // TS_INS_CONF 컬럼명 → 프론트엔드 키 매핑
-    const insConfColMap: Record<string, string> = {
-      WEEK_TW_GY: 'mating',
-      WEEK_TW_BM: 'farrowing',
-      WEEK_TW_IM: 'pregnancy',
-      WEEK_TW_EU: 'weaning',
-      WEEK_TW_VC: 'vaccine',
+    const emptyResult = {
+      farmConfig: {},
+      planModon: { mating: [], farrowing: [], pregnancy: [], weaning: [], vaccine: [] },
+      insConf: {
+        mating: { method: 'farm', tasks: [] },
+        farrowing: { method: 'farm', tasks: [] },
+        pregnancy: { method: 'farm', tasks: [] },
+        weaning: { method: 'farm', tasks: [] },
+        vaccine: { method: 'modon', tasks: [] },
+      },
     };
 
     try {
-      // 1. 농장 기본값 조회 (TC_FARM_CONFIG)
-      const configRows = await this.dataSource.query(COM_SQL.getFarmConfig, params({ farmNo }));
+      const response = await fetch(`${PIG31_API_URL}/officers/api/ins/getFarmConfig.json`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ farmNo }),
+      });
 
-      const farmConfig: Record<string, { code: string; name: string; value: number }> = {};
-      for (const row of configRows) {
-        farmConfig[row.CODE] = {
-          code: row.CODE,
-          name: row.CNAME,
-          value: parseInt(row.CVALUE, 10) || 0,
-        };
+      if (!response.ok) {
+        this.logger.error(`pig3.1 API 호출 실패: status=${response.status}`);
+        return emptyResult;
       }
 
-      // 2. 모돈 작업설정 조회 (TB_PLAN_MODON)
-      const planRows = await this.dataSource.query(COM_SQL.getPlanModon, params({ farmNo }));
+      const data = await response.json();
 
-      const planModon: Record<string, { seq: number; name: string; targetSow: string; elapsedDays: number }[]> = {
-        mating: [], // 교배 (150005)
-        farrowing: [], // 분만 (150002)
-        pregnancy: [], // 임신감정 (150001)
-        weaning: [], // 이유 (150003)
-        vaccine: [], // 백신 (150007)
-      };
-
-      for (const row of planRows) {
-        const frontKey = jobGubunMap[row.JOB_GUBUN_CD];
-        if (frontKey && planModon[frontKey]) {
-          planModon[frontKey].push({
-            seq: parseInt(row.SEQ, 10) || 0,
-            name: row.WK_NM || '',
-            targetSow: this.getCodeSysName('01', row.MODON_STATUS_CD, 'ko') || row.MODON_STATUS_CD || '',
-            elapsedDays: parseInt(row.PASS_DAY, 10) || 0,
-          });
-        }
+      if (!data.result) {
+        this.logger.error(`pig3.1 API 응답 오류: ${data.msg}`);
+        return emptyResult;
       }
 
-      // 3. inspig 설정 조회 (TS_INS_CONF)
-      const insConfRows = await this.dataSource.query(COM_SQL.getInsConf, params({ farmNo }));
-
-      // 기본값: 교배/분만/이유/백신은 modon, 임신감정은 farm
-      // modon 선택 시 해당 작업의 모든 seq를 기본 선택
-      const getDefaultTasks = (key: string): number[] => {
-        const jobs = planModon[key] || [];
-        return jobs.map((j: { seq: number }) => j.seq);
-      };
-
-      const insConf: Record<string, { method: string; tasks: number[] }> = {
-        mating: { method: 'modon', tasks: getDefaultTasks('mating') },
-        farrowing: { method: 'modon', tasks: getDefaultTasks('farrowing') },
-        pregnancy: { method: 'farm', tasks: [] }, // 임신감정만 농장 기본값
-        weaning: { method: 'modon', tasks: getDefaultTasks('weaning') },
-        vaccine: { method: 'modon', tasks: getDefaultTasks('vaccine') },
-      };
-
-      if (insConfRows.length > 0) {
-        const row = insConfRows[0];
-        for (const [colName, frontKey] of Object.entries(insConfColMap)) {
-          const jsonStr = row[colName];
-          if (jsonStr) {
-            try {
-              const parsed = JSON.parse(jsonStr);
-              insConf[frontKey] = {
-                method: parsed.method || (frontKey === 'vaccine' ? 'modon' : 'farm'),
-                tasks: (parsed.tasks || []).map((t: string | number) => parseInt(String(t), 10)),
-              };
-            } catch {
-              // JSON 파싱 실패 시 기본값 유지
-            }
-          }
-        }
-      }
-
-      return { farmConfig, planModon, insConf };
-    } catch (error) {
-      this.logger.error(`농장 기본값 조회 실패: farmNo=${farmNo}`, error.message);
-      // 에러 시 빈 객체 반환
       return {
-        farmConfig: {},
-        planModon: { mating: [], farrowing: [], pregnancy: [], weaning: [], vaccine: [] },
-        insConf: {
-          mating: { method: 'farm', tasks: [] },
-          farrowing: { method: 'farm', tasks: [] },
-          pregnancy: { method: 'farm', tasks: [] },
-          weaning: { method: 'farm', tasks: [] },
-          vaccine: { method: 'modon', tasks: [] },
-        },
+        farmConfig: data.farmConfig || {},
+        planModon: data.planModon || emptyResult.planModon,
+        insConf: data.insConf || emptyResult.insConf,
       };
+    } catch (error) {
+      this.logger.error(`농장 기본값 조회 실패 (pig3.1 API): farmNo=${farmNo}`, error.message);
+      return emptyResult;
     }
   }
 
   /**
    * 주간보고서 작업예정 설정 저장
+   * - pig3.1 API 호출: /officers/api/ins/saveWeeklyConfig.json
+   *
    * @param farmNo 농장번호
    * @param settings 작업예정 설정 (mating, farrowing, pregnancy, weaning, vaccine)
    */
@@ -527,35 +472,26 @@ export class ComService implements OnModuleInit {
     settings: Record<string, { method: string; tasks: number[] }>,
   ): Promise<{ success: boolean; message?: string }> {
     try {
-      // 1. TS_INS_CONF 존재 여부 확인
-      const checkResult = await this.dataSource.query(COM_SQL.checkInsConf, params({ farmNo }));
-      const exists = checkResult[0]?.CNT > 0;
+      const response = await fetch(`${PIG31_API_URL}/officers/api/ins/saveWeeklyConfig.json`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ farmNo, settings }),
+      });
 
-      // 2. 없으면 신규 등록
-      if (!exists) {
-        await this.dataSource.query(COM_SQL.insertInsConf, params({ farmNo }));
+      if (!response.ok) {
+        this.logger.error(`pig3.1 API 호출 실패: status=${response.status}`);
+        return { success: false, message: `API 호출 실패: ${response.status}` };
       }
 
-      // 3. JSON 형식으로 변환
-      const toJson = (key: string) => {
-        const item = settings[key];
-        if (!item) return null;
-        return JSON.stringify({ method: item.method, tasks: item.tasks });
-      };
+      const data = await response.json();
 
-      // 4. UPDATE
-      await this.dataSource.query(COM_SQL.updateInsConfWeekly, params({
-        farmNo,
-        weekTwGy: toJson('mating'),
-        weekTwBm: toJson('farrowing'),
-        weekTwIm: toJson('pregnancy'),
-        weekTwEu: toJson('weaning'),
-        weekTwVc: toJson('vaccine'),
-      }));
+      if (!data.result) {
+        return { success: false, message: data.msg || '저장 실패' };
+      }
 
-      return { success: true };
+      return { success: true, message: data.msg };
     } catch (error) {
-      this.logger.error(`주간보고서 설정 저장 실패: farmNo=${farmNo}`, error.message);
+      this.logger.error(`주간보고서 설정 저장 실패 (pig3.1 API): farmNo=${farmNo}`, error.message);
       return { success: false, message: error.message };
     }
   }
