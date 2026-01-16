@@ -16,6 +16,9 @@ import {
 import { serviceApi, ServiceInfo } from '@/services/api';
 import WeeklyScheduleSettings from '@/components/settings/WeeklyScheduleSettings';
 
+// 동적 렌더링 강제 - RSC 캐시 불일치 방지
+export const dynamic = 'force-dynamic';
+
 // 탭 타입 정의
 type TabKey = 'service' | 'weekly' | 'monthly' | 'quarterly';
 

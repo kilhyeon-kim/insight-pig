@@ -13,6 +13,9 @@ import ScrollToTop from '@/components/common/ScrollToTop';
 import { WeeklyHeader } from '../_components/WeeklyHeader';
 import { AlertCard } from '../_components/AlertCard';
 import { LastWeekSection } from '../_components/LastWeekSection';
+
+// 동적 렌더링 강제 - RSC 캐시 불일치 방지
+export const dynamic = 'force-dynamic';
 import { ThisWeekSection } from '../_components/ThisWeekSection';
 import { ExtraSection } from '../_components/ExtraSection';
 import { MgmtSection } from '../_components/MgmtSection';

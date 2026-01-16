@@ -7,6 +7,9 @@ import { faSearch, faCalendarAlt, faChevronLeft, faChevronRight } from '@fortawe
 import { ReportList } from '@/components/report/ReportList';
 import { useAuth, useRequireAuth } from '@/contexts/AuthContext';
 
+// 동적 렌더링 강제 - RSC 캐시 불일치 방지
+export const dynamic = 'force-dynamic';
+
 // API 베이스 URL
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 

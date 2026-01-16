@@ -5,6 +5,9 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { useAuth } from '@/contexts/AuthContext';
 
+// 동적 렌더링 강제 - RSC 캐시 불일치 방지
+export const dynamic = 'force-dynamic';
+
 
 const TEST_ACCOUNTS = [
  { label: '-- 테스트 계정 선택 --', id: '', pw: '' },

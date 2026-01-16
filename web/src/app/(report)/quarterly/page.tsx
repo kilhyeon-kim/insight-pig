@@ -5,6 +5,9 @@ import { useRouter } from 'next/navigation';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faLock, faCalendarAlt } from '@fortawesome/free-solid-svg-icons';
 
+// 동적 렌더링 강제 - RSC 캐시 불일치 방지
+export const dynamic = 'force-dynamic';
+
 // 서비스 오픈일: 2026-04-01
 const SERVICE_OPEN_DATE = new Date('2026-04-01');
 

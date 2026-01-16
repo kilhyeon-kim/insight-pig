@@ -7,6 +7,9 @@ import { Icon } from '@/components/common';
 import { MainLayout } from '@/components/layout';
 import { useAuth } from '@/contexts/AuthContext';
 
+// 동적 렌더링 강제 - RSC 캐시 불일치 방지
+export const dynamic = 'force-dynamic';
+
 const menuItems = [
   {
     name: '주간 보고서',
