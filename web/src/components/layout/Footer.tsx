@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useRef } from 'react';
+import Link from 'next/link';
 import { Icon } from '@/components/common';
 
 export default function Footer() {
@@ -53,24 +54,24 @@ export default function Footer() {
         </button>
 
         {/* 가운데: 홈 */}
-        <button
+        <Link
           id="btn-footer-home"
-          onClick={() => router.push('/')}
+          href="/"
           className="flex flex-col items-center gap-0.5 text-gray-500 dark:text-gray-400 hover:text-[#2a5298] dark:hover:text-blue-400 transition-colors p-2"
         >
           <Icon name="home" className="text-xl" />
           <span className="text-xs">홈</span>
-        </button>
+        </Link>
 
         {/* 우측: 설정 */}
-        <button
+        <Link
           id="btn-footer-settings"
-          onClick={() => router.push('/settings')}
+          href="/settings"
           className="flex flex-col items-center gap-0.5 text-gray-500 dark:text-gray-400 hover:text-[#2a5298] dark:hover:text-blue-400 transition-colors p-2"
         >
           <Icon name="cog" className="text-xl" />
           <span className="text-xs">설정</span>
-        </button>
+        </Link>
       </div>
     </footer>
   );
