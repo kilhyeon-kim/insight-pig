@@ -371,20 +371,19 @@ export const WEEKLY_SQL = {
   // - 웹에서는 TS_INS_WEEK.MODON_SANGSI_CNT에서 직접 읽어옴 (getReportDetail 쿼리)
 
   /**
-   * 관리포인트 조회 (TS_INS_MGMT)
+   * 관리포인트 리스트 조회 (TS_INS_MGMT) - CONTENT 제외
    * TS_INS_MGMT는 독립 테이블
    * MGMT_TYPE: QUIZ(퀴즈), CHANNEL(박사채널&정보), PORK-NEWS(한돈&업계소식)
    * 조회 조건: 게시기간(POST_FROM~POST_TO)이 주간보고서 기간(지난주 시작~금주 종료)과 하루라도 겹치면 표시
+   * 모바일 메모리 부담 경감을 위해 CONTENT는 상세 조회 시에만 조회
    */
   getMgmtList: `
-    /* weekly.weekly.getMgmtList : 관리포인트 조회 (USE_YN='Y' 전체) */
+    /* weekly.weekly.getMgmtList : 관리포인트 리스트 조회 (CONTENT 제외) */
     SELECT
         SEQ,
         MGMT_TYPE,
         SORT_NO,
         TITLE,
-        CONTENT,
-        NVL(CONTENT_TYPE, 'TEXT') AS CONTENT_TYPE,
         LINK_URL,
         LINK_TARGET,
         VIDEO_URL,
@@ -401,6 +400,29 @@ export const WEEKLY_SQL = {
         END,
         POST_FROM DESC NULLS LAST,
         SORT_NO
+  `,
+
+  /**
+   * 관리포인트 상세 조회 (단건) - CONTENT 포함
+   * @param seq - 관리포인트 SEQ
+   */
+  getMgmtDetail: `
+    /* weekly.weekly.getMgmtDetail : 관리포인트 상세 조회 */
+    SELECT
+        SEQ,
+        MGMT_TYPE,
+        SORT_NO,
+        TITLE,
+        CONTENT,
+        NVL(CONTENT_TYPE, 'TEXT') AS CONTENT_TYPE,
+        LINK_URL,
+        LINK_TARGET,
+        VIDEO_URL,
+        TO_CHAR(POST_FROM, 'YYYYMMDD') AS POST_FROM,
+        TO_CHAR(POST_TO, 'YYYYMMDD') AS POST_TO
+    FROM TS_INS_MGMT
+    WHERE SEQ = :seq
+      AND NVL(USE_YN, 'Y') = 'Y'
   `,
 
   /**

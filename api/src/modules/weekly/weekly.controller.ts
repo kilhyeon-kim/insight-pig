@@ -246,6 +246,27 @@ export class WeeklyController {
     };
   }
 
+  /**
+   * 관리포인트 상세 조회 (CONTENT, 첨부파일 포함)
+   * GET /api/weekly/mgmt/:seq
+   * 모바일 메모리 부담 경감을 위해 상세 정보는 팝업 열 때만 조회
+   */
+  @Get('mgmt/:seq')
+  async getMgmtDetail(@Param('seq') seq: string) {
+    const seqNum = parseInt(seq, 10);
+    if (!seqNum) {
+      throw new NotFoundException('seq is required');
+    }
+    const data = await this.weeklyService.getMgmtDetail(seqNum);
+    if (!data) {
+      throw new NotFoundException(`Mgmt item with seq '${seq}' not found`);
+    }
+    return {
+      success: true,
+      data,
+    };
+  }
+
   // ─────────────────────────────────────────────────────────────────────────────
   // 기존 API
   // ─────────────────────────────────────────────────────────────────────────────

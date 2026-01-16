@@ -427,53 +427,30 @@ export class WeeklyService {
   }
 
   /**
-   * 관리포인트 데이터 추출 (TS_INS_MGMT)
+   * 관리포인트 데이터 추출 (TS_INS_MGMT) - 리스트용 (CONTENT 제외)
    * 3개 유형: QUIZ(퀴즈), CHANNEL(박사채널&정보), PORK-NEWS(한돈&업계소식)
+   * 모바일 메모리 부담 경감을 위해 CONTENT는 상세 조회 시에만 조회
    */
   private async extractMgmtData(mgmtRows: any[]): Promise<{
-    quizList: { seq: number; mgmtType: string; title: string; content: string | null; link: string | null; linkTarget: string | null; videoUrl: string | null; postFrom: string | null; postTo: string | null; attachFiles?: any[] }[];
-    channelList: { seq: number; mgmtType: string; title: string; content: string | null; link: string | null; linkTarget: string | null; videoUrl: string | null; postFrom: string | null; postTo: string | null; attachFiles?: any[] }[];
-    porkNewsList: { seq: number; mgmtType: string; title: string; content: string | null; link: string | null; linkTarget: string | null; videoUrl: string | null; postFrom: string | null; postTo: string | null; attachFiles?: any[] }[];
+    quizList: { seq: number; mgmtType: string; title: string; link: string | null; linkTarget: string | null; videoUrl: string | null; postFrom: string | null; postTo: string | null }[];
+    channelList: { seq: number; mgmtType: string; title: string; link: string | null; linkTarget: string | null; videoUrl: string | null; postFrom: string | null; postTo: string | null }[];
+    porkNewsList: { seq: number; mgmtType: string; title: string; link: string | null; linkTarget: string | null; videoUrl: string | null; postFrom: string | null; postTo: string | null }[];
   }> {
     const quizList: any[] = [];
     const channelList: any[] = [];
     const porkNewsList: any[] = [];
 
     for (const row of mgmtRows) {
-      // 첨부파일 조회
-      let attachFiles: any[] = [];
-      if (row.SEQ) {
-        try {
-          const files = await this.dataSource.query(
-            WEEKLY_SQL.getAttachFiles,
-            params({ refTable: 'TS_INS_MGMT', refSeq: row.SEQ }),
-          );
-          attachFiles = files.map((f: any) => ({
-            fileSeq: f.FILE_SEQ,
-            fileNm: f.FILE_NM,
-            fileOrgnlNm: f.FILE_ORGNL_NM,
-            fileUrl: f.FILE_URL,
-            fileSize: f.FILE_SIZE || 0,
-            fileExt: f.FILE_EXT,
-            mimeType: f.MIME_TYPE || null,
-          }));
-        } catch {
-          // 첨부파일 테이블이 없을 수 있음 (무시)
-        }
-      }
-
+      // 리스트에서는 첨부파일 조회하지 않음 (상세에서만 조회)
       const item = {
         seq: row.SEQ || 0,
         mgmtType: row.MGMT_TYPE || 'QUIZ',
-        title: row.TITLE || row.CONTENT || '',
-        content: row.CONTENT || null,
-        contentType: row.CONTENT_TYPE || 'TEXT',
+        title: row.TITLE || '',
         link: row.LINK_URL || null,
         linkTarget: row.LINK_TARGET || null,
         videoUrl: row.VIDEO_URL || null,
         postFrom: row.POST_FROM || null,
         postTo: row.POST_TO || null,
-        attachFiles: attachFiles.length > 0 ? attachFiles : undefined,
       };
       if (row.MGMT_TYPE === 'QUIZ') {
         quizList.push(item);
@@ -488,15 +465,83 @@ export class WeeklyService {
   }
 
   /**
+   * 관리포인트 상세 조회 (단건) - CONTENT, 첨부파일 포함
+   * @param seq - 관리포인트 SEQ
+   */
+  async getMgmtDetail(seq: number): Promise<{
+    seq: number;
+    mgmtType: string;
+    title: string;
+    content: string | null;
+    contentType: string;
+    link: string | null;
+    linkTarget: string | null;
+    videoUrl: string | null;
+    postFrom: string | null;
+    postTo: string | null;
+    attachFiles?: any[];
+  } | null> {
+    try {
+      const rows = await this.dataSource.query(
+        WEEKLY_SQL.getMgmtDetail,
+        params({ seq }),
+      );
+
+      if (!rows || rows.length === 0) {
+        return null;
+      }
+
+      const row = rows[0];
+
+      // 첨부파일 조회
+      let attachFiles: any[] = [];
+      try {
+        const files = await this.dataSource.query(
+          WEEKLY_SQL.getAttachFiles,
+          params({ refTable: 'TS_INS_MGMT', refSeq: seq }),
+        );
+        attachFiles = files.map((f: any) => ({
+          fileSeq: f.FILE_SEQ,
+          fileNm: f.FILE_NM,
+          fileOrgnlNm: f.FILE_ORGNL_NM,
+          fileUrl: f.FILE_URL,
+          fileSize: f.FILE_SIZE || 0,
+          fileExt: f.FILE_EXT,
+          mimeType: f.MIME_TYPE || null,
+        }));
+      } catch {
+        // 첨부파일 테이블이 없을 수 있음 (무시)
+      }
+
+      return {
+        seq: row.SEQ || 0,
+        mgmtType: row.MGMT_TYPE || 'QUIZ',
+        title: row.TITLE || '',
+        content: row.CONTENT || null,
+        contentType: row.CONTENT_TYPE || 'TEXT',
+        link: row.LINK_URL || null,
+        linkTarget: row.LINK_TARGET || null,
+        videoUrl: row.VIDEO_URL || null,
+        postFrom: row.POST_FROM || null,
+        postTo: row.POST_TO || null,
+        attachFiles: attachFiles.length > 0 ? attachFiles : undefined,
+      };
+    } catch (e) {
+      this.logger.error(`getMgmtDetail error: ${e.message}`);
+      return null;
+    }
+  }
+
+  /**
    * Raw SQL 결과를 프론트엔드 형식으로 변환
    */
   private transformToReportDetailFromRow(
     week: any,
     subRows: any[],
     mgmtData?: {
-      quizList: { seq: number; mgmtType: string; title: string; content: string | null; link: string | null; linkTarget: string | null; videoUrl: string | null; postFrom: string | null; postTo: string | null; attachFiles?: any[] }[];
-      channelList: { seq: number; mgmtType: string; title: string; content: string | null; link: string | null; linkTarget: string | null; videoUrl: string | null; postFrom: string | null; postTo: string | null; attachFiles?: any[] }[];
-      porkNewsList: { seq: number; mgmtType: string; title: string; content: string | null; link: string | null; linkTarget: string | null; videoUrl: string | null; postFrom: string | null; postTo: string | null; attachFiles?: any[] }[];
+      quizList: { seq: number; mgmtType: string; title: string; link: string | null; linkTarget: string | null; videoUrl: string | null; postFrom: string | null; postTo: string | null }[];
+      channelList: { seq: number; mgmtType: string; title: string; link: string | null; linkTarget: string | null; videoUrl: string | null; postFrom: string | null; postTo: string | null }[];
+      porkNewsList: { seq: number; mgmtType: string; title: string; link: string | null; linkTarget: string | null; videoUrl: string | null; postFrom: string | null; postTo: string | null }[];
     },
   ) {
     const subs = subRows.map((row) => this.mapRowToWeekSub(row));

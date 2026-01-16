@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faExternalLinkAlt, faCalendarAlt, faPlayCircle, faTimes, faDownload, faFile } from '@fortawesome/free-solid-svg-icons';
+import { faExternalLinkAlt, faCalendarAlt, faPlayCircle, faTimes, faDownload, faFile, faSpinner } from '@fortawesome/free-solid-svg-icons';
 import { PopupContainer } from './PopupContainer';
 import { MgmtItem } from '@/types/weekly';
 
@@ -12,6 +12,7 @@ interface MgmtDetailPopupProps {
 
 /**
  * 관리포인트 상세 팝업 (단일 아이템)
+ * 팝업 열릴 때 API 호출하여 상세 정보(CONTENT, 첨부파일) 조회
  */
 export const MgmtDetailPopup: React.FC<MgmtDetailPopupProps> = ({
     isOpen,
@@ -19,8 +20,51 @@ export const MgmtDetailPopup: React.FC<MgmtDetailPopupProps> = ({
     item
 }) => {
     const [showVideo, setShowVideo] = useState(false);
+    const [detailData, setDetailData] = useState<MgmtItem | null>(null);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    // 팝업 열릴 때 상세 정보 조회
+    useEffect(() => {
+        if (isOpen && item?.seq) {
+            // 이미 content가 있으면 API 호출 불필요 (이전 데이터 재사용)
+            if (item.content !== undefined) {
+                setDetailData(item);
+                return;
+            }
+
+            setLoading(true);
+            setError(null);
+
+            fetch(`/api/weekly/mgmt/${item.seq}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success && data.data) {
+                        // 기존 item 정보에 상세 정보 병합
+                        setDetailData({ ...item, ...data.data });
+                    } else {
+                        setError('상세 정보를 불러올 수 없습니다.');
+                        setDetailData(item); // 기본 정보라도 표시
+                    }
+                })
+                .catch(() => {
+                    setError('상세 정보를 불러오는 중 오류가 발생했습니다.');
+                    setDetailData(item); // 기본 정보라도 표시
+                })
+                .finally(() => {
+                    setLoading(false);
+                });
+        } else if (!isOpen) {
+            // 팝업 닫힐 때 상태 초기화
+            setDetailData(null);
+            setShowVideo(false);
+        }
+    }, [isOpen, item]);
 
     if (!item) return null;
+
+    // 표시할 데이터 (상세 데이터 우선, 없으면 기본 item)
+    const displayItem = detailData || item;
 
     // 날짜 포맷팅 (YYYYMMDD -> YYYY.MM.DD)
     const formatDate = (dateStr: string | null): string => {
@@ -30,8 +74,8 @@ export const MgmtDetailPopup: React.FC<MgmtDetailPopupProps> = ({
 
     // 링크 클릭 핸들러 - 항상 새 탭에서 열기
     const handleLinkClick = () => {
-        if (!item.link) return;
-        window.open(item.link, '_blank', 'noopener,noreferrer');
+        if (!displayItem.link) return;
+        window.open(displayItem.link, '_blank', 'noopener,noreferrer');
     };
 
     // 동영상 보기 클릭 핸들러
@@ -54,29 +98,44 @@ export const MgmtDetailPopup: React.FC<MgmtDetailPopupProps> = ({
         <PopupContainer
             isOpen={isOpen}
             onClose={handlePopupClose}
-            title={item.title}
+            title={displayItem.title}
             id="popup-mgmt-detail"
             maxWidth="max-w-xl"
         >
             <div className="mgmt-detail-content">
+                {/* 로딩 중 */}
+                {loading && (
+                    <div className="mgmt-detail-loading">
+                        <FontAwesomeIcon icon={faSpinner} spin />
+                        <span>불러오는 중...</span>
+                    </div>
+                )}
+
+                {/* 에러 메시지 */}
+                {error && !loading && (
+                    <div className="mgmt-detail-error">
+                        {error}
+                    </div>
+                )}
+
                 {/* 상세 내용 */}
-                {item.content && (
+                {!loading && displayItem.content && (
                     <div className="mgmt-detail-body">
-                        {item.contentType === 'HTML' ? (
+                        {displayItem.contentType === 'HTML' ? (
                             <div
                                 className="mgmt-html-content"
-                                dangerouslySetInnerHTML={{ __html: item.content }}
+                                dangerouslySetInnerHTML={{ __html: displayItem.content }}
                             />
                         ) : (
                             <div className="mgmt-text-content whitespace-pre-wrap">
-                                {item.content}
+                                {displayItem.content}
                             </div>
                         )}
                     </div>
                 )}
 
                 {/* 동영상 플레이어 */}
-                {showVideo && item.videoUrl && (
+                {showVideo && displayItem.videoUrl && (
                     <div className="mgmt-video-container">
                         <div className="mgmt-video-header">
                             <span>동영상</span>
@@ -91,7 +150,7 @@ export const MgmtDetailPopup: React.FC<MgmtDetailPopupProps> = ({
                             controls
                             autoPlay
                             className="mgmt-video-player"
-                            src={item.videoUrl}
+                            src={displayItem.videoUrl}
                         >
                             브라우저가 동영상을 지원하지 않습니다.
                         </video>
@@ -99,7 +158,7 @@ export const MgmtDetailPopup: React.FC<MgmtDetailPopupProps> = ({
                 )}
 
                 {/* 동영상 보기 버튼 */}
-                {item.videoUrl && !showVideo && (
+                {displayItem.videoUrl && !showVideo && (
                     <button
                         onClick={handleVideoClick}
                         className="mgmt-detail-video-btn"
@@ -110,7 +169,7 @@ export const MgmtDetailPopup: React.FC<MgmtDetailPopupProps> = ({
                 )}
 
                 {/* 링크 버튼 */}
-                {item.link && (
+                {displayItem.link && (
                     <button
                         onClick={handleLinkClick}
                         className="mgmt-detail-link-btn"
@@ -121,14 +180,14 @@ export const MgmtDetailPopup: React.FC<MgmtDetailPopupProps> = ({
                 )}
 
                 {/* 첨부파일 목록 */}
-                {item.attachFiles && item.attachFiles.length > 0 && (
+                {!loading && displayItem.attachFiles && displayItem.attachFiles.length > 0 && (
                     <div className="mgmt-attach-files">
                         <div className="mgmt-attach-header">
                             <FontAwesomeIcon icon={faFile} />
-                            <span>첨부파일 ({item.attachFiles.length})</span>
+                            <span>첨부파일 ({displayItem.attachFiles.length})</span>
                         </div>
                         <ul className="mgmt-attach-list">
-                            {item.attachFiles.map((file) => (
+                            {displayItem.attachFiles.map((file) => (
                                 <li key={file.fileSeq} className="mgmt-attach-item">
                                     <a
                                         href={file.fileUrl}
@@ -152,13 +211,13 @@ export const MgmtDetailPopup: React.FC<MgmtDetailPopupProps> = ({
                 )}
 
                 {/* 게시 기간 */}
-                {(item.postFrom || item.postTo) && (
+                {(displayItem.postFrom || displayItem.postTo) && (
                     <div className="mgmt-detail-period">
                         <FontAwesomeIcon icon={faCalendarAlt} />
                         <span>
-                            게시기간: {formatDate(item.postFrom)}
-                            {item.postFrom && item.postTo && ' ~ '}
-                            {formatDate(item.postTo)}
+                            게시기간: {formatDate(displayItem.postFrom)}
+                            {displayItem.postFrom && displayItem.postTo && ' ~ '}
+                            {formatDate(displayItem.postTo)}
                         </span>
                     </div>
                 )}
