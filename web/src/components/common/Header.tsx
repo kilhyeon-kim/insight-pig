@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { Icon } from '@/components/common';
 import { useAuth } from '@/contexts/AuthContext';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -103,7 +104,7 @@ export default function Header({ onMenuToggle, isLoginAccess = true, showMenu = 
           )}
 
           {/* 로고 */}
-          <a
+          <Link
             id="btn-top-ci"
             href={isLoginAccess ? "/" : "/login"}
             className="flex items-center cursor-pointer"
@@ -115,7 +116,7 @@ export default function Header({ onMenuToggle, isLoginAccess = true, showMenu = 
               height={28}
               className="dark:brightness-0 dark:invert"
             />
-          </a>
+          </Link>
         </div>
 
         {/* 오른쪽: 사용자 정보 또는 로그인 버튼 */}
