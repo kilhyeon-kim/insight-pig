@@ -14,8 +14,29 @@ const nextConfig: NextConfig = {
   output: 'standalone', // Docker 배포를 위한 설정
 
   // 이중화 서버(38/99)에서 같은 소스면 같은 빌드 ID 생성
-  // RSC 캐시 불일치 방지
   generateBuildId: async () => getGitCommitHash(),
+
+  // 실험적 기능: PPR 비활성화 및 동적 렌더링 강제
+  experimental: {
+    // 정적 생성 비활성화 - 모든 페이지를 동적으로 렌더링
+    ppr: false,
+  },
+
+  // HTTP 헤더 설정 - RSC 캐시 비활성화
+  async headers() {
+    return [
+      {
+        // 모든 페이지에 적용
+        source: '/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'no-store, must-revalidate',
+          },
+        ],
+      },
+    ];
+  },
 };
 
 export default nextConfig;

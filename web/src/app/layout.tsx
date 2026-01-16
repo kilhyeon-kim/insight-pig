@@ -4,6 +4,11 @@ import "./globals.css";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { AuthProvider } from "@/contexts/AuthContext";
 
+// 동적 렌더링 강제 - 이중화 서버 RSC 캐시 문제 해결
+// 이 설정은 Server Component인 layout.tsx에서만 유효
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
