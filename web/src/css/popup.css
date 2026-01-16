@@ -2773,3 +2773,61 @@
         font-size: 15px;
     }
 }
+
+/* ============================================
+   상세 팝업 네비게이션 (리스트에서 진입 시)
+   ============================================ */
+.mgmt-detail-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 0 0;
+    margin-top: 16px;
+    border-top: 1px solid var(--rp-border-light, #e5e7eb);
+}
+
+.dark .mgmt-detail-nav {
+    border-top-color: rgba(255, 255, 255, 0.1);
+}
+
+.mgmt-nav-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    background: var(--rp-bg-secondary, #f3f4f6);
+    border: 1px solid var(--rp-border-light, #e5e7eb);
+    border-radius: 6px;
+    color: var(--rp-text-secondary, #666);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.dark .mgmt-nav-btn {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.1);
+    color: #9ca3af;
+}
+
+.mgmt-nav-btn:hover:not(:disabled) {
+    background: var(--rp-accent-primary, #667eea);
+    border-color: var(--rp-accent-primary, #667eea);
+    color: #fff;
+}
+
+.mgmt-nav-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.mgmt-nav-info {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--rp-text-secondary, #666);
+}
+
+.dark .mgmt-nav-info {
+    color: #9ca3af;
+}

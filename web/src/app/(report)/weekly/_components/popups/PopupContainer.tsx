@@ -10,6 +10,7 @@ interface PopupContainerProps {
     children: React.ReactNode;
     maxWidth?: string;
     id?: string;
+    zIndex?: number;  // 팝업 위에 팝업 띄울 때 사용
 }
 
 export const PopupContainer: React.FC<PopupContainerProps> = ({
@@ -19,12 +20,13 @@ export const PopupContainer: React.FC<PopupContainerProps> = ({
     subtitle,
     children,
     maxWidth = 'max-w-2xl',
-    id
+    id,
+    zIndex
 }) => {
     if (!isOpen) return null;
 
     return (
-        <div className="wr-layer-popup active" id={id}>
+        <div className="wr-layer-popup active" id={id} style={zIndex ? { zIndex } : undefined}>
             <div className={`wr-popup-content ${maxWidth}`}>
                 {/* 헤더 - 푸른색 라인 */}
                 <div className="wr-popup-header">

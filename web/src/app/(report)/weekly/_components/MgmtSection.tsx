@@ -34,6 +34,8 @@ export const MgmtSection: React.FC<MgmtSectionProps> = ({ data }) => {
     // 상세 팝업 상태
     const [detailPopupOpen, setDetailPopupOpen] = useState(false);
     const [detailItem, setDetailItem] = useState<MgmtItem | null>(null);
+    const [detailItemIndex, setDetailItemIndex] = useState<number>(-1);  // 리스트 네비게이션용
+    const [isFromList, setIsFromList] = useState(false);  // 리스트에서 진입 여부
 
     // 기간 내 항목인지 확인 (카드 표시용)
     const isInPeriod = (item: MgmtItem): boolean => {
@@ -77,6 +79,8 @@ export const MgmtSection: React.FC<MgmtSectionProps> = ({ data }) => {
             }
             // POPUP이거나 링크 없으면 상세 팝업
             setDetailItem(item);
+            setDetailItemIndex(-1);
+            setIsFromList(false);
             setDetailPopupOpen(true);
             return;
         }
@@ -87,6 +91,8 @@ export const MgmtSection: React.FC<MgmtSectionProps> = ({ data }) => {
             return;
         }
         setDetailItem(item);
+        setDetailItemIndex(-1);
+        setIsFromList(false);
         setDetailPopupOpen(true);
     };
 
@@ -182,10 +188,12 @@ export const MgmtSection: React.FC<MgmtSectionProps> = ({ data }) => {
                 items={getListPopupItems()}
                 periodFrom={data.periodFrom}
                 periodTo={data.periodTo}
-                onItemClick={(item) => {
+                onItemClick={(item, index) => {
                     // 링크가 없는 경우만 호출됨 (링크는 MgmtListPopup 내부에서 처리)
-                    setListPopupOpen(false);
+                    // 리스트 팝업은 유지하고 상세 팝업만 열기
                     setDetailItem(item);
+                    setDetailItemIndex(index ?? -1);
+                    setIsFromList(true);
                     setDetailPopupOpen(true);
                 }}
             />
@@ -193,8 +201,20 @@ export const MgmtSection: React.FC<MgmtSectionProps> = ({ data }) => {
             {/* 상세 팝업 */}
             <MgmtDetailPopup
                 isOpen={detailPopupOpen}
-                onClose={() => setDetailPopupOpen(false)}
+                onClose={() => {
+                    // 상세 팝업 닫기 (리스트 팝업은 유지)
+                    setDetailPopupOpen(false);
+                    setDetailItem(null);
+                    setDetailItemIndex(-1);
+                    setIsFromList(false);
+                }}
                 item={detailItem}
+                listItems={isFromList ? getListPopupItems() : undefined}
+                currentIndex={isFromList ? detailItemIndex : undefined}
+                onNavigate={isFromList ? (item, index) => {
+                    setDetailItem(item);
+                    setDetailItemIndex(index);
+                } : undefined}
             />
         </div>
     );

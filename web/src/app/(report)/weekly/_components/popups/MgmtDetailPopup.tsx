@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faExternalLinkAlt, faCalendarAlt, faPlayCircle, faTimes, faDownload, faFile, faSpinner } from '@fortawesome/free-solid-svg-icons';
+import { faExternalLinkAlt, faCalendarAlt, faPlayCircle, faTimes, faDownload, faFile, faSpinner, faChevronLeft, faChevronRight } from '@fortawesome/free-solid-svg-icons';
 import { PopupContainer } from './PopupContainer';
 import { MgmtItem } from '@/types/weekly';
 
@@ -8,21 +8,37 @@ interface MgmtDetailPopupProps {
     isOpen: boolean;
     onClose: () => void;
     item: MgmtItem | null;
+    // 리스트 네비게이션용 (팝업 리스트에서 진입 시)
+    listItems?: MgmtItem[];           // 전체 리스트
+    currentIndex?: number;            // 현재 아이템 인덱스
+    onNavigate?: (item: MgmtItem, index: number) => void;  // 네비게이션 콜백
 }
 
 /**
  * 관리포인트 상세 팝업 (단일 아이템)
  * 팝업 열릴 때 API 호출하여 상세 정보(CONTENT, 첨부파일) 조회
+ *
+ * 진입 경로에 따른 동작:
+ * - 카드 칩 클릭: 단순 상세보기 (닫기만)
+ * - 팝업 리스트 클릭: 네비게이션 (이전/닫기/다음)
  */
 export const MgmtDetailPopup: React.FC<MgmtDetailPopupProps> = ({
     isOpen,
     onClose,
-    item
+    item,
+    listItems,
+    currentIndex,
+    onNavigate
 }) => {
     const [showVideo, setShowVideo] = useState(false);
     const [detailData, setDetailData] = useState<MgmtItem | null>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+
+    // 리스트 네비게이션 모드 여부
+    const hasNavigation = listItems && listItems.length > 0 && currentIndex !== undefined && onNavigate;
+    const canGoPrev = hasNavigation && currentIndex > 0;
+    const canGoNext = hasNavigation && currentIndex < listItems.length - 1;
 
     // 팝업 열릴 때 상세 정보 조회
     useEffect(() => {
@@ -94,6 +110,26 @@ export const MgmtDetailPopup: React.FC<MgmtDetailPopupProps> = ({
         onClose();
     };
 
+    // 이전 아이템으로 이동
+    const handlePrev = () => {
+        if (canGoPrev && listItems && onNavigate) {
+            const prevIndex = currentIndex - 1;
+            setDetailData(null);  // 상세 데이터 초기화
+            setShowVideo(false);
+            onNavigate(listItems[prevIndex], prevIndex);
+        }
+    };
+
+    // 다음 아이템으로 이동
+    const handleNext = () => {
+        if (canGoNext && listItems && onNavigate) {
+            const nextIndex = currentIndex + 1;
+            setDetailData(null);  // 상세 데이터 초기화
+            setShowVideo(false);
+            onNavigate(listItems[nextIndex], nextIndex);
+        }
+    };
+
     return (
         <PopupContainer
             isOpen={isOpen}
@@ -101,6 +137,7 @@ export const MgmtDetailPopup: React.FC<MgmtDetailPopupProps> = ({
             title={displayItem.title}
             id="popup-mgmt-detail"
             maxWidth="max-w-xl"
+            zIndex={10001}  /* 리스트 팝업(10000) 위에 표시 */
         >
             <div className="mgmt-detail-content">
                 {/* 로딩 중 */}
@@ -219,6 +256,31 @@ export const MgmtDetailPopup: React.FC<MgmtDetailPopupProps> = ({
                             {displayItem.postFrom && displayItem.postTo && ' ~ '}
                             {formatDate(displayItem.postTo)}
                         </span>
+                    </div>
+                )}
+
+                {/* 네비게이션 푸터 (리스트에서 진입한 경우만) */}
+                {hasNavigation && (
+                    <div className="mgmt-detail-nav">
+                        <button
+                            className="mgmt-nav-btn mgmt-nav-prev"
+                            onClick={handlePrev}
+                            disabled={!canGoPrev}
+                        >
+                            <FontAwesomeIcon icon={faChevronLeft} />
+                            <span>이전</span>
+                        </button>
+                        <span className="mgmt-nav-info">
+                            {currentIndex + 1} / {listItems.length}
+                        </span>
+                        <button
+                            className="mgmt-nav-btn mgmt-nav-next"
+                            onClick={handleNext}
+                            disabled={!canGoNext}
+                        >
+                            <span>다음</span>
+                            <FontAwesomeIcon icon={faChevronRight} />
+                        </button>
                     </div>
                 )}
             </div>

@@ -20,7 +20,7 @@ interface MgmtListPopupProps {
     items: MgmtItem[];
     periodFrom?: string;  // 조회 기간 시작일 (YYYYMMDD) - 만료 판단용
     periodTo?: string;    // 조회 기간 종료일 (YYYYMMDD) - 만료 판단용
-    onItemClick: (item: MgmtItem) => void;
+    onItemClick: (item: MgmtItem, index?: number) => void;
 }
 
 const ITEMS_PER_PAGE = 10;
@@ -56,8 +56,8 @@ export const MgmtListPopup: React.FC<MgmtListPopupProps> = ({
     const endIndex = startIndex + ITEMS_PER_PAGE;
     const currentItems = items.slice(startIndex, endIndex);
 
-    // 아이템 클릭 핸들러
-    const handleItemClick = (item: MgmtItem) => {
+    // 아이템 클릭 핸들러 (index는 전체 items 배열 기준)
+    const handleItemClick = (item: MgmtItem, globalIndex: number) => {
         // PORK-NEWS는 POPUP/DIRECT 구분
         if (item.mgmtType === 'PORK-NEWS') {
             if (item.linkTarget === 'DIRECT' && item.link) {
@@ -65,7 +65,7 @@ export const MgmtListPopup: React.FC<MgmtListPopupProps> = ({
                 return;
             }
             // POPUP이거나 링크 없으면 상세 팝업
-            onItemClick(item);
+            onItemClick(item, globalIndex);
             return;
         }
 
@@ -74,7 +74,7 @@ export const MgmtListPopup: React.FC<MgmtListPopupProps> = ({
             window.open(item.link, '_blank', 'noopener,noreferrer');
             return;
         }
-        onItemClick(item);
+        onItemClick(item, globalIndex);
     };
 
     // DIRECT 링크인지 확인 (외부 링크 아이콘 표시용)
@@ -123,12 +123,13 @@ export const MgmtListPopup: React.FC<MgmtListPopupProps> = ({
                     <>
                         <ul className="mgmt-list-items">
                             {currentItems.map((item, index) => {
+                                const globalIndex = startIndex + index;  // 전체 배열 기준 인덱스
                                 const expired = isExpired(item);
                                 return (
                                     <li
-                                        key={startIndex + index}
+                                        key={globalIndex}
                                         className={`mgmt-list-item ${expired ? 'mgmt-list-item-expired' : ''}`}
-                                        onClick={() => handleItemClick(item)}
+                                        onClick={() => handleItemClick(item, globalIndex)}
                                     >
                                         <span className={`mgmt-list-item-icon mgmt-list-item-icon-${item.mgmtType?.toLowerCase() || 'quiz'}`}>
                                             <FontAwesomeIcon icon={getMgmtTypeIcon(item.mgmtType)} />

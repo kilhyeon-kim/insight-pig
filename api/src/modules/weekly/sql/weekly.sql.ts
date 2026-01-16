@@ -374,7 +374,9 @@ export const WEEKLY_SQL = {
    * 관리포인트 리스트 조회 (TS_INS_MGMT) - CONTENT 제외
    * TS_INS_MGMT는 독립 테이블
    * MGMT_TYPE: QUIZ(퀴즈), CHANNEL(박사채널&정보), PORK-NEWS(한돈&업계소식)
-   * 조회 조건: 게시기간(POST_FROM~POST_TO)이 주간보고서 기간(지난주 시작~금주 종료)과 하루라도 겹치면 표시
+   * 조회 조건:
+   *   - POST_FROM <= 현재일 (미도래 게시물 제외)
+   *   - 게시기간(POST_FROM~POST_TO)이 주간보고서 기간과 겹치면 표시
    * 모바일 메모리 부담 경감을 위해 CONTENT는 상세 조회 시에만 조회
    */
   getMgmtList: `
@@ -391,6 +393,7 @@ export const WEEKLY_SQL = {
         TO_CHAR(POST_TO, 'YYYYMMDD') AS POST_TO
     FROM TS_INS_MGMT
     WHERE NVL(USE_YN, 'Y') = 'Y'
+      AND (POST_FROM IS NULL OR POST_FROM <= TRUNC(SYSDATE))  /* 미도래 게시물 제외 */
     ORDER BY
         CASE MGMT_TYPE
             WHEN 'QUIZ' THEN 1
