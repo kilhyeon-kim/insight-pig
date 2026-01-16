@@ -1,12 +1,15 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
 import { useEffect, useState, useRef } from 'react';
-import Link from 'next/link';
 import { Icon } from '@/components/common';
 
+// Hard navigation 함수 - Next.js 클라이언트 라우터 우회
+// 이중화 서버 환경에서 RSC 상태 불일치 문제 방지
+const navigateTo = (path: string) => {
+  window.location.href = path;
+};
+
 export default function Footer() {
-  const router = useRouter();
   const [isVisible, setIsVisible] = useState(true);
   const lastScrollY = useRef(0);
   const scrollThreshold = 15; // 스크롤 임계값 (px)
@@ -36,6 +39,15 @@ export default function Footer() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  // 뒤로가기 핸들러
+  const handleBack = () => {
+    if (window.history.length > 1) {
+      window.history.back();
+    } else {
+      navigateTo('/');
+    }
+  };
+
   return (
     <footer
       className={`fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 px-4 py-2 z-40 transition-transform duration-300 ${
@@ -46,32 +58,40 @@ export default function Footer() {
         {/* 좌측: 뒤로가기 */}
         <button
           id="btn-footer-back"
-          onClick={() => router.back()}
+          onClick={handleBack}
           className="flex flex-col items-center gap-0.5 text-gray-500 dark:text-gray-400 hover:text-[#2a5298] dark:hover:text-blue-400 transition-colors p-2"
         >
           <Icon name="chevron-left" className="text-xl" />
           <span className="text-xs">뒤로</span>
         </button>
 
-        {/* 가운데: 홈 */}
-        <Link
+        {/* 가운데: 홈 - Hard navigation 사용 */}
+        <a
           id="btn-footer-home"
           href="/"
+          onClick={(e) => {
+            e.preventDefault();
+            navigateTo('/');
+          }}
           className="flex flex-col items-center gap-0.5 text-gray-500 dark:text-gray-400 hover:text-[#2a5298] dark:hover:text-blue-400 transition-colors p-2"
         >
           <Icon name="home" className="text-xl" />
           <span className="text-xs">홈</span>
-        </Link>
+        </a>
 
-        {/* 우측: 설정 */}
-        <Link
+        {/* 우측: 설정 - Hard navigation 사용 */}
+        <a
           id="btn-footer-settings"
           href="/settings"
+          onClick={(e) => {
+            e.preventDefault();
+            navigateTo('/settings');
+          }}
           className="flex flex-col items-center gap-0.5 text-gray-500 dark:text-gray-400 hover:text-[#2a5298] dark:hover:text-blue-400 transition-colors p-2"
         >
           <Icon name="cog" className="text-xl" />
           <span className="text-xs">설정</span>
-        </Link>
+        </a>
       </div>
     </footer>
   );

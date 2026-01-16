@@ -1,11 +1,16 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { useRouter } from 'next/navigation';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSearch, faCalendarAlt, faChevronLeft, faChevronRight } from '@fortawesome/free-solid-svg-icons';
 import { ReportList } from '@/components/report/ReportList';
 import { useAuth, useRequireAuth } from '@/contexts/AuthContext';
+
+// Hard navigation 함수 - Next.js 클라이언트 라우터 우회
+// 이중화 서버 환경에서 RSC 상태 불일치 문제 방지
+const navigateTo = (path: string) => {
+  window.location.href = path;
+};
 
 // 동적 렌더링 강제 - RSC 캐시 불일치 방지
 export const dynamic = 'force-dynamic';
@@ -72,7 +77,6 @@ export default function WeeklyListPage() {
   // 인증 체크 - 로그인 안됐으면 리다이렉트
   const { isLoading: authLoading } = useRequireAuth('/login');
   const { user, activeFarmNo, testFarmNo, setTestFarmNo } = useAuth();
-  const router = useRouter();
 
   // 최근 6개월 기본값
   const [startDate, setStartDate] = useState<string>(formatDateForInput(getSixMonthsAgo()));
@@ -173,7 +177,7 @@ export default function WeeklyListPage() {
 
   const handleItemClick = async (item: ReportItem) => {
     if (item.shareToken) {
-      router.push(`/weekly/${item.shareToken}`);
+      navigateTo(`/weekly/${item.shareToken}`);
       return;
     }
 
@@ -194,7 +198,7 @@ export default function WeeklyListPage() {
       });
       const result = await res.json();
       if (result.success) {
-        router.push(`/weekly/${result.token}`);
+        navigateTo(`/weekly/${result.token}`);
       } else {
         alert('리포트 토큰 생성 실패: ' + result.message);
       }

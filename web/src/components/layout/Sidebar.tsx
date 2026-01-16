@@ -1,12 +1,17 @@
 "use client";
 
 import React from 'react';
-import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faChartPie, faCalendarAlt, faChartBar, faInfoCircle, faSignOutAlt, faTimes, faLock } from '@fortawesome/free-solid-svg-icons';
 import { ThemeToggle } from './ThemeToggle';
 import { useAuth } from '@/contexts/AuthContext';
+
+// Hard navigation 함수 - Next.js 클라이언트 라우터 우회
+// 이중화 서버 환경에서 RSC 상태 불일치 문제 방지
+const navigateTo = (path: string) => {
+  window.location.href = path;
+};
 
 interface SidebarProps {
     isOpen: boolean;
@@ -47,14 +52,16 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
         { name: '환경설정', path: '/settings', icon: faInfoCircle },
     ];
 
-    const handleMenuClick = (e: React.MouseEvent, path: string) => {
+    const handleMenuClick = (e: React.MouseEvent<HTMLAnchorElement>, path: string) => {
+        e.preventDefault();
         if (!isServiceOpen(path)) {
-            e.preventDefault();
             const openDate = getOpenDateText(path);
             alert(`서비스 준비 중입니다.\n\n오픈 예정일: ${openDate}`);
         } else {
             // Close sidebar on mobile when navigating
             if (window.innerWidth < 1024) onClose();
+            // Hard navigation 사용
+            navigateTo(path);
         }
     };
 
@@ -82,7 +89,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                         const isActive = pathname.startsWith(item.path);
                         const isLocked = !isServiceOpen(item.path);
                         return (
-                            <Link
+                            <a
                                 key={item.path}
                                 href={isLocked ? '#' : item.path}
                                 className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
@@ -97,7 +104,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                                 <FontAwesomeIcon icon={isLocked ? faLock : item.icon} className="w-5 h-5" />
                                 {item.name}
                                 {isLocked && <span className="ml-auto text-xs text-gray-400">(준비중)</span>}
-                            </Link>
+                            </a>
                         );
                     })}
                 </nav>

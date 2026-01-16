@@ -1,7 +1,12 @@
 import React from 'react';
-import Link from 'next/link';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faChevronRight, faCalendarAlt } from '@fortawesome/free-solid-svg-icons';
+
+// Hard navigation 함수 - Next.js 클라이언트 라우터 우회
+// 이중화 서버 환경에서 RSC 상태 불일치 문제 방지
+const navigateTo = (path: string) => {
+  window.location.href = path;
+};
 
 interface ReportItem {
     id: string;
@@ -56,13 +61,17 @@ export const ReportList: React.FC<ReportListProps> = ({ items, basePath, onItemC
                     }
 
                     return (
-                        <Link
+                        <a
                             key={item.id}
                             href={`${basePath}/${item.id}`}
+                            onClick={(e) => {
+                                e.preventDefault();
+                                navigateTo(`${basePath}/${item.id}`);
+                            }}
                             className="block hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
                         >
                             {content}
-                        </Link>
+                        </a>
                     );
                 })}
             </div>

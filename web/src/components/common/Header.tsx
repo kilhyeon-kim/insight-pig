@@ -2,11 +2,16 @@
 
 import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
-import Link from 'next/link';
 import { Icon } from '@/components/common';
 import { useAuth } from '@/contexts/AuthContext';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSignInAlt } from '@fortawesome/free-solid-svg-icons';
+
+// Hard navigation 함수 - Next.js 클라이언트 라우터 우회
+// 이중화 서버 환경에서 RSC 상태 불일치 문제 방지
+const navigateTo = (path: string) => {
+  window.location.href = path;
+};
 
 interface HeaderProps {
   onMenuToggle?: () => void;
@@ -103,10 +108,14 @@ export default function Header({ onMenuToggle, isLoginAccess = true, showMenu = 
             </button>
           )}
 
-          {/* 로고 */}
-          <Link
+          {/* 로고 - Hard navigation 사용 */}
+          <a
             id="btn-top-ci"
             href={isLoginAccess ? "/" : "/login"}
+            onClick={(e) => {
+              e.preventDefault();
+              navigateTo(isLoginAccess ? "/" : "/login");
+            }}
             className="flex items-center cursor-pointer"
           >
             <Image
@@ -116,7 +125,7 @@ export default function Header({ onMenuToggle, isLoginAccess = true, showMenu = 
               height={28}
               className="dark:brightness-0 dark:invert"
             />
-          </Link>
+          </a>
         </div>
 
         {/* 오른쪽: 사용자 정보 또는 로그인 버튼 */}
