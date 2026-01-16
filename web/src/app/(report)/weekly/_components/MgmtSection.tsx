@@ -35,11 +35,29 @@ export const MgmtSection: React.FC<MgmtSectionProps> = ({ data }) => {
     const [detailPopupOpen, setDetailPopupOpen] = useState(false);
     const [detailItem, setDetailItem] = useState<MgmtItem | null>(null);
 
-    // 퀴즈 + 박사채널 통합 리스트
+    // 기간 내 항목인지 확인 (카드 표시용)
+    const isInPeriod = (item: MgmtItem): boolean => {
+        const { periodFrom, periodTo } = data;
+        if (!periodFrom || !periodTo) return true; // 기간 정보 없으면 모두 표시
+
+        // POST_FROM이 조회 기간 종료일보다 크면 기간 외 (아직 시작 안 함)
+        if (item.postFrom && item.postFrom > periodTo) return false;
+
+        // POST_TO가 조회 기간 시작일보다 작으면 기간 외 (이미 종료됨)
+        if (item.postTo && item.postTo < periodFrom) return false;
+
+        return true;
+    };
+
+    // 퀴즈 + 박사채널 통합 리스트 (전체 - 팝업용)
     const quizInfoList = [
         ...(data.quizList || []),
         ...(data.channelList || [])
     ];
+
+    // 카드에 표시할 리스트 (기간 내 항목만)
+    const quizInfoListFiltered = quizInfoList.filter(isInPeriod);
+    const porkNewsListFiltered = (data.porkNewsList || []).filter(isInPeriod);
 
     // 더보기 클릭 - 리스트 팝업 열기
     const openListPopup = (type: MgmtType) => {
@@ -111,8 +129,8 @@ export const MgmtSection: React.FC<MgmtSectionProps> = ({ data }) => {
                     </span>
                 </div>
                 <div className="mgmt-chips">
-                    {quizInfoList.length > 0 ? (
-                        quizInfoList.slice(0, maxDisplayItems).map((item, index) => (
+                    {quizInfoListFiltered.length > 0 ? (
+                        quizInfoListFiltered.slice(0, maxDisplayItems).map((item, index) => (
                             <span
                                 key={index}
                                 className={`mgmt-chip mgmt-chip-${item.mgmtType?.toLowerCase() || 'quiz'}`}
@@ -140,8 +158,8 @@ export const MgmtSection: React.FC<MgmtSectionProps> = ({ data }) => {
                     </span>
                 </div>
                 <div className="mgmt-chips">
-                    {(data.porkNewsList || []).length > 0 ? (
-                        (data.porkNewsList || []).slice(0, maxDisplayItems).map((item, index) => (
+                    {porkNewsListFiltered.length > 0 ? (
+                        porkNewsListFiltered.slice(0, maxDisplayItems).map((item, index) => (
                             <span
                                 key={index}
                                 className="mgmt-chip"
@@ -162,6 +180,8 @@ export const MgmtSection: React.FC<MgmtSectionProps> = ({ data }) => {
                 onClose={() => setListPopupOpen(false)}
                 title={getListPopupTitle()}
                 items={getListPopupItems()}
+                periodFrom={data.periodFrom}
+                periodTo={data.periodTo}
                 onItemClick={(item) => {
                     // 링크가 없는 경우만 호출됨 (링크는 MgmtListPopup 내부에서 처리)
                     setListPopupOpen(false);

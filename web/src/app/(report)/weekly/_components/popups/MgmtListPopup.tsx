@@ -18,6 +18,8 @@ interface MgmtListPopupProps {
     onClose: () => void;
     title: string;
     items: MgmtItem[];
+    periodFrom?: string;  // 조회 기간 시작일 (YYYYMMDD) - 만료 판단용
+    periodTo?: string;    // 조회 기간 종료일 (YYYYMMDD) - 만료 판단용
     onItemClick: (item: MgmtItem) => void;
 }
 
@@ -34,6 +36,8 @@ export const MgmtListPopup: React.FC<MgmtListPopupProps> = ({
     onClose,
     title,
     items,
+    periodFrom,
+    periodTo,
     onItemClick
 }) => {
     // 페이지 상태
@@ -81,6 +85,20 @@ export const MgmtListPopup: React.FC<MgmtListPopupProps> = ({
         return !!item.link;
     };
 
+    // 게시 만료 여부 확인 (주간보고서 조회 기간 기준)
+    // 만료 조건: POST_FROM > periodTo OR POST_TO < periodFrom (기간이 겹치지 않음)
+    const isExpired = (item: MgmtItem): boolean => {
+        if (!periodFrom || !periodTo) return false;
+
+        // POST_FROM이 조회 기간 종료일보다 크면 만료 (아직 시작 안 함)
+        if (item.postFrom && item.postFrom > periodTo) return true;
+
+        // POST_TO가 조회 기간 시작일보다 작으면 만료 (이미 종료됨)
+        if (item.postTo && item.postTo < periodFrom) return true;
+
+        return false;
+    };
+
     // 페이지 이동
     const goToPage = (page: number) => {
         if (page >= 1 && page <= totalPages) {
@@ -104,23 +122,29 @@ export const MgmtListPopup: React.FC<MgmtListPopupProps> = ({
                 ) : (
                     <>
                         <ul className="mgmt-list-items">
-                            {currentItems.map((item, index) => (
-                                <li
-                                    key={startIndex + index}
-                                    className="mgmt-list-item"
-                                    onClick={() => handleItemClick(item)}
-                                >
-                                    <span className={`mgmt-list-item-icon mgmt-list-item-icon-${item.mgmtType?.toLowerCase() || 'quiz'}`}>
-                                        <FontAwesomeIcon icon={getMgmtTypeIcon(item.mgmtType)} />
-                                    </span>
-                                    <span className="mgmt-list-item-title">{item.title}</span>
-                                    {isDirectLink(item) ? (
-                                        <FontAwesomeIcon icon={faExternalLinkAlt} className="mgmt-list-item-link" />
-                                    ) : (
-                                        <FontAwesomeIcon icon={faChevronRight} className="mgmt-list-item-arrow" />
-                                    )}
-                                </li>
-                            ))}
+                            {currentItems.map((item, index) => {
+                                const expired = isExpired(item);
+                                return (
+                                    <li
+                                        key={startIndex + index}
+                                        className={`mgmt-list-item ${expired ? 'mgmt-list-item-expired' : ''}`}
+                                        onClick={() => handleItemClick(item)}
+                                    >
+                                        <span className={`mgmt-list-item-icon mgmt-list-item-icon-${item.mgmtType?.toLowerCase() || 'quiz'}`}>
+                                            <FontAwesomeIcon icon={getMgmtTypeIcon(item.mgmtType)} />
+                                        </span>
+                                        <span className="mgmt-list-item-title">
+                                            {item.title}
+                                            {expired && <span className="mgmt-expired-badge">만료</span>}
+                                        </span>
+                                        {isDirectLink(item) ? (
+                                            <FontAwesomeIcon icon={faExternalLinkAlt} className="mgmt-list-item-link" />
+                                        ) : (
+                                            <FontAwesomeIcon icon={faChevronRight} className="mgmt-list-item-arrow" />
+                                        )}
+                                    </li>
+                                );
+                            })}
                         </ul>
 
                         {/* 페이징 UI - 2페이지 이상일 때만 표시 */}

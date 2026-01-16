@@ -2425,6 +2425,32 @@
     font-size: 12px;
 }
 
+/* 만료 아이템 스타일 */
+.mgmt-list-item-expired {
+    opacity: 0.5;
+}
+
+.mgmt-list-item-expired .mgmt-list-item-title {
+    color: var(--rp-text-tertiary, #999);
+}
+
+.mgmt-expired-badge {
+    display: inline-block;
+    margin-left: 6px;
+    padding: 1px 6px;
+    font-size: 10px;
+    font-weight: 600;
+    background: #f3f4f6;
+    color: #9ca3af;
+    border-radius: 4px;
+    vertical-align: middle;
+}
+
+.dark .mgmt-expired-badge {
+    background: rgba(255, 255, 255, 0.1);
+    color: #6b7280;
+}
+
 /* 페이징 UI */
 .mgmt-list-pagination {
     display: flex;

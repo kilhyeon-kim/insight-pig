@@ -375,11 +375,9 @@ export const WEEKLY_SQL = {
    * TS_INS_MGMT는 독립 테이블
    * MGMT_TYPE: QUIZ(퀴즈), CHANNEL(박사채널&정보), PORK-NEWS(한돈&업계소식)
    * 조회 조건: 게시기간(POST_FROM~POST_TO)이 주간보고서 기간(지난주 시작~금주 종료)과 하루라도 겹치면 표시
-   * @param prevDtFrom - 지난주 시작일 (YYYYMMDD)
-   * @param dtTo - 금주 종료일 (YYYYMMDD)
    */
   getMgmtList: `
-    /* weekly.weekly.getMgmtList : 관리포인트 조회 */
+    /* weekly.weekly.getMgmtList : 관리포인트 조회 (USE_YN='Y' 전체) */
     SELECT
         SEQ,
         MGMT_TYPE,
@@ -394,9 +392,6 @@ export const WEEKLY_SQL = {
         TO_CHAR(POST_TO, 'YYYYMMDD') AS POST_TO
     FROM TS_INS_MGMT
     WHERE NVL(USE_YN, 'Y') = 'Y'
-      /* 기간 겹침 조건: POST_FROM <= 금주종료 AND POST_TO >= 지난주시작 */
-      AND (POST_FROM IS NULL OR TRUNC(POST_FROM) <= TO_DATE(:dtTo, 'YYYYMMDD'))
-      AND (POST_TO IS NULL OR TRUNC(POST_TO) >= TO_DATE(:prevDtFrom, 'YYYYMMDD'))
     ORDER BY
         CASE MGMT_TYPE
             WHEN 'QUIZ' THEN 1
@@ -404,6 +399,7 @@ export const WEEKLY_SQL = {
             WHEN 'PORK-NEWS' THEN 3
             ELSE 9
         END,
+        POST_FROM DESC NULLS LAST,
         SORT_NO
   `,
 

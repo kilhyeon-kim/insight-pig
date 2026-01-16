@@ -227,8 +227,8 @@ export class WeeklyService {
       const subs = await this.dataSource.query(WEEKLY_SQL.getReportSub, params({ masterSeq, farmNo }));
 
       // 3. 관리포인트 조회 (TS_INS_MGMT)
-      // 게시기간이 지난주~금주 기간에 하루라도 겹치면 표시
-      let mgmtData = { quizList: [] as any[], channelList: [] as any[], porkNewsList: [] as any[] };
+      // 관리포인트 조회 (USE_YN='Y' 전체, 만료 판단은 프론트에서)
+      let mgmtData = { quizList: [] as any[], channelList: [] as any[], porkNewsList: [] as any[], periodFrom: '', periodTo: '' };
 
       try {
         const dtFromStr = week.DT_FROM; // 예: "24.12.23"
@@ -249,6 +249,10 @@ export class WeeklyService {
           const prevDtFromDate = new Date(dtFromDate);
           prevDtFromDate.setDate(prevDtFromDate.getDate() - 7);
 
+          // 다음주 종료일 = 금주 종료일 + 7일 (금주 작업예정 기간 포함)
+          const nextDtToDate = new Date(dtToDate);
+          nextDtToDate.setDate(nextDtToDate.getDate() + 7);
+
           // YYYYMMDD 포맷으로 변환
           const formatYYYYMMDD = (d: Date): string => {
             const yyyy = d.getFullYear();
@@ -257,19 +261,19 @@ export class WeeklyService {
             return `${yyyy}${mm}${dd}`;
           };
 
-          const mgmtPrevDtFrom = formatYYYYMMDD(prevDtFromDate);
-          const mgmtDtTo = formatYYYYMMDD(dtToDate);
+          const mgmtPeriodFrom = formatYYYYMMDD(prevDtFromDate);
+          const mgmtPeriodTo = formatYYYYMMDD(nextDtToDate);
 
-          this.logger.debug(`getMgmtList params: prevDtFrom=${mgmtPrevDtFrom}, dtTo=${mgmtDtTo}`);
-
-          const mgmtRows = await this.dataSource.query(
-            WEEKLY_SQL.getMgmtList,
-            params({ prevDtFrom: mgmtPrevDtFrom, dtTo: mgmtDtTo }),
-          );
+          const mgmtRows = await this.dataSource.query(WEEKLY_SQL.getMgmtList);
 
           this.logger.debug(`getMgmtList rows: ${mgmtRows?.length || 0}`);
 
-          mgmtData = await this.extractMgmtData(mgmtRows);
+          const extracted = await this.extractMgmtData(mgmtRows);
+          mgmtData = {
+            ...extracted,
+            periodFrom: mgmtPeriodFrom,  // 지난주 시작일 (YYYYMMDD)
+            periodTo: mgmtPeriodTo,       // 다음주 종료일 (YYYYMMDD)
+          };
         }
       } catch (e) {
         this.logger.error(`getMgmtList error: ${e.message}`);

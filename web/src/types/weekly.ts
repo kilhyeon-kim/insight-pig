@@ -549,4 +549,6 @@ export interface MgmtData {
   quizList: MgmtItem[];       // 퀴즈 목록
   channelList: MgmtItem[];    // 박사채널&정보 목록
   porkNewsList: MgmtItem[];   // 한돈&업계소식 목록
+  periodFrom?: string;        // 조회 기간 시작일 (지난주 시작일, YYYYMMDD) - 만료 판단용
+  periodTo?: string;          // 조회 기간 종료일 (다음주 종료일, YYYYMMDD) - 만료 판단용
 }
