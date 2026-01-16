@@ -1,9 +1,14 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faLock, faCalendarAlt } from '@fortawesome/free-solid-svg-icons';
+
+// Hard navigation 함수 - Next.js 클라이언트 라우터 우회
+// 이중화 서버 환경에서 RSC 상태 불일치 문제 방지
+const navigateTo = (path: string) => {
+  window.location.href = path;
+};
 
 // 동적 렌더링 강제 - RSC 캐시 불일치 방지
 export const dynamic = 'force-dynamic';
@@ -12,7 +17,6 @@ export const dynamic = 'force-dynamic';
 const SERVICE_OPEN_DATE = new Date('2026-04-01');
 
 export default function QuarterlyListPage() {
-    const router = useRouter();
     const [isOpen, setIsOpen] = useState(false);
 
     useEffect(() => {
@@ -44,7 +48,7 @@ export default function QuarterlyListPage() {
                         <span>오픈 예정일: {formatOpenDate()}</span>
                     </div>
                     <button
-                        onClick={() => router.push('/weekly')}
+                        onClick={() => navigateTo('/weekly')}
                         className="mt-6 px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
                     >
                         주간 보고서로 이동

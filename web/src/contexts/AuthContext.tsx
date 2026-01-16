@@ -1,8 +1,13 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
 import { ErrorCode, detectErrorCode, detectErrorCodeByStatus, getErrorMessage } from '@/err';
+
+// Hard navigation 함수 - Next.js 클라이언트 라우터 우회
+// 이중화 서버 환경에서 RSC 상태 불일치 문제 방지
+const navigateTo = (path: string) => {
+  window.location.href = path;
+};
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
@@ -35,7 +40,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [testFarmNo, setTestFarmNoState] = useState<number | null>(null);
-  const router = useRouter();
 
   // localStorage에서 토큰 가져오기
   const getAccessToken = useCallback((): string | null => {
@@ -168,8 +172,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setAccessToken(null);
     setUser(null);
     setTestFarmNo(null);
-    router.push('/login');
-  }, [router, setTestFarmNo]);
+    navigateTo('/login');
+  }, [setTestFarmNo]);
 
   const value: AuthContextType = {
     user,
@@ -201,13 +205,12 @@ export const useAuth = () => {
 // 인증이 필요한 페이지에서 사용할 HOC 또는 훅
 export const useRequireAuth = (redirectTo: string = '/login') => {
   const { isAuthenticated, isLoading } = useAuth();
-  const router = useRouter();
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
-      router.push(redirectTo);
+      navigateTo(redirectTo);
     }
-  }, [isAuthenticated, isLoading, router, redirectTo]);
+  }, [isAuthenticated, isLoading, redirectTo]);
 
   return { isAuthenticated, isLoading };
 };

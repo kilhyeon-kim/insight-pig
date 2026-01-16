@@ -1,11 +1,15 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { Icon } from '@/components/common';
 import { MainLayout } from '@/components/layout';
 import { useAuth } from '@/contexts/AuthContext';
+
+// Hard navigation 함수 - Next.js 클라이언트 라우터 우회
+// 이중화 서버 환경에서 RSC 상태 불일치 문제 방지
+const navigateTo = (path: string) => {
+  window.location.href = path;
+};
 
 // 동적 렌더링 강제 - RSC 캐시 불일치 방지
 export const dynamic = 'force-dynamic';
@@ -35,14 +39,13 @@ const menuItems = [
 ];
 
 export default function HomePage() {
-  const router = useRouter();
   const { isAuthenticated, isLoading } = useAuth();
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
-      router.replace('/login');
+      navigateTo('/login');
     }
-  }, [isAuthenticated, isLoading, router]);
+  }, [isAuthenticated, isLoading]);
 
   // 로딩 중이거나 미인증 상태면 빈 화면 (리다이렉트 전)
   if (isLoading || !isAuthenticated) {
@@ -66,9 +69,13 @@ export default function HomePage() {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl w-full">
           {menuItems.map((item) => (
-            <Link
+            <a
               key={item.href}
               href={item.href}
+              onClick={(e) => {
+                e.preventDefault();
+                navigateTo(item.href);
+              }}
               className="flex flex-col items-center p-8 bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-lg hover:border-[var(--primary)] transition-all group"
             >
               <div className={item.color + ' w-20 h-20 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform'}>
@@ -76,7 +83,7 @@ export default function HomePage() {
               </div>
               <h2 className="text-lg font-semibold text-gray-800 mb-1">{item.name}</h2>
               <p className="text-sm text-gray-500">{item.description}</p>
-            </Link>
+            </a>
           ))}
         </div>
       </div>

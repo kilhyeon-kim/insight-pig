@@ -1,9 +1,15 @@
 "use client";
 
 import React, { useState, Suspense } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { useAuth } from '@/contexts/AuthContext';
+
+// Hard navigation 함수 - Next.js 클라이언트 라우터 우회
+// 이중화 서버 환경에서 RSC 상태 불일치 문제 방지
+const navigateTo = (path: string) => {
+  window.location.href = path;
+};
 
 // 동적 렌더링 강제 - RSC 캐시 불일치 방지
 export const dynamic = 'force-dynamic';
@@ -22,7 +28,6 @@ const TEST_ACCOUNTS = [
 ];
 
 function LoginContent() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const { login, isLoading } = useAuth();
   const [username, setUsername] = useState('');
@@ -42,7 +47,7 @@ function LoginContent() {
     const result = await login(username, password);
 
     if (result.success) {
-      router.push('/weekly');
+      navigateTo('/weekly');
     } else {
       setError(result.error || '로그인에 실패했습니다.');
     }
@@ -64,7 +69,7 @@ function LoginContent() {
     const result = await login(account.id, account.pw);
 
     if (result.success) {
-      router.push('/weekly');
+      navigateTo('/weekly');
     } else {
       setError(result.error || '로그인에 실패했습니다.');
       setSelectedAccount('');

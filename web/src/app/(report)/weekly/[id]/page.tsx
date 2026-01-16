@@ -1,11 +1,16 @@
 "use client";
 
 import React, { useState, useEffect, use, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
 import {
     parseApiError,
     parseFetchError
 } from '@/err';
+
+// Hard navigation 함수 - Next.js 클라이언트 라우터 우회
+// 이중화 서버 환경에서 RSC 상태 불일치 문제 방지
+const navigateTo = (path: string) => {
+  window.location.href = path;
+};
 import Header from '@/components/common/Header';
 import { Sidebar } from '@/components/layout/Sidebar';
 import Footer from '@/components/layout/Footer';
@@ -74,7 +79,6 @@ interface ReportData {
 export default function WeeklyDetailPage({ params }: WeeklyDetailPageProps) {
     const resolvedParams = use(params);
     const id = resolvedParams.id; // 이것이 토큰입니다.
-    const router = useRouter();
 
     const [data, setData] = useState<ReportData | null>(null);
     const [loading, setLoading] = useState(true);
@@ -169,7 +173,7 @@ export default function WeeklyDetailPage({ params }: WeeklyDetailPageProps) {
 
     // 로그인 페이지로 이동
     const handleLoginRedirect = () => {
-        router.push('/login');
+        navigateTo('/login');
     };
 
     const handlePopupOpen = (type: string) => {
