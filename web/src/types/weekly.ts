@@ -532,6 +532,7 @@ export interface MgmtItem {
   mgmtType: 'QUIZ' | 'CHANNEL' | 'PORK-NEWS';  // 유형 (QUIZ: 퀴즈, CHANNEL: 박사채널&정보, PORK-NEWS: 한돈&업계소식)
   title: string;           // 카드에 표시될 제목 (한줄)
   content: string | null;  // 상세 내용 (팝업에 표시)
+  contentType: 'TEXT' | 'HTML' | null;  // 콘텐츠 타입 (TEXT: 텍스트, HTML: HTML 형식)
   link: string | null;     // 링크 URL
   linkTarget: 'POPUP' | 'DIRECT' | null;  // 링크 열기 방식
   videoUrl: string | null; // 동영상 URL

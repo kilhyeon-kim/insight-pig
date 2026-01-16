@@ -227,6 +227,12 @@ export default function WeeklyScheduleSettings({
             }
         }
 
+        // 확인 메시지
+        const confirmed = window.confirm(
+            '변경된 설정은 차주 보고서 발송부터 반영됩니다.\n계속하시겠습니까?'
+        );
+        if (!confirmed) return;
+
         setSaving(true);
         setMessage(null);
 

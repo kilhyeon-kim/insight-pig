@@ -62,7 +62,16 @@ export const MgmtDetailPopup: React.FC<MgmtDetailPopupProps> = ({
                 {/* 상세 내용 */}
                 {item.content && (
                     <div className="mgmt-detail-body">
-                        {item.content}
+                        {item.contentType === 'HTML' ? (
+                            <div
+                                className="mgmt-html-content"
+                                dangerouslySetInnerHTML={{ __html: item.content }}
+                            />
+                        ) : (
+                            <div className="mgmt-text-content whitespace-pre-wrap">
+                                {item.content}
+                            </div>
+                        )}
                     </div>
                 )}
 

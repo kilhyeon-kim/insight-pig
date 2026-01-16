@@ -386,6 +386,7 @@ export const WEEKLY_SQL = {
         SORT_NO,
         TITLE,
         CONTENT,
+        NVL(CONTENT_TYPE, 'TEXT') AS CONTENT_TYPE,
         LINK_URL,
         LINK_TARGET,
         VIDEO_URL,

@@ -463,6 +463,7 @@ export class WeeklyService {
         mgmtType: row.MGMT_TYPE || 'QUIZ',
         title: row.TITLE || row.CONTENT || '',
         content: row.CONTENT || null,
+        contentType: row.CONTENT_TYPE || 'TEXT',
         link: row.LINK_URL || null,
         linkTarget: row.LINK_TARGET || null,
         videoUrl: row.VIDEO_URL || null,

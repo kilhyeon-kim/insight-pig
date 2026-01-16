@@ -3,6 +3,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import * as oracledb from 'oracledb';
 
 // Modules
 import { WeeklyModule } from './modules/weekly';
@@ -32,21 +33,26 @@ import { TaMember, TaFarm, TsInsService } from './modules/auth/entities';
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: (configService: ConfigService) => ({
-        type: 'oracle',
-        host: configService.get<string>('database.host'),
-        port: configService.get<number>('database.port'),
-        username: configService.get<string>('database.username'),
-        password: configService.get<string>('database.password'),
-        serviceName: configService.get<string>('database.serviceName'),
-        entities: [TsInsMaster, TsInsWeek, TsInsWeekSub, TaMember, TaFarm, TsInsService],
-        synchronize: false,
-        logging: configService.get<string>('app.nodeEnv') !== 'production',
-        logger:
-          configService.get<string>('app.nodeEnv') !== 'production'
-            ? new CustomTypeOrmLogger()
-            : undefined,
-      }),
+      useFactory: (configService: ConfigService) => {
+        // CLOB을 문자열로 자동 변환 설정
+        oracledb.fetchAsString = [oracledb.CLOB];
+
+        return {
+          type: 'oracle',
+          host: configService.get<string>('database.host'),
+          port: configService.get<number>('database.port'),
+          username: configService.get<string>('database.username'),
+          password: configService.get<string>('database.password'),
+          serviceName: configService.get<string>('database.serviceName'),
+          entities: [TsInsMaster, TsInsWeek, TsInsWeekSub, TaMember, TaFarm, TsInsService],
+          synchronize: false,
+          logging: configService.get<string>('app.nodeEnv') !== 'production',
+          logger:
+            configService.get<string>('app.nodeEnv') !== 'production'
+              ? new CustomTypeOrmLogger()
+              : undefined,
+        };
+      },
     }),
 
     // Feature Modules
