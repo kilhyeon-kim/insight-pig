@@ -118,9 +118,11 @@ export const ThisWeekSection: React.FC<ThisWeekSectionProps> = ({ data, farmNo, 
                             </button>
                         </div>
                         <div className="help-tooltip-note">
-                            [교배,분만,이유,모돈백신]&nbsp;:&nbsp;농장정보&gt;모돈 작업설정(피그플랜)
+                            [농장 기본값]&nbsp;:&nbsp;피그플랜 &gt; 농장 정보관리 &gt; 농장 기본값 설정
                             <br />
-                            [출하]&nbsp;:&nbsp;농장정보&gt;농장 기본값설정(피그플랜)
+                            [모돈 작업설정]&nbsp;:&nbsp;피그플랜 &gt; 농장 정보관리 &gt; 모돈 작업설정
+                             <br />
+                            ※ 출하는 농장 기본설정값 기준으로 산출
                         </div>
                         <div className="help-tooltip-body">
                             <div className="help-item">
@@ -128,13 +130,28 @@ export const ThisWeekSection: React.FC<ThisWeekSectionProps> = ({ data, farmNo, 
                                 <span className="help-desc">{grid?.help?.mating || '설정된 예정작업정보 없음'}</span>
                             </div>
                             <div className="help-item">
-                                <span className="help-label">재발확인</span>
-                                <span className="help-desc">{grid?.help?.checking || '교배일+21일/28일'}</span>
-                            </div>
-                            <div className="help-item">
                                 <span className="help-label">분만</span>
                                 <span className="help-desc">{grid?.help?.farrowing || '설정된 예정작업정보 없음'}</span>
                             </div>
+                            {grid?.isModonPregnancy ? (
+                                /* 모돈작업설정: 임신 감정 하나로 표시 */
+                                <div className="help-item">
+                                    <span className="help-label">임신 감정</span>
+                                    <span className="help-desc">{grid?.help?.pregnancy || '설정된 예정작업정보 없음'}</span>
+                                </div>
+                            ) : (
+                                /* 농장기본값: 재발확인, 임신진단 별도 표시 */
+                                <>
+                                    <div className="help-item">
+                                        <span className="help-label">재발확인</span>
+                                        <span className="help-desc">{grid?.help?.pregnancy3w || '(농장기본값) 교배 후 3주'}</span>
+                                    </div>
+                                    <div className="help-item">
+                                        <span className="help-label">임신진단</span>
+                                        <span className="help-desc">{grid?.help?.pregnancy4w || '(농장기본값) 교배 후 4주'}</span>
+                                    </div>
+                                </>
+                            )}
                             <div className="help-item">
                                 <span className="help-label">이유</span>
                                 <span className="help-desc">{grid?.help?.weaning || '설정된 예정작업정보 없음'}</span>
@@ -154,38 +171,50 @@ export const ThisWeekSection: React.FC<ThisWeekSectionProps> = ({ data, farmNo, 
                             </div>
                         )}
                     </div>
-                    <div className="legend-item"><FontAwesomeIcon icon={faArrowUpRightFromSquare} /> 더보기</div>
+                    <div className="legend-item legend-clickable-hint"><FontAwesomeIcon icon={faArrowUpRightFromSquare} />=상세보기</div>
                     <span className="section-desc">단위: 복</span>
                 </div>
             </div>
             <div className="card-body">
-                {/* 주간 요약 카드 */}
+                {/* 주간 요약 카드 - 모돈작업설정인 경우에만 클릭 가능 */}
                 <div className="summary-section">
-                    <div className="summary-card clickable" onClick={() => onPopupOpen('scheduleGb')}>
-                        <span className="detail-btn"><FontAwesomeIcon icon={faArrowUpRightFromSquare} /></span>
+                    <div
+                        className={`summary-card${!grid?.help?.isFarmMating ? ' clickable' : ''}`}
+                        onClick={() => !grid?.help?.isFarmMating && onPopupOpen('scheduleGb')}
+                    >
+                        {!grid?.help?.isFarmMating && <span className="detail-btn"><FontAwesomeIcon icon={faArrowUpRightFromSquare} /></span>}
                         <div className="icon"><FontAwesomeIcon icon={faHeart} /></div>
                         <div className="title">교배</div>
                         <div className="count">{summaryData.mating}</div>
                     </div>
                     <div className="summary-card">
                         <div className="icon"><FontAwesomeIcon icon={faMagnifyingGlass} /></div>
-                        <div className="title">재발확인</div>
+                        <div className="title">{grid?.isModonPregnancy ? '임신감정' : '재발확인'}</div>
                         <div className="count">{summaryData.checking}</div>
                     </div>
-                    <div className="summary-card clickable" onClick={() => onPopupOpen('scheduleBm')}>
-                        <span className="detail-btn"><FontAwesomeIcon icon={faArrowUpRightFromSquare} /></span>
+                    <div
+                        className={`summary-card${!grid?.help?.isFarmFarrowing ? ' clickable' : ''}`}
+                        onClick={() => !grid?.help?.isFarmFarrowing && onPopupOpen('scheduleBm')}
+                    >
+                        {!grid?.help?.isFarmFarrowing && <span className="detail-btn"><FontAwesomeIcon icon={faArrowUpRightFromSquare} /></span>}
                         <div className="icon"><FontAwesomeIcon icon={faBaby} /></div>
                         <div className="title">분만</div>
                         <div className="count">{summaryData.farrowing}</div>
                     </div>
-                    <div className="summary-card clickable" onClick={() => onPopupOpen('scheduleEu')}>
-                        <span className="detail-btn"><FontAwesomeIcon icon={faArrowUpRightFromSquare} /></span>
+                    <div
+                        className={`summary-card${!grid?.help?.isFarmWeaning ? ' clickable' : ''}`}
+                        onClick={() => !grid?.help?.isFarmWeaning && onPopupOpen('scheduleEu')}
+                    >
+                        {!grid?.help?.isFarmWeaning && <span className="detail-btn"><FontAwesomeIcon icon={faArrowUpRightFromSquare} /></span>}
                         <div className="icon"><FontAwesomeIcon icon={faPersonBreastfeeding} /></div>
                         <div className="title">이유</div>
                         <div className="count">{summaryData.weaning}</div>
                     </div>
-                    <div className="summary-card clickable" onClick={() => onPopupOpen('scheduleVaccine')}>
-                        <span className="detail-btn"><FontAwesomeIcon icon={faArrowUpRightFromSquare} /></span>
+                    <div
+                        className={`summary-card${!grid?.help?.isFarmVaccine ? ' clickable' : ''}`}
+                        onClick={() => !grid?.help?.isFarmVaccine && onPopupOpen('scheduleVaccine')}
+                    >
+                        {!grid?.help?.isFarmVaccine && <span className="detail-btn"><FontAwesomeIcon icon={faArrowUpRightFromSquare} /></span>}
                         <div className="icon"><FontAwesomeIcon icon={faSyringe} /></div>
                         <div className="title">모돈백신</div>
                         <div className="count">{summaryData.vaccine}</div>
@@ -209,79 +238,103 @@ export const ThisWeekSection: React.FC<ThisWeekSectionProps> = ({ data, farmNo, 
                             </div>
                         ))}
 
-                        {/* 교배 */}
+                        {/* 교배 - 모돈작업설정인 경우에만 클릭 가능 */}
                         <div className="calendar-section">
                             <span className="section-label">교배</span>
                         </div>
                         {weekDays.map((_, i) => {
                             const count = grid?.gb?.[i];
+                            const canClick = count && !grid?.help?.isFarmMating;
                             return (
-                                <div key={i} className={`calendar-cell${count ? ' clickable' : ''}${i === 6 ? ' last-col' : ''}`} onClick={() => count && onPopupOpen('scheduleGb')}>
+                                <div key={i} className={`calendar-cell${canClick ? ' clickable' : ''}${i === 6 ? ' last-col' : ''}`} onClick={() => canClick && onPopupOpen('scheduleGb')}>
                                     {count && <span className="count">{count}</span>}
                                 </div>
                             );
                         })}
 
-                        {/* 분만 (강조색) */}
+                        {/* 분만 (강조색) - 모돈작업설정인 경우에만 클릭 가능 */}
                         <div className="calendar-section">
                             <span className="section-label">분만</span>
                         </div>
                         {weekDays.map((_, i) => {
                             const count = grid?.bm?.[i];
+                            const canClick = count && !grid?.help?.isFarmFarrowing;
                             return (
-                                <div key={i} className={`calendar-cell highlight${count ? ' clickable' : ''}${i === 6 ? ' last-col' : ''}`} onClick={() => count && onPopupOpen('scheduleBm')}>
+                                <div key={i} className={`calendar-cell highlight${canClick ? ' clickable' : ''}${i === 6 ? ' last-col' : ''}`} onClick={() => canClick && onPopupOpen('scheduleBm')}>
                                     {count && <span className="count">{count}</span>}
                                 </div>
                             );
                         })}
 
-                        {/* 재발확인(3주) */}
-                        <div className="calendar-section">
-                            <span className="section-label">재발<br />확인<br /><span className="section-sub">(3주)</span></span>
-                        </div>
-                        {weekDays.map((_, i) => {
-                            const count = grid?.imsin3w?.[i];
-                            return (
-                                <div key={`3w-${i}`} className={`calendar-cell${i === 6 ? ' last-col' : ''}`}>
-                                    {count && <span className="count">{count}</span>}
+                        {grid?.isModonPregnancy ? (
+                            /* 모돈작업설정: 임신 감정돈(진단) 하나로 표시 */
+                            <>
+                                <div className="calendar-section">
+                                    <span className="section-label">임신<br />감정</span>
                                 </div>
-                            );
-                        })}
-
-                        {/* 임신진단(4주) */}
-                        <div className="calendar-section">
-                            <span className="section-label">임신<br />진단<br /><span className="section-sub">(4주)</span></span>
-                        </div>
-                        {weekDays.map((_, i) => {
-                            const count = grid?.imsin4w?.[i];
-                            return (
-                                <div key={`4w-${i}`} className={`calendar-cell${i === 6 ? ' last-col' : ''}`}>
-                                    {count && <span className="count">{count}</span>}
+                                {weekDays.map((_, i) => {
+                                    const count = grid?.imsin?.[i];
+                                    return (
+                                        <div key={`imsin-${i}`} className={`calendar-cell${i === 6 ? ' last-col' : ''}`}>
+                                            {count && <span className="count">{count}</span>}
+                                        </div>
+                                    );
+                                })}
+                            </>
+                        ) : (
+                            /* 농장기본값: 재발확인(3주), 임신진단(4주) 별도 표시 */
+                            <>
+                                {/* 재발확인(3주) */}
+                                <div className="calendar-section">
+                                    <span className="section-label">재발<br />확인<br /><span className="section-sub">(3주)</span></span>
                                 </div>
-                            );
-                        })}
+                                {weekDays.map((_, i) => {
+                                    const count = grid?.imsin3w?.[i];
+                                    return (
+                                        <div key={`3w-${i}`} className={`calendar-cell${i === 6 ? ' last-col' : ''}`}>
+                                            {count && <span className="count">{count}</span>}
+                                        </div>
+                                    );
+                                })}
 
-                        {/* 이유 */}
+                                {/* 임신진단(4주) */}
+                                <div className="calendar-section">
+                                    <span className="section-label">임신<br />진단<br /><span className="section-sub">(4주)</span></span>
+                                </div>
+                                {weekDays.map((_, i) => {
+                                    const count = grid?.imsin4w?.[i];
+                                    return (
+                                        <div key={`4w-${i}`} className={`calendar-cell${i === 6 ? ' last-col' : ''}`}>
+                                            {count && <span className="count">{count}</span>}
+                                        </div>
+                                    );
+                                })}
+                            </>
+                        )}
+
+                        {/* 이유 - 모돈작업설정인 경우에만 클릭 가능 */}
                         <div className="calendar-section">
                             <span className="section-label">이유</span>
                         </div>
                         {weekDays.map((_, i) => {
                             const count = grid?.eu?.[i];
+                            const canClick = count && !grid?.help?.isFarmWeaning;
                             return (
-                                <div key={i} className={`calendar-cell${count ? ' clickable' : ''}${i === 6 ? ' last-col' : ''}`} onClick={() => count && onPopupOpen('scheduleEu')}>
+                                <div key={i} className={`calendar-cell${canClick ? ' clickable' : ''}${i === 6 ? ' last-col' : ''}`} onClick={() => canClick && onPopupOpen('scheduleEu')}>
                                     {count && <span className="count">{count}</span>}
                                 </div>
                             );
                         })}
 
-                        {/* 모돈백신 */}
+                        {/* 모돈백신 - 모돈작업설정인 경우에만 클릭 가능 */}
                         <div className="calendar-section">
                             <span className="section-label">모돈<br />백신</span>
                         </div>
                         {weekDays.map((_, i) => {
                             const count = grid?.vaccine?.[i];
+                            const canClick = count && !grid?.help?.isFarmVaccine;
                             return (
-                                <div key={i} className={`calendar-cell${count ? ' clickable' : ''}${i === 6 ? ' last-col' : ''}`} onClick={() => count && onPopupOpen('scheduleVaccine')}>
+                                <div key={i} className={`calendar-cell${canClick ? ' clickable' : ''}${i === 6 ? ' last-col' : ''}`} onClick={() => canClick && onPopupOpen('scheduleVaccine')}>
                                     {count && <span className="count">{count}</span>}
                                 </div>
                             );

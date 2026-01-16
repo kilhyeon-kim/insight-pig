@@ -775,10 +775,14 @@ export class WeeklyService {
     // CODE_1로 각 행 찾기
     const gbRow = calSubs.find((s) => s.code1 === 'GB');
     const bmRow = calSubs.find((s) => s.code1 === 'BM');
-    const imsin3wRow = calSubs.find((s) => s.code1 === 'IMSIN_3W');
-    const imsin4wRow = calSubs.find((s) => s.code1 === 'IMSIN_4W');
+    const imsinRow = calSubs.find((s) => s.code1 === 'IMSIN');       // 모돈작업설정: 임신감정 통합
+    const imsin3wRow = calSubs.find((s) => s.code1 === 'IMSIN_3W');  // 농장기본값: 재발확인(3주)
+    const imsin4wRow = calSubs.find((s) => s.code1 === 'IMSIN_4W');  // 농장기본값: 임신진단(4주)
     const euRow = calSubs.find((s) => s.code1 === 'EU');
     const vaccineRow = calSubs.find((s) => s.code1 === 'VACCINE');
+
+    // 임신감정 산정방식 판단: IMSIN 있으면 모돈작업설정, 없으면 농장기본값
+    const isModonPregnancy = !!imsinRow;
 
     // CNT_1~7을 배열로 변환 (0은 null로)
     const toArray = (row?: TsInsWeekSub): (number | null)[] => {
@@ -910,12 +914,15 @@ export class WeeklyService {
       // 캘린더 셀 데이터
       gb: toArray(gbRow),
       bm: toArray(bmRow),
-      imsin3w: toArray(imsin3wRow),
-      imsin4w: toArray(imsin4wRow),
+      imsin: isModonPregnancy ? toArray(imsinRow) : undefined,    // 모돈작업설정: 임신감정 통합
+      imsin3w: !isModonPregnancy ? toArray(imsin3wRow) : undefined, // 농장기본값: 재발확인(3주)
+      imsin4w: !isModonPregnancy ? toArray(imsin4wRow) : undefined, // 농장기본값: 임신진단(4주)
       eu: toArray(euRow),
       vaccine: toArray(vaccineRow),
       // 출하는 병합 셀 (합계만)
       ship: scheduleSub?.cnt6 || week.THIS_SHIP_SUM || 0,
+      // 임신감정 산정방식 플래그 (true: 모돈작업설정, false: 농장기본값)
+      isModonPregnancy,
       // 산출기준 도움말 (GUBUN='SCHEDULE', SUB_GUBUN='HELP')
       help: this.extractScheduleHelpData(subs),
     };
@@ -929,13 +936,24 @@ export class WeeklyService {
     const helpSub = subs.find((s) => s.gubun === 'SCHEDULE' && s.subGubun === 'HELP');
     if (!helpSub) return undefined;
 
+    // 산정방식 판단: '농장기본값' 문자열 포함 여부
+    const isFarmDefault = (str: string) => str === '농장기본값' || str.includes('농장기본값');
+
     return {
       mating: helpSub.str1 || '',        // 교배 산출기준
       farrowing: helpSub.str2 || '',     // 분만 산출기준
       weaning: helpSub.str3 || '',       // 이유 산출기준
       vaccine: helpSub.str4 || '',       // 백신 산출기준
       shipment: helpSub.str5 || '',      // 출하 산출기준
-      checking: helpSub.str6 || '교배일+21일/28일',  // 재발확인 산출기준 (고정)
+      pregnancy3w: helpSub.str6 || '',   // 재발확인(3주) 산출기준
+      pregnancy4w: helpSub.str7 || '',   // 임신진단(4주) 산출기준
+      // 모돈작업설정일 때 통합 표시용 (str6, str7 동일한 값)
+      pregnancy: helpSub.str6 || '',     // 임신감정 산출기준 (모돈작업설정용)
+      // 각 작업별 산정방식 (true: 농장기본값 = 팝업 없음, false: 모돈작업설정 = 팝업 있음)
+      isFarmMating: isFarmDefault(helpSub.str1 || ''),
+      isFarmFarrowing: isFarmDefault(helpSub.str2 || ''),
+      isFarmWeaning: isFarmDefault(helpSub.str3 || ''),
+      isFarmVaccine: isFarmDefault(helpSub.str4 || ''),
     };
   }
 

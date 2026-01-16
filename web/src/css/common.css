@@ -1338,6 +1338,17 @@
         height: 10px;
     }
 
+    /* 클릭 힌트 범례 - 회색으로 정보성 표시 (클릭 불가 표현) */
+    .legend-item.legend-clickable-hint {
+        color: var(--rp-text-tertiary);
+        font-size: 11px;
+    }
+
+    .legend-item.legend-clickable-hint svg {
+        color: var(--rp-text-tertiary);
+        opacity: 0.7;
+    }
+
     /* up/down 아이콘 간격 최소화 */
     .legend-item svg.up {
         color: var(--rp-accent-primary);
@@ -1544,6 +1555,7 @@
     .help-desc {
         flex: 1;
         color: var(--rp-text-secondary);
+        white-space: pre-line;
     }
 
     .help-tooltip-footer {

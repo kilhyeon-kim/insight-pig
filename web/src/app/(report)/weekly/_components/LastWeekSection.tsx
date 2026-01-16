@@ -25,7 +25,7 @@ export const LastWeekSection: React.FC<LastWeekSectionProps> = ({ data, onPopupO
                 <div className="legend">
                     <div className="legend-item"><span className="legend-dot orange"></span> 누계(당해년도)</div>
                     <div className="legend-item"><FontAwesomeIcon icon={faCaretUp} className="up" /><FontAwesomeIcon icon={faCaretDown} className="down" /> 증감(1년평균 대비)</div>
-                    <div className="legend-item"><FontAwesomeIcon icon={faArrowUpRightFromSquare} /> 더보기</div>
+                    <div className="legend-item legend-clickable-hint"><FontAwesomeIcon icon={faArrowUpRightFromSquare} />=상세보기</div>
                 </div>
             </div>
             <div className="card-body">

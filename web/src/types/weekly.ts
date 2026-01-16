@@ -113,10 +113,12 @@ export interface CalendarGridData {
   weekNum: number;           // 주차
   periodFrom: string;        // 시작일 (MM.DD)
   periodTo: string;          // 종료일 (MM.DD)
+  periodFromRaw?: string;    // 시작일 (YYYYMMDD) - 날씨 조회용
+  periodToRaw?: string;      // 종료일 (YYYYMMDD) - 날씨 조회용
   dates: (number | string)[]; // 날짜 배열 [25, 26, 27, 28, 29, 30, '01']
   // 요약 카드 합계
   gbSum: number;             // 교배 합계
-  imsinSum: number;          // 재발확인 합계 (3주+4주)
+  imsinSum: number;          // 재발확인 합계 (3주+4주) 또는 임신감정 합계
   bmSum: number;             // 분만 합계
   euSum: number;             // 이유 합계
   vaccineSum: number;        // 모돈백신 합계
@@ -124,11 +126,14 @@ export interface CalendarGridData {
   // 캘린더 셀 데이터 (null = 빈 셀)
   gb: (number | null)[];           // 교배 [월,화,수,목,금,토,일]
   bm: (number | null)[];           // 분만
-  imsin3w: (number | null)[];      // 재발확인 3주
-  imsin4w: (number | null)[];      // 재발확인 4주
+  imsin?: (number | null)[];       // 임신감정 (모돈작업설정일 때 사용)
+  imsin3w?: (number | null)[];     // 재발확인 3주 (농장기본값일 때 사용)
+  imsin4w?: (number | null)[];     // 임신진단 4주 (농장기본값일 때 사용)
   eu: (number | null)[];           // 이유
   vaccine: (number | null)[];      // 모돈백신
   ship: number;                    // 출하 (병합 셀)
+  // 임신감정 산정방식 플래그 (true: 모돈작업설정, false: 농장기본값)
+  isModonPregnancy?: boolean;
   // 산출기준 도움말 (TB_PLAN_MODON 기반)
   help?: ScheduleHelpData;
 }
@@ -143,7 +148,14 @@ export interface ScheduleHelpData {
   weaning: string;       // 이유 산출기준 (예: "이유예정(21일)")
   vaccine: string;       // 백신 산출기준 (예: "분만전백신(-7일)")
   shipment: string;      // 출하 산출기준 (예: "이유일+(180-21)=159일")
-  checking: string;      // 재발확인 산출기준 (고정: "교배일+21일/28일")
+  pregnancy: string;     // 임신감정 산출기준 (모돈작업설정용)
+  pregnancy3w: string;   // 재발확인(3주) 산출기준
+  pregnancy4w: string;   // 임신진단(4주) 산출기준
+  // 각 작업별 산정방식 플래그 (true: 농장기본값 = 팝업 없음)
+  isFarmMating?: boolean;
+  isFarmFarrowing?: boolean;
+  isFarmWeaning?: boolean;
+  isFarmVaccine?: boolean;
 }
 
 export interface KPIData {
