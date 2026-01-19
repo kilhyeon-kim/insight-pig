@@ -393,7 +393,7 @@ export const WEEKLY_SQL = {
         TO_CHAR(POST_TO, 'YYYYMMDD') AS POST_TO
     FROM TS_INS_MGMT
     WHERE NVL(USE_YN, 'Y') = 'Y'
-      AND (POST_FROM IS NULL OR POST_FROM <= TRUNC(SYSDATE))  /* 미도래 게시물 제외 */
+      AND (POST_FROM IS NULL OR POST_FROM <= TRUNC(SYSDATE + 9/24))  /* 미도래 게시물 제외 (KST 기준) */
     ORDER BY
         CASE MGMT_TYPE
             WHEN 'QUIZ' THEN 1

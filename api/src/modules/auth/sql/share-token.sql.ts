@@ -39,7 +39,7 @@ export const SHARE_TOKEN_SQL = {
           W.FARM_NO || '-' || W.MASTER_SEQ || '-' || TO_CHAR(SYSDATE, 'YYYYMMDDHH24MISS'),
           'SHA256'
         ),
-        W.TOKEN_EXPIRE_DT = TO_CHAR(SYSDATE + :expireDays, 'YYYYMMDD')
+        W.TOKEN_EXPIRE_DT = TO_CHAR(SYSDATE + 9/24 + :expireDays, 'YYYYMMDD')  /* KST 기준 */
     WHERE W.MASTER_SEQ = :masterSeq
       AND W.FARM_NO = :farmNo
   `,
